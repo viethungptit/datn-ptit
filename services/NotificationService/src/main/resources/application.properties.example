@@ -1,0 +1,37 @@
+# Dev environment configuration
+server.port=
+
+# PostgreSQL datasource
+spring.datasource.url=
+spring.datasource.username=
+spring.datasource.password=
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Mail config
+spring.mail.host=
+spring.mail.port=
+spring.mail.username=
+spring.mail.password=
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.debug=true
+
+# RabbitMQ connection
+spring.rabbitmq.host=
+spring.rabbitmq.port=
+spring.rabbitmq.username=
+spring.rabbitmq.password=
+
+# User register event queue/exchange/routing key
+notification.exchange=
+notification.user.queue=
+notification.user.register.routing-key=
+notification.user.reset-password.routing-key=
+
+# External service configuration
+external.user.service.url=

@@ -1,0 +1,6 @@
+# Dev environment configuration
+server.port=
+spring.datasource.url=
+spring.datasource.username=
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=

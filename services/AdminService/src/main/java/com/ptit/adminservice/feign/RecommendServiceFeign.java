@@ -1,0 +1,13 @@
+package com.ptit.adminservice.feign;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@FeignClient(name = "recommend-service", url = "${external.recommend.service.url}")
+public interface RecommendServiceFeign {
+    // Example endpoint, adjust as needed
+    @GetMapping("/recommends/{id}")
+    Object getRecommendById(@PathVariable("id") Long id);
+}
+
