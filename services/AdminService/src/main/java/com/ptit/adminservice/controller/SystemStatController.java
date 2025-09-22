@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/stats")
+@RequestMapping("/api/stats")
 @RequiredArgsConstructor
 public class SystemStatController {
     private final SystemStatService systemStatService;

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/templates")
+@RequestMapping("/api/cv-templates")
 public class TemplateController {
     @Autowired
     private TemplateService templateService;

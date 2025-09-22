@@ -1,7 +1,6 @@
 package com.ptit.userservice.controller;
 
-import com.ptit.userservice.dto.UserRequest;
-import com.ptit.userservice.dto.UserResponse;
+import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -50,5 +49,30 @@ public class UserController {
     public ResponseEntity<UserResponse> getUserByEmail(@RequestParam String email) {
         UserResponse response = userService.getUserByEmail(email);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-otp")
+    public VerifyOtpResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
+        return userService.verifyOtp(request);
+    }
+
+    @PostMapping("/reset-otp")
+    public ResetOtpResponse resetOtp(@RequestBody ResetOtpRequest request) {
+        return userService.resetOtp(request);
+    }
+
+    @PostMapping("/change-password")
+    public ForgotPasswordResponse changePassword(@RequestBody ChangePasswordRequest request) {
+        return userService.changePassword(request);
+    }
+
+    @PostMapping("/forgot-password")
+    public ForgotPasswordResponse forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        return userService.forgotPassword(request);
+    }
+
+    @PostMapping("/request-reset-password")
+    public void requestResetPassword(@RequestBody RequestResetPasswordRequest request) {
+        userService.requestResetPassword(request);
     }
 }

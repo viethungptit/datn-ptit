@@ -31,28 +31,4 @@ public class AuthController {
         return authService.logout(request);
     }
 
-    @PostMapping("/verify-otp")
-    public VerifyOtpResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
-        return authService.verifyOtp(request);
-    }
-
-    @PostMapping("/reset-otp")
-    public ResetOtpResponse resetOtp(@RequestBody ResetOtpRequest request) {
-        return authService.resetOtp(request);
-    }
-
-    @PostMapping("/change-password")
-    public ForgotPasswordResponse changePassword(@RequestBody ChangePasswordRequest request) {
-        return authService.changePassword(request);
-    }
-
-    @PostMapping("/forgot-password")
-    public ForgotPasswordResponse forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        return authService.forgotPassword(request);
-    }
-
-    @PostMapping("/request-reset-password")
-    public void requestResetPassword(@RequestBody RequestResetPasswordRequest request) {
-        authService.requestResetPassword(request);
-    }
 }
