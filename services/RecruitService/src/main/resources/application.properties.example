@@ -1,6 +1,41 @@
 # Dev environment configuration
-server.port=
+server.port=5004
+
+# PostgreSQL datasource
 spring.datasource.url=
 spring.datasource.username=
 spring.datasource.password=
-spring.jpa.hibernate.ddl-auto=
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# RabbitMQ connection
+spring.rabbitmq.host=
+spring.rabbitmq.port=
+spring.rabbitmq.username=
+spring.rabbitmq.password=
+
+# User register event queue/exchange/routing key
+notification.recruit.exchange=
+notification.recruit.queue=
+notification.recruit.status.routing-key=
+
+embbedding.exchange=
+embbedding.cv.queue=
+embbedding.cv.routing-key=
+embbedding.jd.routing-key=
+
+# MinIO configuration
+minio.url=
+minio.access-key=
+minio.secret-key=
+minio.bucket=
+
+# External service configuration
+external.user.service.url=http://localhost:xxxx
+
+# CORS configuration
+cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx

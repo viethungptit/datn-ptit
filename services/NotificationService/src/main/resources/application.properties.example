@@ -1,5 +1,6 @@
 # Dev environment configuration
 server.port=
+spring.main.allow-bean-definition-overriding=true
 
 # PostgreSQL datasource
 spring.datasource.url=
@@ -35,3 +36,6 @@ notification.user.reset-password.routing-key=
 
 # External service configuration
 external.user.service.url=
+
+# CORS configuration
+cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx

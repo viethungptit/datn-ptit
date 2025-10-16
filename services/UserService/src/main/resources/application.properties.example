@@ -34,3 +34,8 @@ minio.url=
 minio.access-key=
 minio.secret-key=
 minio.bucket=
+
+internal.secret=
+
+# CORS configuration
+cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx
