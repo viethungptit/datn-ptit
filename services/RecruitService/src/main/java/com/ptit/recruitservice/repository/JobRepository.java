@@ -10,4 +10,5 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     List<Job> findByIsDeletedFalse();
     List<Job> findByCompanyIdAndIsDeletedFalse(UUID companyId);
     List<Job> findByCityAndIsDeletedFalse(String city);
+    List<Job> findByStatusAndDeadlineBefore(Job.Status status, java.sql.Timestamp deadline);
 }

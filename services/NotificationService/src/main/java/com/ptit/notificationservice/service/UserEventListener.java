@@ -7,7 +7,7 @@ import com.ptit.notificationservice.entity.EmailDelivery;
 import com.ptit.notificationservice.entity.InappDelivery;
 import com.ptit.notificationservice.entity.Notification;
 import com.ptit.notificationservice.entity.NotificationTemplate;
-import com.ptit.notificationservice.feign.ExternalUserServiceFeignClient;
+import com.ptit.notificationservice.feign.UserServiceFeign;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,10 +30,10 @@ public class UserEventListener {
     @Autowired
     private InappDeliveryService inappDeliveryService;
     @Autowired
-    private ExternalUserServiceFeignClient externalUserServiceFeignClient;
+    private UserServiceFeign userServiceFeign;
 
     public UserResponse getUserByEmail(String email) {
-        return externalUserServiceFeignClient.getUserByEmail(email);
+        return userServiceFeign.getUserByEmail(email);
     }
 
     @RabbitListener(queues = "${notification.user.queue}")

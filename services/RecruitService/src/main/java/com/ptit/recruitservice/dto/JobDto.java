@@ -13,6 +13,8 @@ public class JobDto {
     private String jobType;
     private String status;
     private boolean isDeleted;
+    private Integer quantity;
+    private java.sql.Timestamp deadline;
 
     // Getters and setters
     public UUID getJobId() { return jobId; }
@@ -35,5 +37,8 @@ public class JobDto {
     public void setStatus(String status) { this.status = status; }
     public boolean isDeleted() { return isDeleted; }
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public java.sql.Timestamp getDeadline() { return deadline; }
+    public void setDeadline(java.sql.Timestamp deadline) { this.deadline = deadline; }
 }
-

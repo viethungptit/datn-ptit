@@ -1,11 +1,13 @@
 package com.ptit.recruitservice.service;
 
+import com.ptit.recruitservice.dto.CompanyResponse;
 import com.ptit.recruitservice.dto.JobCreateRequest;
 import com.ptit.recruitservice.dto.JobUpdateRequest;
 import com.ptit.recruitservice.dto.JobDto;
 import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.entity.JobTagMapping;
 import com.ptit.recruitservice.entity.JobGroupTagMapping;
+import com.ptit.recruitservice.feign.UserServiceFeign;
 import com.ptit.recruitservice.repository.JobRepository;
 import com.ptit.recruitservice.repository.JobTagMappingRepository;
 import com.ptit.recruitservice.repository.JobGroupTagMappingRepository;
@@ -14,9 +16,13 @@ import com.ptit.recruitservice.repository.GroupJobTagRepository;
 import com.ptit.recruitservice.exception.ResourceNotFoundException;
 import com.ptit.recruitservice.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -33,18 +39,25 @@ public class JobService {
     private JobTagRepository jobTagRepository;
     @Autowired
     private GroupJobTagRepository groupJobTagRepository;
+    @Autowired
+    private UserServiceFeign externalUserServiceFeignClient;
+
+    public CompanyResponse getCompanyByUserId(UUID userId) {
+        return externalUserServiceFeignClient.getCompanyByUserId(userId);
+    }
 
     @Transactional
-    public JobDto createJob(JobCreateRequest request, UUID userId) {
-        //Chưa có Tìm company theo userId
-
+    public JobDto createJob(JobCreateRequest request, UUID currentUserId) {
+        UUID companyId = getCompanyByUserId(currentUserId).getCompanyId();
         Job job = new Job();
-        job.setCompanyId(request.getCompanyId());
+        job.setCompanyId(companyId);
         job.setTitle(request.getTitle());
         job.setDescription(request.getDescription());
         job.setSalaryRange(request.getSalaryRange());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
+        job.setQuantity(request.getQuantity());
+        job.setDeadline(request.getDeadline());
         job.setJobType(Job.JobType.valueOf(request.getJobType().replace("|", "_")));
         job.setStatus(Job.Status.open);
         job.setIsDeleted(false);
@@ -85,10 +98,13 @@ public class JobService {
     }
 
     @Transactional
-    public JobDto updateJob(UUID jobId, JobUpdateRequest request) {
+    public JobDto updateJob(UUID jobId, JobUpdateRequest request, UUID currentUserId) {
+        UUID companyId = getCompanyByUserId(currentUserId).getCompanyId();
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-        // Validate jobType
+        if(!job.getCompanyId().equals(companyId)) {
+            throw new AccessDeniedException("You do not have permission to update this job");
+        }
         try {
             Job.JobType.valueOf(request.getJobType().replace("|", "_"));
         } catch (IllegalArgumentException e) {
@@ -100,6 +116,8 @@ public class JobService {
         job.setSalaryRange(request.getSalaryRange());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
+        job.setQuantity(request.getQuantity());
+        job.setDeadline(request.getDeadline());
         job.setJobType(Job.JobType.valueOf(request.getJobType().replace("|", "_")));
         job = jobRepository.save(job);
         final Job savedJob = job;
@@ -154,6 +172,34 @@ public class JobService {
         return jobRepository.findByCityAndIsDeletedFalse(city).stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    @Transactional
+    public JobDto closeJob(UUID jobId, UUID currentUserId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+        CompanyResponse company = getCompanyByUserId(currentUserId);
+        boolean isEmployer = company != null && job.getCompanyId().equals(company.getCompanyId());
+        boolean isAdmin = company == null; // If company is null, treat as admin (adjust if you have a better admin check)
+        if (!isEmployer && !isAdmin) {
+            throw new AccessDeniedException("You do not have permission to close this job");
+        }
+        if (job.getStatus() == Job.Status.closed) {
+            throw new BusinessException("Job is already closed");
+        }
+        job.setStatus(Job.Status.closed);
+        job = jobRepository.save(job);
+        return toDto(job);
+    }
+
+    @Scheduled(cron = "0 0 1 * * *") // Runs daily at 1:00 AM
+    @Transactional
+    public void closeExpiredJobs() {
+        List<Job> expiredJobs = jobRepository.findByStatusAndDeadlineBefore(Job.Status.open, Timestamp.from(Instant.now()));
+        for (Job job : expiredJobs) {
+            job.setStatus(Job.Status.closed);
+            jobRepository.save(job);
+        }
+    }
+
     private JobDto toDto(Job job) {
         JobDto dto = new JobDto();
         dto.setJobId(job.getJobId());
@@ -163,6 +209,8 @@ public class JobService {
         dto.setSalaryRange(job.getSalaryRange());
         dto.setLocation(job.getLocation());
         dto.setCity(job.getCity());
+        dto.setQuantity(job.getQuantity());
+        dto.setDeadline(job.getDeadline());
         dto.setJobType(job.getJobType().name());
         dto.setStatus(job.getStatus().name());
         dto.setDeleted(Boolean.TRUE.equals(job.getIsDeleted()));

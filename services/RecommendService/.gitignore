@@ -1,0 +1,32 @@
+# Byte-code files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# Virtual environment
+.venv/
+env/
+venv/
+*.egg-info/
+.Python
+build/
+dist/
+
+# Editor/OS specific files
+.DS_Store
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.*
+secrets.toml
+
+# Logs and temporary files
+*.log
+tmp/
+logs/
+
+# Database files (if using SQLite or similar)
+*.db

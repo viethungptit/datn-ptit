@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: datn
+  profiles:
+    active: dev

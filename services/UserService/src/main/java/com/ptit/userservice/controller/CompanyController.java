@@ -3,8 +3,13 @@ package com.ptit.userservice.controller;
 import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.CompanyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,28 +17,39 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/companies")
+@RequestMapping("/api/user-service/companies")
 @RequiredArgsConstructor
 public class CompanyController {
     private final CompanyService companyService;
 
+    @Value("${internal.secret}")
+    private String internalSecret;
+
+    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponse> createCompany(
         @ModelAttribute  CompanyCreateRequest request
     ) {
-        return ResponseEntity.ok(companyService.createCompany(request));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        return ResponseEntity.ok(companyService.createCompany(request, isAdmin));
     }
 
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> getCompany(@PathVariable UUID companyId) {
         return ResponseEntity.ok(companyService.getCompany(companyId));
     }
 
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
         return ResponseEntity.ok(companyService.getAllCompanies());
     }
 
+    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping(value = "/{companyId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponse> updateCompany(
         @PathVariable UUID companyId,
@@ -42,18 +58,24 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.updateCompany(companyId, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{companyId}/verify")
     public ResponseEntity<CompanyResponse> verifyCompany(@PathVariable UUID companyId) {
         return ResponseEntity.ok(companyService.verifyCompany(companyId));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> deleteCompany(@PathVariable UUID companyId) {
         return ResponseEntity.ok(companyService.deleteCompany(companyId));
     }
 
+
     @GetMapping("/by-user/{userId}")
-    public ResponseEntity<CompanyResponse> getCompanyByUserId(@PathVariable UUID userId) {
+    public ResponseEntity<CompanyResponse> getCompanyByUserId(@PathVariable UUID userId, @RequestHeader("X-Internal-Secret") String secret) {
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
         return ResponseEntity.ok(companyService.getCompanyByUserId(userId));
     }
 }

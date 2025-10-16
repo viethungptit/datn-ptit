@@ -1,16 +1,32 @@
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import React, { useState } from "react";
+import { useAppDispatch } from '../redux/store';
+import { login } from '../redux/authSlice';
+import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ email, password });
+        setLoading(true);
+        setError("");
+        try {
+            await dispatch(login({ email, password })).unwrap();
+            navigate("/");
+        } catch (err: any) {
+            setError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -61,9 +77,14 @@ const Login: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                    <Button variant="login" type="submit" className="w-full mb-3">
-                        Đăng nhập
+                    <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
+                        {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
+                    {error && (
+                        <div className="text-center text-sm text-red-500 mb-2">
+                            {error}
+                        </div>
+                    )}
                     <div className="text-center text-sm text-gray-600 mb-2">
                         Chưa có tài khoản?{" "}
                         <Link

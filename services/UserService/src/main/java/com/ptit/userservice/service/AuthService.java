@@ -8,6 +8,8 @@ import com.ptit.userservice.exception.UnauthorizedException;
 import com.ptit.userservice.repository.*;
 import com.ptit.userservice.config.JwtUtil;
 import com.ptit.userservice.config.EventPublisher;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -35,6 +37,9 @@ public class AuthService {
     private JwtUtil jwtUtil;
     @Autowired
     private EventPublisher eventPublisher;
+
+    @Value("${jwt.refreshExpirationMs}")
+    private int refreshTokenDurationMs;
 
     @Value("${notification.exchange}")
     private String notificationExchange;
@@ -137,15 +142,24 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
-        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty() || !passwordEncoder.matches(request.password, userOpt.get().getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+    public LoginResponse login(LoginRequest request, HttpServletResponse response) {
+        if (request.email == null || request.email.trim().isEmpty()) {
+            throw new BusinessException("Email is required");
         }
-        if (!userOpt.get().isActive()){
-            throw new BusinessException("Account not verified");
+        if (request.password == null || request.password.trim().isEmpty()) {
+            throw new BusinessException("Password is required");
+        }
+        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
+        if (userOpt.isEmpty()) {
+            throw new ResourceNotFoundException("User not found");
         }
         User user = userOpt.get();
+        if (!passwordEncoder.matches(request.password, user.getPassword())) {
+            throw new BusinessException("Wrong password");
+        }
+        if (!user.isActive()) {
+            throw new BusinessException("Account not verified");
+        }
         String accessToken = jwtUtil.generateToken(user);
         String refreshTokenStr = jwtUtil.generateRefreshToken(user);
         RefreshToken refreshToken = new RefreshToken();
@@ -154,25 +168,28 @@ public class AuthService {
         refreshToken.setExpiresAt(LocalDateTime.now().plusDays(7));
         refreshToken.setCreatedAt(LocalDateTime.now());
         refreshTokenRepository.save(refreshToken);
-        // TODO: Send event to AdminService
+        Cookie cookie = new Cookie("refreshToken", refreshTokenStr);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        int expirySeconds = refreshTokenDurationMs / 1000;
+        cookie.setMaxAge(expirySeconds);
+        response.addCookie(cookie);
 
-        LoginResponse response = new LoginResponse();
-        response.accessToken = accessToken;
-        response.refreshToken = refreshTokenStr;
-        response.userId = user.getUserId().toString();
-        response.role = user.getRole().name();
-        return response;
+        LoginResponse result = new LoginResponse();
+        result.accessToken = accessToken;
+        return result;
     }
 
     @Transactional
-    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
-        Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(request.refreshToken);
+    public RefreshTokenResponse refreshTokenFromCookie(String refreshToken) {
+        Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(refreshToken);
         if (tokenOpt.isEmpty() || tokenOpt.get().getExpiresAt().isBefore(LocalDateTime.now())) {
             tokenOpt.ifPresent(token -> refreshTokenRepository.deleteById(token.getTokenId()));
             throw new UnauthorizedException("Refresh token expired");
         }
         User user = tokenOpt.get().getUser();
         String newAccessToken = jwtUtil.generateToken(user);
+        LoginResponse result = new LoginResponse();
         RefreshTokenResponse response = new RefreshTokenResponse();
         response.accessToken = newAccessToken;
         return response;
@@ -185,5 +202,94 @@ public class AuthService {
         LogoutResponse response = new LogoutResponse();
         response.message = "Logged out successfully";
         return response;
+    }
+
+
+    @Transactional
+    public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.email);
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        User user = userOpt.get();
+        Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
+        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
+        OtpToken otp = otpOpt.get();
+        if (otp.isUsed()) throw new RuntimeException("OTP already used");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP expired, request new OTP");
+        if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Invalid OTP");
+        otp.setUsed(true);
+        otpTokenRepository.save(otp);
+        user.setActive(true);
+        userRepository.save(user);
+        // TODO: Send event to AdminService
+        VerifyOtpResponse response = new VerifyOtpResponse();
+        response.message = "Verify OTP successfully";
+        return response;
+    }
+
+    @Transactional
+    public ResetOtpResponse resetOtp(ResetOtpRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.email);
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        User user = userOpt.get();
+        String otpCode = String.format("%06d", (int)(Math.random()*1000000));
+        OtpToken otp = new OtpToken();
+        otp.setUser(user);
+        otp.setOtpCode(otpCode);
+        otp.setUsed(false);
+        otp.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        otp.setCreatedAt(LocalDateTime.now());
+        otpTokenRepository.save(otp);
+
+        // TODO: Send event to NotificationService
+        Map<String, Object> event = new HashMap<>();
+        event.put("email", user.getEmail());
+        event.put("name", user.getFullName());
+        event.put("otp", otpCode);
+        event.put("event_type", registerRoutingKey);
+        eventPublisher.publish(notificationExchange, registerRoutingKey, event);
+
+        ResetOtpResponse response = new ResetOtpResponse();
+        response.otp = otpCode;
+        return response;
+    }
+
+    @Transactional
+    public void requestResetPassword(RequestResetPasswordRequest request) {
+        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        User user = userOpt.get();
+        String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
+        OtpToken otp = new OtpToken();
+        otp.setUser(user);
+        otp.setOtpCode(otpCode);
+        otp.setUsed(false);
+        otp.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        otp.setCreatedAt(LocalDateTime.now());
+        otpTokenRepository.save(otp);
+        // Send OTP event to RabbitMQ
+        Map<String, Object> event = new HashMap<>();
+        event.put("email", user.getEmail());
+        event.put("name", user.getFullName());
+        event.put("otp", otpCode);
+        event.put("event_type", resetPasswordRoutingKey);
+        eventPublisher.publish(notificationExchange, resetPasswordRoutingKey, event);
+    }
+
+    @Transactional
+    public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
+        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        User user = userOpt.get();
+        Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
+        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
+        OtpToken otp = otpOpt.get();
+        if (otp.isUsed()) throw new BusinessException("OTP already used");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new BusinessException("OTP expired");
+        if (!otp.getOtpCode().equals(request.otp)) throw new BusinessException("Invalid OTP");
+        otp.setUsed(true);
+        otpTokenRepository.save(otp);
+        user.setPassword(passwordEncoder.encode(request.newPassword));
+        userRepository.save(user);
+        return new ForgotPasswordResponse("Password reset successful");
     }
 }

@@ -1,7 +1,7 @@
 export const SERVICE_URLS = {
-    user: 'http://localhost:3001',
-    admin: 'http://localhost:3002',
-    recruit: 'http://localhost:3003',
-    notification: 'http://localhost:3004',
-    recommend: 'http://localhost:3005',
+    user: import.meta.env.VITE_USER_SERVICE_URL,
+    admin: import.meta.env.VITE_ADMIN_SERVICE_URL,
+    recruit: import.meta.env.VITE_RECRUIT_SERVICE_URL,
+    notification: import.meta.env.VITE_NOTIFICATION_SERVICE_URL,
+    recommend: import.meta.env.VITE_RECOMMEND_SERVICE_URL,
 };

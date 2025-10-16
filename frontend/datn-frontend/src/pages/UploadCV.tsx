@@ -32,11 +32,16 @@ const UploadCV = () => {
     };
 
     return (
-        <div className="py-6 px-[100px]">
-            <div className='p-6 shadow-md border rounded-md flex flex-col items-center justify-center min-h-[70vh]'>
-                <h2 className="text-2xl font-semibold text-txt-red mb-4">Tải lên CV</h2>
-                <span className='mb-4'>Bạn đã có sẵn CV của mình, chỉ cần tải CV lên, hệ thống sẽ tự động đề xuất CV của bạn tới những nhà tuyển dụng uy tín.
-                    <br />  Tiết kiệm thời gian, tìm việc thông minh, nắm bắt cơ hội và làm chủ đường đua nghề nghiệp của chính mình.</span>
+        <div>
+            <div className='flex flex-col justify-center items-start px-[100px] py-14' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>
+                <div className="text-left mb-6">
+                    <p className="text-2xl font-bold text-txt-red mb-2">Tải lên CV</p>
+                    <p className="text-base text-gray-700">Bạn đã có sẵn CV của mình, chỉ cần tải CV lên, hệ thống sẽ tự động đề xuất CV của bạn tới những nhà tuyển dụng uy tín.</p>
+                </div>
+            </div>
+            <div className='px-[100px] p-6 rounded-md flex flex-col items-center justify-center'>
+                <h2 className="text-2xl font-semibold text-txt-red mb-4"></h2>
+
                 <div
                     className="w-full max-w-xl h-64 border-2 border-dashed border-gray-400 rounded-lg flex flex-col items-center justify-center cursor-pointer bg-gray-50 hover:bg-gray-100 mb-6"
                     onDrop={handleDrop}
@@ -50,7 +55,8 @@ const UploadCV = () => {
                         className="hidden"
                         onChange={handleFileChange}
                     />
-                    <span className="text-xl text-gray-500 mb-2">
+                    <i className="fa-solid fa-cloud-arrow-up fa-2xl mb-4"></i>
+                    <span className="text-lg text-gray-500 mb-2">
                         Kéo thả hoặc chọn file CV
                     </span>
                     <span className="text-sm text-gray-400">(Hỗ trợ .doc, .docx, .pdf)</span>

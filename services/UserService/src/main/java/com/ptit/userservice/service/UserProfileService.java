@@ -20,6 +20,7 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
@@ -77,7 +79,10 @@ public class UserProfileService {
     }
 
     @Transactional
-    public CandidateResponse upsertCandidateByUserId(UUID userId, CandidateUpdateRequest request) {
+    public CandidateResponse upsertCandidateByUserId(UUID userId, UUID currentUserId, CandidateUpdateRequest request, boolean isAdmin) {
+        if (!isAdmin && !userId.equals(currentUserId)) {
+            throw new AccessDeniedException("You can't update other people information");
+        }
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException("User not found for userId: " + userId));
         Candidate candidate = candidateRepository.findByUser_UserId(userId).orElse(null);
@@ -87,11 +92,13 @@ public class UserProfileService {
         }
         if (request.getDob() != null) {
             try {
-                candidate.setDob(LocalDate.parse(request.getDob()));
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("[yyyy-MM-dd][dd/MM/yyyy][yyyy/MM/dd]");
+                candidate.setDob(LocalDate.parse(request.getDob(), formatter));
             } catch (Exception e) {
                 throw new BusinessException("Invalid date format for dob: " + request.getDob());
             }
         }
+
         if (request.getGender() != null) {
             try {
                 candidate.setGender(Gender.valueOf(request.getGender()));
@@ -111,7 +118,10 @@ public class UserProfileService {
     }
 
     @Transactional
-    public EmployerResponse upsertEmployerByUserId(UUID userId, EmployerUpdateRequest request) {
+    public EmployerResponse upsertEmployerByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request, boolean isAdmin) {
+        if (!isAdmin && !userId.equals(currentUserId)) {
+            throw new AccessDeniedException("You can't update other people information");
+        }
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found for userId: " + userId));
         Employer employer = employerRepository.findByUser_UserId(userId).orElse(null);

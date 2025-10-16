@@ -11,6 +11,7 @@ import com.ptit.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,13 +42,12 @@ public class UserService {
     @Value("${notification.user.reset-password.routing-key}")
     private String resetPasswordRoutingKey;
 
-    public UserResponse updateUser(UUID userId, UserRequest request) {
+    public UserResponse updateUser(UUID userId, UserUpdateAdminRequest request, String currentUserId, boolean isAdmin) {
+        if (!isAdmin && !userId.equals(UUID.fromString(currentUserId))) {
+            throw new AccessDeniedException("You can't change other people information");
+        }
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        if (!existingUser.getEmail().equals(request.getEmail()) && userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
-            throw new DataIntegrityViolationException("Email already exists");
-        }
-        existingUser.setEmail(request.getEmail());
         existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
         existingUser.setFullName(request.getFullName());
         existingUser.setPhone(request.getPhone());
@@ -96,7 +96,10 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public UserResponse getUser(UUID userId) {
+    public UserResponse getUser(UUID userId, String currentUserId, boolean isPrivilegedUser) {
+        if (!isPrivilegedUser && !userId.equals(UUID.fromString(currentUserId))) {
+            throw new AccessDeniedException("You can't view other people information");
+        }
         User user = userRepository.findById(userId)
                 .filter(u -> !u.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -130,60 +133,14 @@ public class UserService {
         return response;
     }
 
-
     @Transactional
-    public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
-        User user = userOpt.get();
-        Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
-        OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new RuntimeException("OTP already used");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP expired, request new OTP");
-        if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Invalid OTP");
-        otp.setUsed(true);
-        otpTokenRepository.save(otp);
-        user.setActive(true);
-        userRepository.save(user);
-        // TODO: Send event to AdminService
-        VerifyOtpResponse response = new VerifyOtpResponse();
-        response.message = "Verify OTP successfully";
-        return response;
-    }
-
-    @Transactional
-    public ResetOtpResponse resetOtp(ResetOtpRequest request) {
-        Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
-        User user = userOpt.get();
-        String otpCode = String.format("%06d", (int)(Math.random()*1000000));
-        OtpToken otp = new OtpToken();
-        otp.setUser(user);
-        otp.setOtpCode(otpCode);
-        otp.setUsed(false);
-        otp.setExpiresAt(LocalDateTime.now().plusMinutes(5));
-        otp.setCreatedAt(LocalDateTime.now());
-        otpTokenRepository.save(otp);
-
-        // TODO: Send event to NotificationService
-        Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
-        event.put("event_type", registerRoutingKey);
-        eventPublisher.publish(notificationExchange, registerRoutingKey, event);
-
-        ResetOtpResponse response = new ResetOtpResponse();
-        response.otp = otpCode;
-        return response;
-    }
-
-    @Transactional
-    public ForgotPasswordResponse changePassword(ChangePasswordRequest request) {
+    public ForgotPasswordResponse changePassword(ChangePasswordRequest request, String currentUserId, boolean isAdmin) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
         if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
         User user = userOpt.get();
+        if (!isAdmin && !user.getUserId().equals(UUID.fromString(currentUserId))) {
+            throw new AccessDeniedException("You can't change other people information");
+        }
         if (!passwordEncoder.matches(request.oldPassword, user.getPassword())) {
             throw new BusinessException("Old password is incorrect");
         }
@@ -192,43 +149,19 @@ public class UserService {
         return new ForgotPasswordResponse("Password changed successfully");
     }
 
-    @Transactional
-    public void requestResetPassword(RequestResetPasswordRequest request) {
-        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
-        User user = userOpt.get();
-        String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
-        OtpToken otp = new OtpToken();
-        otp.setUser(user);
-        otp.setOtpCode(otpCode);
-        otp.setUsed(false);
-        otp.setExpiresAt(LocalDateTime.now().plusMinutes(5));
-        otp.setCreatedAt(LocalDateTime.now());
-        otpTokenRepository.save(otp);
-        // Send OTP event to RabbitMQ
-        Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
-        event.put("event_type", resetPasswordRoutingKey);
-        eventPublisher.publish(notificationExchange, resetPasswordRoutingKey, event);
+    public UserResponse updateUserMe(UUID currentUserId, UserUpdateRequest request){
+        User existingUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        existingUser.setFullName(request.getFullName());
+        existingUser.setPhone(request.getPhone());
+        userRepository.save(existingUser);
+        return toResponse(existingUser);
     }
 
-    @Transactional
-    public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
-        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
-        User user = userOpt.get();
-        Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
-        OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new BusinessException("OTP already used");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new BusinessException("OTP expired");
-        if (!otp.getOtpCode().equals(request.otp)) throw new BusinessException("Invalid OTP");
-        otp.setUsed(true);
-        otpTokenRepository.save(otp);
-        user.setPassword(passwordEncoder.encode(request.newPassword));
-        userRepository.save(user);
-        return new ForgotPasswordResponse("Password reset successful");
+    public UserResponse getUserMe(UUID currentUserId) {
+        User user = userRepository.findById(currentUserId)
+                .filter(u -> !u.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return toResponse(user);
     }
 }

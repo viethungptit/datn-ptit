@@ -4,75 +4,105 @@ import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/user-service/users")
 public class UserController {
     @Autowired
     private UserService userService;
 
+    @Value("${internal.secret}")
+    private String internalSecret;
+
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@RequestBody UserRequest request) {
         UserResponse response = userService.createUser(request);
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponse> getUser(@PathVariable UUID userId) {
-        UserResponse response = userService.getUser(userId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        boolean isPrivilegedUser = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_EMPLOYER"));
+        UserResponse response = userService.getUser(userId, currentUserId, isPrivilegedUser);
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{userId}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID userId, @RequestBody UserRequest request) {
-        UserResponse response = userService.updateUser(userId, request);
+    public ResponseEntity<UserResponse> updateUser(@PathVariable UUID userId, @RequestBody UserUpdateAdminRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        UserResponse response = userService.updateUser(userId, request, currentUserId, isAdmin);
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<UserResponse>> listUsers() {
         List<UserResponse> users = userService.listUsers();
         return ResponseEntity.ok(users);
     }
 
+    // API to get user by email, protected by internal secret
     @GetMapping("/by-email")
-    public ResponseEntity<UserResponse> getUserByEmail(@RequestParam String email) {
+    public ResponseEntity<UserResponse> getUserByEmail(@RequestParam String email, @RequestHeader("X-Internal-Secret") String secret) {
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
         UserResponse response = userService.getUserByEmail(email);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/verify-otp")
-    public VerifyOtpResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
-        return userService.verifyOtp(request);
-    }
-
-    @PostMapping("/reset-otp")
-    public ResetOtpResponse resetOtp(@RequestBody ResetOtpRequest request) {
-        return userService.resetOtp(request);
-    }
-
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @PostMapping("/change-password")
     public ForgotPasswordResponse changePassword(@RequestBody ChangePasswordRequest request) {
-        return userService.changePassword(request);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return userService.changePassword(request, currentUserId, isAdmin);
     }
 
-    @PostMapping("/forgot-password")
-    public ForgotPasswordResponse forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        return userService.forgotPassword(request);
+    // Get current user's info
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        UserResponse response = userService.getUserMe(UUID.fromString(currentUserId));
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/request-reset-password")
-    public void requestResetPassword(@RequestBody RequestResetPasswordRequest request) {
-        userService.requestResetPassword(request);
+    // Update current user's info
+    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateCurrentUser(@RequestBody UserUpdateRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        UserResponse response = userService.updateUserMe(UUID.fromString(currentUserId), request);
+        return ResponseEntity.ok(response);
     }
 }

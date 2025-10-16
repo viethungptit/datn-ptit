@@ -11,8 +11,9 @@ public class CompanyCreateRequest {
     private Integer companySize;
     private String location;
     private String website;
-
+    private String description;
     @Schema(type = "string", format = "binary", description = "Logo file")
     private MultipartFile logo;
+    @Schema(type = "string", format = "binary", description = "Cover image file")
+    private MultipartFile coverImg;
 }
-

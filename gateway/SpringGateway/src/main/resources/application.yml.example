@@ -1,0 +1,86 @@
+server:
+  port: 8080
+jwt:
+  secret: your_jwt_secret_key
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - TokenRelay
+      routes:
+        - id: userservice
+          uri: http://localhost:5000
+          predicates:
+            - Path=/api/user-service/**
+
+        - id: adminservice
+          uri: http://localhost:5001
+          predicates:
+            - Path=/api/admin-service/**
+
+        - id: recommendservice
+          uri: http://localhost:5002
+          predicates:
+            - Path=/api/recommend-service/**
+
+        - id: notificationservice
+          uri: http://localhost:5003
+          predicates:
+            - Path=/api/notification-service/**
+
+        - id: recruitservice
+          uri: http://localhost:5004
+          predicates:
+            - Path=/api/recruit-service/**
+
+
+        - id: userservice-swagger
+          uri: http://localhost:5000
+          predicates:
+            - Path=/api/user-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/user-swagger/v3/api-docs,/v3/api-docs
+        - id: adminservice-swagger
+          uri: http://localhost:5001
+          predicates:
+            - Path=/api/admin-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/admin-swagger/v3/api-docs,/v3/api-docs
+        - id: recommendservice-swagger
+          uri: http://localhost:5002
+          predicates:
+            - Path=/api/recommend-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/recommend-swagger/v3/api-docs,/v3/api-docs
+        - id: notificationservice-swagger
+          uri: http://localhost:5003
+          predicates:
+            - Path=/api/notification-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/notification-swagger/v3/api-docs,/v3/api-docs
+        - id: recruitservice-swagger
+          uri: http://localhost:5004
+          predicates:
+            - Path=/api/recruit-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/recruit-swagger/v3/api-docs,/v3/api-docs
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: User Service
+        url: /api/user-swagger/v3/api-docs
+      - name: Admin Service
+        url: /api/admin-swagger/v3/api-docs
+      - name: Recommend Service
+        url: /api/recommend-swagger/v3/api-docs
+      - name: Notification Service
+        url: /api/notification-swagger/v3/api-docs
+      - name: Recruit Service
+        url: /api/recruit-swagger/v3/api-docs
+
+
+

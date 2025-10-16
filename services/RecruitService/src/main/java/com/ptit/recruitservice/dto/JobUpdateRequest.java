@@ -13,6 +13,8 @@ public class JobUpdateRequest {
     private String jobType;
     private List<UUID> groupTagIds;
     private List<UUID> jobTagIds;
+    private Integer quantity;
+    private java.sql.Timestamp deadline;
 
     // Getters and setters
     public UUID getCompanyId() { return companyId; }
@@ -33,5 +35,8 @@ public class JobUpdateRequest {
     public void setGroupTagIds(List<UUID> groupTagIds) { this.groupTagIds = groupTagIds; }
     public List<UUID> getJobTagIds() { return jobTagIds; }
     public void setJobTagIds(List<UUID> jobTagIds) { this.jobTagIds = jobTagIds; }
+    public Integer getQuantity() { return quantity; }
+    public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public java.sql.Timestamp getDeadline() { return deadline; }
+    public void setDeadline(java.sql.Timestamp deadline) { this.deadline = deadline; }
 }
-

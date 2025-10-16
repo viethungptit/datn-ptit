@@ -24,6 +24,12 @@ public class Job {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "deadline")
+    private Timestamp deadline;
+
     @Column(name = "salary_range", length = 100)
     private String salaryRange;
 
@@ -73,6 +79,10 @@ public class Job {
     public void setDescription(String description) {
         this.description = description;
     }
+    public Integer getQuantity() {return quantity;}
+    public void setQuantity(Integer quantity) {this.quantity = quantity;}
+    public Timestamp getDeadline() {return deadline;}
+    public void setDeadline(Timestamp deadline) {this.deadline = deadline;}
     public String getSalaryRange() {
         return salaryRange;
     }

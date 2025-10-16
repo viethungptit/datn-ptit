@@ -34,6 +34,12 @@ public class Company {
     @Column(name = "logo_url")
     private String logoUrl;
 
+    @Column(name = "cover_img_url")
+    private String coverImgUrl;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "website")
     private String website;
 
@@ -93,6 +99,14 @@ public class Company {
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
     }
+
+    public String getCoverImgUrl() {return coverImgUrl;}
+
+    public void setCoverImgUrl(String coverImgUrl) {this.coverImgUrl = coverImgUrl;}
+
+    public String getDescription() {return description;}
+
+    public void setDescription(String description) {this.description = description;}
 
     public String getWebsite() {
         return website;

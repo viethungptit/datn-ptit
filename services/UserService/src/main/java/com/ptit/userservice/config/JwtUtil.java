@@ -4,9 +4,12 @@ import com.ptit.userservice.entity.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 import java.util.Base64;
@@ -23,24 +26,24 @@ public class JwtUtil {
     private long refreshExpirationMs;
 
     public String generateToken(User user) {
-        byte[] secretBytes = Base64.getDecoder().decode(jwtSecret);
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
                 .setSubject(user.getUserId().toString())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(SignatureAlgorithm.HS512, secretBytes)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
     public String generateRefreshToken(User user) {
-        byte[] secretBytes = Base64.getDecoder().decode(jwtSecret);
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
                 .setSubject(user.getUserId().toString())
-                .claim("type", "refresh")
+                .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
-                .signWith(SignatureAlgorithm.HS512, secretBytes)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 

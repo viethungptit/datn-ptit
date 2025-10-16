@@ -105,8 +105,8 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber }) => {
                         <div className="flex items-center mb-4">
                             <img src={job.companyLogo} alt="#" className="w-24 h-24 rounded-md object-cover" />
                             <div className="flex flex-col ml-5 text-left">
-                                <p className="text-sm text-gray-500 mb-1 line-clamp-2 truncate w-[200px]">{job.location}</p>
-                                <a href={job.companyLink} className="font-semibold text-txt-red text-base line-clamp-2 block truncate w-[200px]">{job.companyName}</a>
+                                <p className="text-sm text-gray-500 mb-1 line-clamp-2">{job.location}</p>
+                                <a href={job.companyLink} className="font-semibold text-txt-red text-base line-clamp-2 block">{job.companyName}</a>
                             </div>
                         </div>
                         <div className="mb-4">

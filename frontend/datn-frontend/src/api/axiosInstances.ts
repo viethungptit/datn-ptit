@@ -4,7 +4,7 @@ import { SERVICE_URLS } from './serviceConfig';
 function setupInterceptors(instance: ReturnType<typeof axios.create>) {
     instance.interceptors.response.use(
         (response: any) => {
-            return response.data;
+            return response;
         },
         (error: any) => {
             return Promise.reject(error.response?.data || error.message);

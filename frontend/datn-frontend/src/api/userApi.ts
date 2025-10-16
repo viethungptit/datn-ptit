@@ -1,6 +1,5 @@
 import { userApi } from './axiosInstances';
 
-// Mẫu gọi API cho service User
-export const getUserProfile = () => userApi.get('/profile');
-export const updateUserProfile = (data: any) => userApi.put('/profile', data);
-export const getUserList = () => userApi.get('/users');
+// Auth APIs
+export const loginApi = (email: string, password: string) => userApi.post('/api/auth/login', { email, password });
+export const refreshTokenApi = () => userApi.post('/api/auth/refresh', {}, { withCredentials: true });

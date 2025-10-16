@@ -16,4 +16,6 @@ public class CompanyResponse {
     private boolean isDeleted;
     private boolean isVerified;
     private LocalDateTime createdAt;
+    private String coverImgUrl;
+    private String description;
 }

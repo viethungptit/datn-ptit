@@ -1,6 +1,4 @@
 package com.ptit.datn.filter;
-
-import com.ptit.datn.exception.UnauthorizedException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtException;
@@ -10,6 +8,8 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -26,20 +26,21 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
-
-        // Bypass JWT check for /api/auth/**
-        if (path.startsWith("/api/auth/")) {
-            return chain.filter(exchange);
-        }
-
-        if (path.startsWith("/api/test/")) {
+        if (path.matches(".*/v3/api-docs.*")
+                || path.contains("/swagger-ui")
+                || path.contains("/swagger")
+                || path.contains("/webjars")
+                || path.startsWith("/api/user-service/auth/")
+        ) {
             return chain.filter(exchange);
         }
 
         // Get JWT from Authorization header only
         String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new UnauthorizedException("JWT token is missing or invalid");
+            System.out.println("1");
+            throw new AuthenticationException("JWT token is missing or invalid") {
+            };
         }
         String token = authHeader.substring(7); // Remove 'Bearer '
 
@@ -53,12 +54,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (JwtException e) {
+            System.out.println("2");
+            System.out.println(e.getMessage());
             if (e.getMessage() != null && e.getMessage().toLowerCase().contains("expired")) {
-                throw new UnauthorizedException("Access token expired");
+                throw new AuthenticationException("Access token expired") {
+                };
             }
-            throw new UnauthorizedException("JWT token is missing or invalid");
+            throw new AuthenticationException("JWT token is missing or invalid") {
+            };
         } catch (IllegalArgumentException e) {
-            throw new UnauthorizedException("JWT token is missing or invalid");
+            System.out.println("3");
+            System.out.println(e.getMessage());
+            throw new AuthenticationException("JWT token is missing or invalid") {
+                @Override
+                public Authentication getAuthenticationRequest() {
+                    return super.getAuthenticationRequest();
+                }
+            };
         }
 
         // Get userId (subject) and role
@@ -77,6 +89,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1; // Highest precedence
+        return -1;
     }
 }

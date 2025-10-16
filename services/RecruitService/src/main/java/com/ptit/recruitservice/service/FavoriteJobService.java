@@ -4,6 +4,7 @@ import com.ptit.recruitservice.dto.FavoriteJobRequest;
 import com.ptit.recruitservice.dto.FavoriteJobResponse;
 import com.ptit.recruitservice.entity.FavoriteJob;
 import com.ptit.recruitservice.entity.Job;
+import com.ptit.recruitservice.exception.ResourceNotFoundException;
 import com.ptit.recruitservice.repository.FavoriteJobRepository;
 import com.ptit.recruitservice.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,10 @@ public class FavoriteJobService {
     @Autowired
     private JobRepository jobRepository;
 
-    public FavoriteJobResponse addFavorite(FavoriteJobRequest request, UUID userId) {
-        Job job = jobRepository.findById(request.getJobId()).orElseThrow(() -> new RuntimeException("Job not found"));
+    public FavoriteJobResponse addFavorite(FavoriteJobRequest request, UUID currentUserId) {
+        Job job = jobRepository.findById(request.getJobId()).orElseThrow(() -> new ResourceNotFoundException("Job not found"));
         FavoriteJob favoriteJob = new FavoriteJob();
-        favoriteJob.setUserId(userId);
+        favoriteJob.setUserId(currentUserId);
         favoriteJob.setJob(job);
         favoriteJob.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         favoriteJob = favoriteJobRepository.save(favoriteJob);

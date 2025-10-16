@@ -15,6 +15,7 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,7 +58,7 @@ public class CVService {
         }
     }
 
-    private void deleteCV(String objectKey) {
+    private void deleteCVInMinio(String objectKey) {
         if (objectKey == null || objectKey.isEmpty()) return;
         try {
             minioClient.removeObject(
@@ -124,16 +125,22 @@ public class CVService {
         return toDto(cv);
     }
 
-    public CVDto getCV(UUID cvId) {
+    public CVDto getCV(UUID cvId, UUID currentUserId, boolean isPrivilegedUser) {
         CV cv = cvRepository.findById(cvId)
             .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+        if(!isPrivilegedUser && !cv.getUserId().equals(currentUserId)) {
+            throw new AccessDeniedException("You can't view other people's CV");
+        }
         return toDto(cv);
     }
 
     @Transactional
-    public CVDto updateCV(UUID cvId, CVUpdateRequest request) {
+    public CVDto updateCV(UUID cvId, CVUpdateRequest request, UUID currentUserId) {
         CV cv = cvRepository.findById(cvId)
             .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+        if(!currentUserId.equals(cv.getUserId())){
+            throw new AccessDeniedException("You can't update other people's CV");
+        }
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             throw new BusinessException("CV title must not be empty");
         }
@@ -151,11 +158,14 @@ public class CVService {
     }
 
     @Transactional
-    public CVDto deleteCV(UUID cvId) {
+    public CVDto deleteCV(UUID cvId, UUID currentUserId, boolean isAdmin) {
         CV cv = cvRepository.findById(cvId)
             .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+        if(!isAdmin && !cv.getUserId().equals(currentUserId)){
+            throw new AccessDeniedException("You can't delete other people's CV");
+        }
         if (cv.getFileUrl() != null && !cv.getFileUrl().isEmpty()) {
-            deleteCV(cv.getFileUrl()); // Remove file from MinIO if exists
+            deleteCVInMinio(cv.getFileUrl()); // Remove file from MinIO if exists
         }
         cv.setIsDeleted(true);
         cv = cvRepository.save(cv);
@@ -184,7 +194,10 @@ public class CVService {
         return response;
     }
 
-    public List<CVDto> getAllCVsByUser(UUID userId) {
+    public List<CVDto> getAllCVsByUser(UUID userId, UUID currentUserId, boolean isAdmin) {
+        if(!isAdmin && !userId.equals(currentUserId)){
+            throw new AccessDeniedException("You can't view other people's CV");
+        }
         return cvRepository.findByUserIdAndIsDeletedFalse(userId).stream().map(this::toDto).collect(Collectors.toList());
     }
 

@@ -4,6 +4,9 @@ import com.ptit.notificationservice.dto.InappDeliveryResponse;
 import com.ptit.notificationservice.entity.InappDelivery;
 import com.ptit.notificationservice.service.InappDeliveryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,7 +14,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/api/notification-service/notifications")
 public class NotificationStatusController {
     @Autowired
     private InappDeliveryService inappDeliveryService;
@@ -26,23 +29,31 @@ public class NotificationStatusController {
         return resp;
     }
 
+    @PreAuthorize("hasRole('CANDIDATE')")
     @GetMapping("/all")
-    public List<InappDeliveryResponse> getAllNotifications(@RequestParam("user_id") UUID userId) {
-        return inappDeliveryService.getUserNotifications(userId)
+    public List<InappDeliveryResponse> getAllNotifications() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return inappDeliveryService.getUserNotifications(UUID.fromString(currentUserId))
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasRole('CANDIDATE')")
     @PutMapping("/{inapp_deli_id}")
     public InappDeliveryResponse markAsRead(@PathVariable("inapp_deli_id") UUID inappDeliId) {
         return toResponse(inappDeliveryService.markAsRead(inappDeliId));
     }
 
-    @PutMapping("/all/{user_id}")
-    public List<InappDeliveryResponse> markAllAsRead(@PathVariable("user_id") UUID userId) {
-        return inappDeliveryService.markAllAsRead(userId)
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @PutMapping("/all")
+    public List<InappDeliveryResponse> markAllAsRead() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return inappDeliveryService.markAllAsRead(UUID.fromString(currentUserId))
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasRole('CANDIDATE')")
     @DeleteMapping("/{inapp_deli_id}")
     public InappDeliveryResponse deleteNotification(@PathVariable("inapp_deli_id") UUID inappDeliId) {
         return toResponse(inappDeliveryService.softDelete(inappDeliId));
