@@ -32,7 +32,7 @@ export const login = createAsyncThunk(
                 role: decoded.role,
             };
         } catch (err: any) {
-            return rejectWithValue(err.response?.data || 'Login failed');
+            return rejectWithValue(err.response?.data || err || 'Login failed');
         }
     }
 );
@@ -52,7 +52,7 @@ export const refreshToken = createAsyncThunk(
                 role: decoded.role,
             };
         } catch (err: any) {
-            return rejectWithValue(err.response?.data || 'Refresh failed');
+            return rejectWithValue(err.response?.data || err || 'Refresh failed');
         }
     }
 );

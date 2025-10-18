@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import Footer from '@/components/Home/Footer';
+import Footer from '@/components/Footer';
 
 const jobs = [
     {

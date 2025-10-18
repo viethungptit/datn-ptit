@@ -49,7 +49,7 @@ public class AdminLogController {
     public ResponseEntity<AdminLogDto> createAdminLog(@RequestBody CreateAdminLogRequest request,
                                                       @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
-            throw new AccessDeniedException("Access denied: invalid internal secret");
+            throw new AccessDeniedException("Bạn không thể thực hiện hành động này");
         }
         AdminLogDto log = adminLogService.createAdminLog(request);
         return ResponseEntity.ok(log);

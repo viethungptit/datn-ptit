@@ -47,7 +47,7 @@ public class CompanyService {
             return objectName;
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            throw new RuntimeException("Failed to upload logo to MinIO", e);
+            throw new RuntimeException("Lỗi tải ảnh lên MinIO");
         }
     }
 
@@ -61,7 +61,8 @@ public class CompanyService {
                     .build()
             );
         } catch (Exception e) {
-            System.out.println("Failed to delete logo in MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi xóa ảnh trên MinIO");
         }
     }
 
@@ -80,7 +81,7 @@ public class CompanyService {
             return objectName;
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            throw new RuntimeException("Failed to upload cover image to MinIO", e);
+            throw new RuntimeException("Lỗi tải ảnh lên MinIO");
         }
     }
 
@@ -94,7 +95,8 @@ public class CompanyService {
                     .build()
             );
         } catch (Exception e) {
-            System.out.println("Failed to delete cover image in MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi xóa ảnh trên MinIO");
         }
     }
 
@@ -139,7 +141,7 @@ public class CompanyService {
 
     public CompanyResponse getCompany(UUID companyId) {
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         return toResponse(company);
     }
 
@@ -152,7 +154,7 @@ public class CompanyService {
 
     public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request) {
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         if (request.getCompanyName() != null) company.setCompanyName(request.getCompanyName());
         if (request.getIndustry() != null) company.setIndustry(request.getIndustry());
         if (request.getCompanySize() != null) company.setCompanySize(request.getCompanySize());
@@ -177,7 +179,7 @@ public class CompanyService {
 
     public CompanyResponse verifyCompany(UUID companyId) {
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         company.setVerified(true);
         companyRepository.save(company);
         // Activate all related employers
@@ -193,7 +195,7 @@ public class CompanyService {
 
     public CompanyResponse deleteCompany(UUID companyId) {
         Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         company.setDeleted(true);
         company = companyRepository.save(company);
         return toResponse(company);
@@ -203,7 +205,7 @@ public class CompanyService {
         Employer employer = employerRepository.findAll().stream()
             .filter(e -> e.getUser().getUserId().equals(userId) && e.isActive())
             .findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("Active employer not found for userId: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Company company = employer.getCompany();
         return toResponse(company);
     }

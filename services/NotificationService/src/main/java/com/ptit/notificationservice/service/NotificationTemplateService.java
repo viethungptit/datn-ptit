@@ -21,7 +21,7 @@ public class NotificationTemplateService {
     @Transactional
     public NotificationTemplateResponse createTemplate(NotificationTemplateRequest request) {
         if (repository.findByEventTypeAndIsDeletedFalse(request.getEventType()).isPresent()) {
-            throw new BusinessException("Event type already exists");
+            throw new BusinessException("Loại sự kiện đã tồn tại");
         }
         NotificationTemplate template = new NotificationTemplate();
         template.setEventType(request.getEventType());
@@ -35,19 +35,19 @@ public class NotificationTemplateService {
 
     public NotificationTemplate getTemplateByEventType(String eventType) {
         NotificationTemplate template = repository.findByEventTypeAndIsDeletedFalse(eventType)
-                .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu cho loại sự kiện"));
         return template;
     }
 
     @Transactional
     public NotificationTemplateResponse updateTemplate(UUID templateId, NotificationTemplateRequest request) {
         NotificationTemplate template = repository.findById(templateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu cho loại sự kiện"));
         if (template.getDeleted())
-            throw new ResourceNotFoundException("Template not found");
+            throw new ResourceNotFoundException("Không tìm thấy mẫu cho loại sự kiện");
         Optional<NotificationTemplate> existing = repository.findByEventTypeAndIsDeletedFalse(request.getEventType());
         if (existing.isPresent() && !existing.get().getTemplateId().equals(templateId)) {
-            throw new BusinessException("Event type already exists");
+            throw new BusinessException("Loại sự kiện đã tồn tại");
         }
         template.setEventType(request.getEventType());
         template.setEmailSubjectTemplate(request.getEmailSubjectTemplate());
@@ -60,9 +60,9 @@ public class NotificationTemplateService {
     @Transactional
     public NotificationTemplateResponse deleteTemplate(UUID templateId) {
         NotificationTemplate template = repository.findById(templateId)
-                .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu cho loại sự kiện"));
         if (template.getDeleted())
-            throw new ResourceNotFoundException("Template not found");
+            throw new ResourceNotFoundException("Không tìm thấy mẫu cho loại sự kiện");
         template.setDeleted(true);
         NotificationTemplate deleted = repository.save(template);
         return toResponse(deleted);

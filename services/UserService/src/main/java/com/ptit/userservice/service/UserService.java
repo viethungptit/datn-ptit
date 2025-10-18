@@ -44,10 +44,10 @@ public class UserService {
 
     public UserResponse updateUser(UUID userId, UserUpdateAdminRequest request, String currentUserId, boolean isAdmin) {
         if (!isAdmin && !userId.equals(UUID.fromString(currentUserId))) {
-            throw new AccessDeniedException("You can't change other people information");
+            throw new AccessDeniedException("Bạn không thể chỉnh sửa thông tin của người khác");
         }
         User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
         existingUser.setFullName(request.getFullName());
         existingUser.setPhone(request.getPhone());
@@ -61,7 +61,7 @@ public class UserService {
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
             if (!existingUser.isDeleted()) {
-                throw new DataIntegrityViolationException("Email already exists");
+                throw new DataIntegrityViolationException("Email đã tồn tại trên hệ thống");
             } else {
                 existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
                 existingUser.setFullName(request.getFullName());
@@ -90,7 +90,7 @@ public class UserService {
 
     public void deleteUser(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         user.setDeleted(true);
         user.setActive(false);
         userRepository.save(user);
@@ -98,11 +98,11 @@ public class UserService {
 
     public UserResponse getUser(UUID userId, String currentUserId, boolean isPrivilegedUser) {
         if (!isPrivilegedUser && !userId.equals(UUID.fromString(currentUserId))) {
-            throw new AccessDeniedException("You can't view other people information");
+            throw new AccessDeniedException("Bạn không thể chỉnh sửa thông tin của người khác");
         }
         User user = userRepository.findById(userId)
                 .filter(u -> !u.isDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         return toResponse(user);
     }
 
@@ -116,7 +116,7 @@ public class UserService {
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .filter(u -> !u.isDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         return toResponse(user);
     }
 
@@ -136,22 +136,22 @@ public class UserService {
     @Transactional
     public ForgotPasswordResponse changePassword(ChangePasswordRequest request, String currentUserId, boolean isAdmin) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         if (!isAdmin && !user.getUserId().equals(UUID.fromString(currentUserId))) {
-            throw new AccessDeniedException("You can't change other people information");
+            throw new AccessDeniedException("Bạn không thể thay đổi mật khẩu của người khác");
         }
         if (!passwordEncoder.matches(request.oldPassword, user.getPassword())) {
-            throw new BusinessException("Old password is incorrect");
+            throw new BusinessException("Mật khẩu hiện tại sai");
         }
         user.setPassword(passwordEncoder.encode(request.newPassword));
         userRepository.save(user);
-        return new ForgotPasswordResponse("Password changed successfully");
+        return new ForgotPasswordResponse("Đổi mật khẩu thành công");
     }
 
     public UserResponse updateUserMe(UUID currentUserId, UserUpdateRequest request){
         User existingUser = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         existingUser.setFullName(request.getFullName());
         existingUser.setPhone(request.getPhone());
         userRepository.save(existingUser);
@@ -161,7 +161,7 @@ public class UserService {
     public UserResponse getUserMe(UUID currentUserId) {
         User user = userRepository.findById(currentUserId)
                 .filter(u -> !u.isDeleted())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         return toResponse(user);
     }
 }

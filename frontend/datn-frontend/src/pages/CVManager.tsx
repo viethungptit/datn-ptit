@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../components/ui/dropdown-menu';
-import Footer from '@/components/Home/Footer';
+import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
 
 // Dummy data for CVs

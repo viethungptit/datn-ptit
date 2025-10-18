@@ -5,12 +5,12 @@ import { useAppDispatch } from '../redux/store';
 import { login } from '../redux/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -18,12 +18,13 @@ const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError("");
         try {
             await dispatch(login({ email, password })).unwrap();
+            toast.success("Đăng nhập thành công!");
             navigate("/");
         } catch (err: any) {
-            setError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+            console.error("Login failed:", err);
+            toast.error(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
         } finally {
             setLoading(false);
         }
@@ -80,11 +81,6 @@ const Login: React.FC = () => {
                     <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
-                    {error && (
-                        <div className="text-center text-sm text-red-500 mb-2">
-                            {error}
-                        </div>
-                    )}
                     <div className="text-center text-sm text-gray-600 mb-2">
                         Chưa có tài khoản?{" "}
                         <Link

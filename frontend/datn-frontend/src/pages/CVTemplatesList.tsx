@@ -1,4 +1,4 @@
-import Footer from "@/components/Home/Footer";
+import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 
 const cvTemplates = [

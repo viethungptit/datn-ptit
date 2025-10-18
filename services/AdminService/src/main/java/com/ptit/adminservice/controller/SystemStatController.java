@@ -40,7 +40,7 @@ public class SystemStatController {
     public ResponseEntity<SystemStatDto> createSystemStat(@RequestBody CreateSystemStatRequest request,
                                                           @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
-            throw new AccessDeniedException("Access denied: invalid internal secret");
+            throw new AccessDeniedException("Bạn không thể thực hiện hành động này");
         }
         SystemStatDto stat = systemStatService.createSystemStat(request);
         return ResponseEntity.ok(stat);

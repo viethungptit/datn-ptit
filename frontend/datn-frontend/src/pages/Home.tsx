@@ -3,7 +3,7 @@ import React from "react";
 import Category from "@/components/Home/Category";
 import JobsList from "@/components/Home/JobsList";
 import CompaniesList from "@/components/Home/CompaniesList";
-import Footer from "@/components/Home/Footer";
+import Footer from "@/components/Footer";
 
 const Home: React.FC = () => {
     return (

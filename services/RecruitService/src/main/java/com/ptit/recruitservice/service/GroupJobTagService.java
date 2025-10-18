@@ -29,10 +29,10 @@ public class GroupJobTagService {
 
     public GroupJobTagDto createGroupJobTag(GroupJobTagUpsertRequest dto) {
         if (dto.getGroupJobName() == null || dto.getGroupJobName().trim().isEmpty()) {
-            throw new BusinessException("Group job name must not be empty");
+            throw new BusinessException("Tên ngành nghề không được bỏ trống");
         }
         if (groupJobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getGroupJobName().equalsIgnoreCase(dto.getGroupJobName()))) {
-            throw new BusinessException("GroupJobTag name already exists: " + dto.getGroupJobName());
+            throw new BusinessException("Tên ngành nghề đã tồn tại: " + dto.getGroupJobName());
         }
         GroupJobTag entity = new GroupJobTag();
         entity.setGroupJobName(dto.getGroupJobName());
@@ -43,7 +43,7 @@ public class GroupJobTagService {
 
     public GroupJobTagDto deleteGroupJobTag(UUID groupTagId) {
         GroupJobTag entity = groupJobTagRepository.findById(groupTagId)
-            .orElseThrow(() -> new ResourceNotFoundException("GroupJobTag not found: " + groupTagId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tên ngành nghề này: " + groupTagId));
         entity.setIsDeleted(true);
         groupJobTagRepository.save(entity);
         return toDto(entity);
@@ -51,12 +51,12 @@ public class GroupJobTagService {
 
     public GroupJobTagDto updateGroupJobTag(UUID groupTagId, GroupJobTagUpsertRequest dto) {
         GroupJobTag entity = groupJobTagRepository.findById(groupTagId)
-            .orElseThrow(() -> new ResourceNotFoundException("GroupJobTag not found: " + groupTagId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tên ngành nghề này: " + groupTagId));
         if (dto.getGroupJobName() == null || dto.getGroupJobName().trim().isEmpty()) {
-            throw new BusinessException("Group job name must not be empty");
+            throw new BusinessException("Tên ngành nghề không được bỏ trống");
         }
         if (groupJobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getGroupJobName().equalsIgnoreCase(dto.getGroupJobName()) && !tag.getGroupTagId().equals(groupTagId))) {
-            throw new BusinessException("GroupJobTag name already exists: " + dto.getGroupJobName());
+            throw new BusinessException("Tên ngành nghề đã tồn tại: " + dto.getGroupJobName());
         }
         entity.setGroupJobName(dto.getGroupJobName());
         groupJobTagRepository.save(entity);
@@ -74,16 +74,16 @@ public class GroupJobTagService {
     public JobGroupTagMappingDto addGroupJobTagMapping(JobGroupTagMappingCreateRequest dto) {
         JobGroupTagMapping mapping = new JobGroupTagMapping();
         mapping.setJob(jobRepository.findById(dto.getJobId())
-            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + dto.getJobId())));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + dto.getJobId())));
         mapping.setGroupJobTag(groupJobTagRepository.findById(dto.getGroupTagId())
-            .orElseThrow(() -> new ResourceNotFoundException("GroupJobTag not found: " + dto.getGroupTagId())));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tên ngành nghề này: " + dto.getGroupTagId())));
         mapping = jobGroupTagMappingRepository.save(mapping);
         return toMappingDto(mapping);
     }
 
     public String deleteGroupJobTagMapping(UUID jgTagId) {
         jobGroupTagMappingRepository.deleteById(jgTagId);
-        return "Delete group tag successfully";
+        return "Xóa mapping thành công";
     }
 
     private GroupJobTagDto toDto(GroupJobTag entity) {

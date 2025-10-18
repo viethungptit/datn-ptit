@@ -30,14 +30,14 @@ public class ApplicationService {
 
     public ApplicationResponse applyForJob(ApplicationRequest request, UUID userId) {
         Job job = jobRepository.findById(request.getJobId())
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc này"));
         if (job.getStatus() == Job.Status.closed) {
-            throw new BusinessException("Job is closed and cannot be applied to");
+            throw new BusinessException("Công việc này đã đóng, không thể ứng tuyển");
         }
         CV cv = cvRepository.findById(request.getCvId())
-                .orElseThrow(() -> new ResourceNotFoundException("CV not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV này"));
         if (!cv.getUserId().equals(userId)) {
-            throw new BusinessException("CV does not belong to user");
+            throw new BusinessException("Bạn không thể sử dụng CV của người khác để ứng tuyển");
         }
         Application application = new Application();
         application.setJob(job);
@@ -52,7 +52,7 @@ public class ApplicationService {
 
     public ApplicationResponse updateStatus(UUID applicationId, String status) {
         Application application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn ứng tuyển"));
         application.setStatus(Application.Status.valueOf(status));
         application = applicationRepository.save(application);
         // TODO: Publish notification event here
@@ -61,7 +61,7 @@ public class ApplicationService {
 
     public ApplicationResponse deleteApplication(UUID applicationId) {
         Application application = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn ứng tuyển"));
         application.setIsDeleted(true);
         application = applicationRepository.save(application);
         // TODO: Publish notification event here

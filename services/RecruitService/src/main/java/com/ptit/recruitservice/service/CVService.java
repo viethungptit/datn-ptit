@@ -54,7 +54,8 @@ public class CVService {
             );
             return objectName;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload cvFile to MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi tải CV lên MinIO");
         }
     }
 
@@ -68,7 +69,8 @@ public class CVService {
                             .build()
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete cvFile in MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi xóa CV trên MinIO");
         }
     }
 
@@ -77,17 +79,17 @@ public class CVService {
         try {
             return objectMapper.readTree(json);
         } catch (JsonProcessingException e) {
-            throw new BusinessException("Invalid JSON for field '" + fieldName + "': " + e.getMessage());
+            throw new BusinessException("Lỗi JSON với trường '" + fieldName + "': " + e.getMessage());
         }
     }
 
     @Transactional
     public CVDto createCV(CVCreateRequest request, UUID userId) {
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
-            throw new BusinessException("CV title must not be empty");
+            throw new BusinessException("Tên CV không được để trống");
         }
         Template template = templateRepository.findById(request.getTemplateId())
-            .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + request.getTemplateId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV với ID: " + request.getTemplateId()));
         CV cv = new CV();
         cv.setUserId(userId);
         cv.setSourceType(CV.SourceType.system);
@@ -107,7 +109,7 @@ public class CVService {
     public CVDto uploadCV(CVUploadRequest request, UUID userId) {
         MultipartFile file = request.getCv();
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("CV file must not be empty");
+            throw new BusinessException("Không tìm thấy file CV để tải lên");
         }
         String objectName = uploadCV(file); // Use MinIO upload helper
         CV cv = new CV();
@@ -127,9 +129,9 @@ public class CVService {
 
     public CVDto getCV(UUID cvId, UUID currentUserId, boolean isPrivilegedUser) {
         CV cv = cvRepository.findById(cvId)
-            .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
         if(!isPrivilegedUser && !cv.getUserId().equals(currentUserId)) {
-            throw new AccessDeniedException("You can't view other people's CV");
+            throw new AccessDeniedException("Bạn không thể xem CV của người khác");
         }
         return toDto(cv);
     }
@@ -137,15 +139,15 @@ public class CVService {
     @Transactional
     public CVDto updateCV(UUID cvId, CVUpdateRequest request, UUID currentUserId) {
         CV cv = cvRepository.findById(cvId)
-            .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
         if(!currentUserId.equals(cv.getUserId())){
-            throw new AccessDeniedException("You can't update other people's CV");
+            throw new AccessDeniedException("Bạn không thể chỉnh sửa CV của người khác");
         }
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
-            throw new BusinessException("CV title must not be empty");
+            throw new BusinessException("Tên CV không được để trống");
         }
         Template template = templateRepository.findById(request.getTemplateId())
-            .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + request.getTemplateId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV " + request.getTemplateId()));
         cv.setTemplate(template);
         cv.setTitle(request.getTitle());
         cv.setDataJson(validateAndConvertJson(request.getDataJson(), "dataJson"));
@@ -160,9 +162,9 @@ public class CVService {
     @Transactional
     public CVDto deleteCV(UUID cvId, UUID currentUserId, boolean isAdmin) {
         CV cv = cvRepository.findById(cvId)
-            .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV:  " + cvId));
         if(!isAdmin && !cv.getUserId().equals(currentUserId)){
-            throw new AccessDeniedException("You can't delete other people's CV");
+            throw new AccessDeniedException("Bạn không thể xóa CV của người khác");
         }
         if (cv.getFileUrl() != null && !cv.getFileUrl().isEmpty()) {
             deleteCVInMinio(cv.getFileUrl()); // Remove file from MinIO if exists
@@ -176,9 +178,9 @@ public class CVService {
     @Transactional
     public CVExportResponse exportCV(UUID cvId) {
         CV cv = cvRepository.findById(cvId)
-            .orElseThrow(() -> new ResourceNotFoundException("CV not found: " + cvId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV:  " + cvId));
         if (cv.getSourceType() != CV.SourceType.system) {
-            throw new BusinessException("Only system CVs can be exported to PDF");
+            throw new BusinessException("Chỉ có thể xuất CV được tạo từ hệ thống");
         }
         // TODO: Render PDF from dataJson using iText
         // InputStream pdfStream = ...; // Rendered PDF stream
@@ -196,7 +198,7 @@ public class CVService {
 
     public List<CVDto> getAllCVsByUser(UUID userId, UUID currentUserId, boolean isAdmin) {
         if(!isAdmin && !userId.equals(currentUserId)){
-            throw new AccessDeniedException("You can't view other people's CV");
+            throw new AccessDeniedException("Bạn không thể xem CV của người khác");
         }
         return cvRepository.findByUserIdAndIsDeletedFalse(userId).stream().map(this::toDto).collect(Collectors.toList());
     }

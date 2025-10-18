@@ -48,7 +48,8 @@ public class TemplateService {
             );
             return objectName;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload previewImage to MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi tải ảnh xem trước lên MinIO");
         }
     }
 
@@ -62,7 +63,8 @@ public class TemplateService {
                             .build()
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete preview image in MinIO: " + e.getMessage());
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi xóa ảnh xem trước trên MinIO");
         }
     }
 
@@ -71,7 +73,7 @@ public class TemplateService {
         try {
             return objectMapper.readTree(json);
         } catch (JsonProcessingException e) {
-            throw new BusinessException("Invalid JSON for field '" + fieldName + "': " + e.getMessage());
+            throw new BusinessException("Lỗi JSON với trường '" + fieldName + "': " + e.getMessage());
         }
     }
 
@@ -92,7 +94,7 @@ public class TemplateService {
 
     public TemplateDto deleteTemplate(UUID templateId) {
         Template entity = templateRepository.findById(templateId)
-            .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + templateId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV:  " + templateId));
         entity.setIsDeleted(true);
         templateRepository.save(entity);
         return toDto(entity);
@@ -107,13 +109,13 @@ public class TemplateService {
 
     public TemplateDto getTemplateDetail(UUID templateId) {
         Template entity = templateRepository.findById(templateId)
-            .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + templateId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV:  " + templateId));
         return toDto(entity);
     }
 
     public TemplateDto updateTemplate(UUID templateId, TemplateUpsertRequest request) {
         Template entity = templateRepository.findById(templateId)
-            .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + templateId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV:  " + templateId));
         entity.setName(request.getName());
         entity.setLayoutJson(validateAndConvertJson(request.getLayoutJson(), "layoutJson"));
         entity.setThemeJson(validateAndConvertJson(request.getThemeJson(), "themeJson"));

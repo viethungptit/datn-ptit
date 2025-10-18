@@ -21,6 +21,8 @@ import CVTemplatesList from './pages/CVTemplatesList';
 import CVPreviewPage from './pages/CVPreviewPage';
 import FavoriteJobs from './pages/FavoriteJobs';
 import AppliedJobs from './pages/AppliedJobs';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -34,11 +36,23 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-
-            {/* Protected routes */}
             <Route
               path="/"
-              element={isAuthenticated ? <Home /> : <Navigate to="/login" replace />} />
+              element={<Home />} />
+            <Route
+              path="/companies"
+              element={<Companies />} />
+            <Route
+              path="/companies/:companyId"
+              element={<CompaniesDetail />} />
+            <Route
+              path="/jobs/:jobId"
+              element={<JobDetail />} />
+            <Route
+              path="/jobs"
+              element={<SearchJob />} />
+
+            {/* Protected routes */}
             <Route
               path="/manage-cvs"
               element={isAuthenticated ? <CVManager /> : <Navigate to="/login" replace />} />
@@ -52,24 +66,6 @@ function App() {
               path="/templates"
               element={isAuthenticated ? <CVTemplateBuilder /> : <Navigate to="/login" replace />} />
             <Route
-              path="/employer/login"
-              element={isAuthenticated ? <Navigate to="/" replace /> : <LoginEmployer />} />
-            <Route
-              path="/employer/register"
-              element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterEmployer />} />
-            <Route
-              path="/companies"
-              element={isAuthenticated ? <Companies /> : <Navigate to="/login" replace />} />
-            <Route
-              path="/companies/:companyId"
-              element={isAuthenticated ? <CompaniesDetail /> : <Navigate to="/login" replace />} />
-            <Route
-              path="/jobs/:jobId"
-              element={isAuthenticated ? <JobDetail /> : <Navigate to="/login" replace />} />
-            <Route
-              path="/jobs"
-              element={isAuthenticated ? <SearchJob /> : <Navigate to="/login" replace />} />
-            <Route
               path="/upload-cv"
               element={isAuthenticated ? <UploadCV /> : <Navigate to="/login" replace />} />
             <Route
@@ -81,8 +77,27 @@ function App() {
             <Route
               path="/applied"
               element={isAuthenticated ? <AppliedJobs /> : <Navigate to="/login" replace />} />
+
+            <Route
+              path="/employer/login"
+              element={isAuthenticated ? <Navigate to="/" replace /> : <LoginEmployer />} />
+            <Route
+              path="/employer/register"
+              element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterEmployer />} />
           </Routes>
         </main>
+        <ToastContainer
+          position="top-right"   // vị trí hiển thị (top-right, top-center, bottom-right,...)
+          autoClose={3000}       // tự đóng sau 3 giây
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"        // có thể là "light", "dark", "colored"
+        />
       </div>
     </Router>
   );

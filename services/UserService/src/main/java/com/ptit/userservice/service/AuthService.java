@@ -57,7 +57,7 @@ public class AuthService {
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
             if (!existingUser.isDeleted()) {
-                throw new DataIntegrityViolationException("Email already exists");
+                throw new DataIntegrityViolationException("Email đã tồn tại trong hệ thống");
             } else {
                 existingUser.setPassword(passwordEncoder.encode(request.password));
                 existingUser.setFullName(request.fullName);
@@ -144,21 +144,21 @@ public class AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletResponse response) {
         if (request.email == null || request.email.trim().isEmpty()) {
-            throw new BusinessException("Email is required");
+            throw new BusinessException("Email không được bỏ trống");
         }
         if (request.password == null || request.password.trim().isEmpty()) {
-            throw new BusinessException("Password is required");
+            throw new BusinessException("Mật khẩu không được bỏ trống");
         }
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
         if (userOpt.isEmpty()) {
-            throw new ResourceNotFoundException("User not found");
+            throw new ResourceNotFoundException("Không tìm thấy người dùng");
         }
         User user = userOpt.get();
         if (!passwordEncoder.matches(request.password, user.getPassword())) {
-            throw new BusinessException("Wrong password");
+            throw new BusinessException("Sai mật khẩu");
         }
         if (!user.isActive()) {
-            throw new BusinessException("Account not verified");
+            throw new BusinessException("Tài khoản chưa được xác thực");
         }
         String accessToken = jwtUtil.generateToken(user);
         String refreshTokenStr = jwtUtil.generateRefreshToken(user);
@@ -185,7 +185,7 @@ public class AuthService {
         Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(refreshToken);
         if (tokenOpt.isEmpty() || tokenOpt.get().getExpiresAt().isBefore(LocalDateTime.now())) {
             tokenOpt.ifPresent(token -> refreshTokenRepository.deleteById(token.getTokenId()));
-            throw new UnauthorizedException("Refresh token expired");
+            throw new UnauthorizedException("Refresh token đã hết hạn hoặc không hợp lệ");
         }
         User user = tokenOpt.get().getUser();
         String newAccessToken = jwtUtil.generateToken(user);
@@ -200,7 +200,7 @@ public class AuthService {
         refreshTokenRepository.deleteByToken(request.refreshToken);
         // TODO: Send event to AdminService
         LogoutResponse response = new LogoutResponse();
-        response.message = "Logged out successfully";
+        response.message = "Đăng xuất thành công";
         return response;
     }
 
@@ -208,28 +208,28 @@ public class AuthService {
     @Transactional
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
+        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy OTP");
         OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new RuntimeException("OTP already used");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP expired, request new OTP");
-        if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Invalid OTP");
+        if (otp.isUsed()) throw new RuntimeException("OTP đã được sử dụng");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP hết hạn, vui lòng nhận OTP mới");
+        if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Sai OTP");
         otp.setUsed(true);
         otpTokenRepository.save(otp);
         user.setActive(true);
         userRepository.save(user);
         // TODO: Send event to AdminService
         VerifyOtpResponse response = new VerifyOtpResponse();
-        response.message = "Verify OTP successfully";
+        response.message = "Xác thực OTP thành công";
         return response;
     }
 
     @Transactional
     public ResetOtpResponse resetOtp(ResetOtpRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         String otpCode = String.format("%06d", (int)(Math.random()*1000000));
         OtpToken otp = new OtpToken();
@@ -256,7 +256,7 @@ public class AuthService {
     @Transactional
     public void requestResetPassword(RequestResetPasswordRequest request) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
         OtpToken otp = new OtpToken();
@@ -278,18 +278,18 @@ public class AuthService {
     @Transactional
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("User not found");
+        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("OTP not found");
+        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy OTP");
         OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new BusinessException("OTP already used");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new BusinessException("OTP expired");
-        if (!otp.getOtpCode().equals(request.otp)) throw new BusinessException("Invalid OTP");
+        if (otp.isUsed()) throw new BusinessException("OTP đã được sử dụng");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new BusinessException("OTP đã hết hạn");
+        if (!otp.getOtpCode().equals(request.otp)) throw new BusinessException("Sai OTP");
         otp.setUsed(true);
         otpTokenRepository.save(otp);
         user.setPassword(passwordEncoder.encode(request.newPassword));
         userRepository.save(user);
-        return new ForgotPasswordResponse("Password reset successful");
+        return new ForgotPasswordResponse("Đặt lại mật khẩu thành công");
     }
 }

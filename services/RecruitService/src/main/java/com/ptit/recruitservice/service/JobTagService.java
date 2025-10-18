@@ -29,10 +29,10 @@ public class JobTagService {
 
     public JobTagDto createJobTag(JobTagUpsertRequest dto) {
         if (dto.getJobName() == null || dto.getJobName().trim().isEmpty()) {
-            throw new BusinessException("Job name must not be empty");
+            throw new BusinessException("Tên thẻ công việc không được bỏ trống");
         }
         if (jobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getJobName().equalsIgnoreCase(dto.getJobName()))) {
-            throw new BusinessException("JobTag name already exists: " + dto.getJobName());
+            throw new BusinessException("Thẻ công việc đã tồn tại" + dto.getJobName());
         }
         JobTag entity = new JobTag();
         entity.setJobName(dto.getJobName());
@@ -43,7 +43,7 @@ public class JobTagService {
 
     public JobTagDto deleteJobTag(UUID jobTagId) {
         JobTag entity = jobTagRepository.findById(jobTagId)
-            .orElseThrow(() -> new ResourceNotFoundException("JobTag not found: " + jobTagId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ công việc: " + jobTagId));
         entity.setIsDeleted(true);
         jobTagRepository.save(entity);
         return toDto(entity);
@@ -51,12 +51,12 @@ public class JobTagService {
 
     public JobTagDto updateJobTag(UUID jobTagId, JobTagUpsertRequest dto) {
         JobTag entity = jobTagRepository.findById(jobTagId)
-            .orElseThrow(() -> new ResourceNotFoundException("JobTag not found: " + jobTagId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ công việc: " + jobTagId));
         if (dto.getJobName() == null || dto.getJobName().trim().isEmpty()) {
-            throw new BusinessException("Job name must not be empty");
+            throw new BusinessException("Tên thẻ công việc không được bỏ trống");
         }
         if (jobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getJobName().equalsIgnoreCase(dto.getJobName()) && !tag.getJobTagId().equals(jobTagId))) {
-            throw new BusinessException("JobTag name already exists: " + dto.getJobName());
+            throw new BusinessException("Thẻ công việc đã tồn tại" + dto.getJobName());
         }
         entity.setJobName(dto.getJobName());
         jobTagRepository.save(entity);
@@ -74,16 +74,16 @@ public class JobTagService {
     public JobTagMappingDto addJobTagMapping(JobTagMappingCreateRequest dto) {
         JobTagMapping mapping = new JobTagMapping();
         mapping.setJob(jobRepository.findById(dto.getJobId())
-            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + dto.getJobId())));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + dto.getJobId())));
         mapping.setJobTag(jobTagRepository.findById(dto.getJobTagId())
-            .orElseThrow(() -> new ResourceNotFoundException("JobTag not found: " + dto.getJobTagId())));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ công việc: " + dto.getJobTagId())));
         mapping = jobTagMappingRepository.save(mapping);
         return toMappingDto(mapping);
     }
 
     public String deleteJobTagMapping(UUID jtTagId) {
         jobTagMappingRepository.deleteById(jtTagId);
-        return "Delete tag successfully";
+        return "Xóa ánh xạ thẻ công việc thành công";
     }
 
     private JobTagDto toDto(JobTag entity) {

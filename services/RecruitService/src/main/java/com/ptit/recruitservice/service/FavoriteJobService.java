@@ -24,7 +24,7 @@ public class FavoriteJobService {
     private JobRepository jobRepository;
 
     public FavoriteJobResponse addFavorite(FavoriteJobRequest request, UUID currentUserId) {
-        Job job = jobRepository.findById(request.getJobId()).orElseThrow(() -> new ResourceNotFoundException("Job not found"));
+        Job job = jobRepository.findById(request.getJobId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc này"));
         FavoriteJob favoriteJob = new FavoriteJob();
         favoriteJob.setUserId(currentUserId);
         favoriteJob.setJob(job);

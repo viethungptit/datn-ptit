@@ -70,7 +70,7 @@ public class JobService {
                     JobTagMapping mapping = new JobTagMapping();
                     mapping.setJob(savedJob);
                     mapping.setJobTag(jobTagRepository.findById(tagId)
-                        .orElseThrow(() -> new ResourceNotFoundException("JobTag not found: " + tagId)));
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ công việc này" + tagId)));
                     return mapping;
                 }).collect(Collectors.toList());
             jobTagMappingRepository.saveAll(jobTagMappings);
@@ -82,7 +82,7 @@ public class JobService {
                     JobGroupTagMapping mapping = new JobGroupTagMapping();
                     mapping.setJob(savedJob);
                     mapping.setGroupJobTag(groupJobTagRepository.findById(groupTagId)
-                        .orElseThrow(() -> new ResourceNotFoundException("GroupJobTag not found: " + groupTagId)));
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tên ngành nghề: " + groupTagId)));
                     return mapping;
                 }).collect(Collectors.toList());
             jobGroupTagMappingRepository.saveAll(groupTagMappings);
@@ -93,7 +93,7 @@ public class JobService {
 
     public JobDto getJob(UUID jobId) {
         Job job = jobRepository.findById(jobId)
-            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         return toDto(job);
     }
 
@@ -101,7 +101,7 @@ public class JobService {
     public JobDto updateJob(UUID jobId, JobUpdateRequest request, UUID currentUserId) {
         UUID companyId = getCompanyByUserId(currentUserId).getCompanyId();
         Job job = jobRepository.findById(jobId)
-            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         if(!job.getCompanyId().equals(companyId)) {
             throw new AccessDeniedException("You do not have permission to update this job");
         }
@@ -131,7 +131,7 @@ public class JobService {
                     JobTagMapping mapping = new JobTagMapping();
                     mapping.setJob(savedJob);
                     mapping.setJobTag(jobTagRepository.findById(tagId)
-                        .orElseThrow(() -> new ResourceNotFoundException("JobTag not found: " + tagId)));
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thẻ công việc này" + tagId)));
                     return mapping;
                 }).collect(Collectors.toList());
             jobTagMappingRepository.saveAll(jobTagMappings);
@@ -143,7 +143,7 @@ public class JobService {
                     JobGroupTagMapping mapping = new JobGroupTagMapping();
                     mapping.setJob(savedJob);
                     mapping.setGroupJobTag(groupJobTagRepository.findById(groupTagId)
-                        .orElseThrow(() -> new ResourceNotFoundException("GroupJobTag not found: " + groupTagId)));
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tên ngành nghề: " + groupTagId)));
                     return mapping;
                 }).collect(Collectors.toList());
             jobGroupTagMappingRepository.saveAll(groupTagMappings);
@@ -154,7 +154,7 @@ public class JobService {
 
     public JobDto deleteJob(UUID jobId) {
         Job job = jobRepository.findById(jobId)
-            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         job.setIsDeleted(true);
         job = jobRepository.save(job);
         return toDto(job);
@@ -175,15 +175,15 @@ public class JobService {
     @Transactional
     public JobDto closeJob(UUID jobId, UUID currentUserId) {
         Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         CompanyResponse company = getCompanyByUserId(currentUserId);
         boolean isEmployer = company != null && job.getCompanyId().equals(company.getCompanyId());
         boolean isAdmin = company == null; // If company is null, treat as admin (adjust if you have a better admin check)
         if (!isEmployer && !isAdmin) {
-            throw new AccessDeniedException("You do not have permission to close this job");
+            throw new AccessDeniedException("Bạn không có quyền đóng công việc này");
         }
         if (job.getStatus() == Job.Status.closed) {
-            throw new BusinessException("Job is already closed");
+            throw new BusinessException("Công việc đã được đóng trước đó");
         }
         job.setStatus(Job.Status.closed);
         job = jobRepository.save(job);

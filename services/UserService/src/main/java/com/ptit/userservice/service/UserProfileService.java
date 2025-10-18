@@ -60,7 +60,8 @@ public class UserProfileService {
             );
             return objectName;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload avatar to MinIO", e);
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi tải ảnh lên MinIO");
         }
     }
 
@@ -74,17 +75,18 @@ public class UserProfileService {
                     .build()
             );
         } catch (Exception e) {
-            throw new RuntimeException("Failed to upload avatar to MinIO", e);
+            System.out.println(e.getMessage());
+            throw new RuntimeException("Lỗi xóa ảnh trên MinIO");
         }
     }
 
     @Transactional
     public CandidateResponse upsertCandidateByUserId(UUID userId, UUID currentUserId, CandidateUpdateRequest request, boolean isAdmin) {
         if (!isAdmin && !userId.equals(currentUserId)) {
-            throw new AccessDeniedException("You can't update other people information");
+            throw new AccessDeniedException("Bạn không thể cập nhật thông tin của người khác");
         }
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new BusinessException("User not found for userId: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không thấy người dùng với ID: " + userId));
         Candidate candidate = candidateRepository.findByUser_UserId(userId).orElse(null);
         if (candidate == null) {
             candidate = new Candidate();
@@ -95,7 +97,7 @@ public class UserProfileService {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("[yyyy-MM-dd][dd/MM/yyyy][yyyy/MM/dd]");
                 candidate.setDob(LocalDate.parse(request.getDob(), formatter));
             } catch (Exception e) {
-                throw new BusinessException("Invalid date format for dob: " + request.getDob());
+                throw new BusinessException("Lỗi định dạng ngày sinh: " + request.getDob());
             }
         }
 
@@ -103,7 +105,7 @@ public class UserProfileService {
             try {
                 candidate.setGender(Gender.valueOf(request.getGender()));
             } catch (Exception e) {
-                throw new BusinessException("Invalid gender value: " + request.getGender());
+                throw new BusinessException("Lỗi giá trị giới tính: " + request.getGender());
             }
         }
         if (request.getAddress() != null) candidate.setAddress(request.getAddress());
@@ -120,10 +122,10 @@ public class UserProfileService {
     @Transactional
     public EmployerResponse upsertEmployerByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request, boolean isAdmin) {
         if (!isAdmin && !userId.equals(currentUserId)) {
-            throw new AccessDeniedException("You can't update other people information");
+            throw new AccessDeniedException("Bạn không thể cập nhật thông tin của người khác");
         }
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found for userId: " + userId));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Employer employer = employerRepository.findByUser_UserId(userId).orElse(null);
         if (employer == null) {
             employer = new Employer();
@@ -131,10 +133,10 @@ public class UserProfileService {
             employer.setCreatedAt(LocalDateTime.now());
         }
         if (request.getCompanyId() == null) {
-            throw new BusinessException("Company is required");
+            throw new BusinessException("ID công ty không được để trống");
         }
         Company company = companyRepository.findById(request.getCompanyId())
-            .orElseThrow(() -> new BusinessException("Company not found for companyId: " + request.getCompanyId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
         employer.setCompany(company);
         employer.setActive(company.isVerified());
         if (request.getPosition() != null) employer.setPosition(request.getPosition());

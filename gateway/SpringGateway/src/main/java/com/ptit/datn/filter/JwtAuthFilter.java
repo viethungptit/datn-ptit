@@ -39,7 +39,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             System.out.println("1");
-            throw new AuthenticationException("JWT token is missing or invalid") {
+            throw new AuthenticationException("JWT không hợp lệ hoặc không tồn tại") {
             };
         }
         String token = authHeader.substring(7); // Remove 'Bearer '
@@ -57,15 +57,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             System.out.println("2");
             System.out.println(e.getMessage());
             if (e.getMessage() != null && e.getMessage().toLowerCase().contains("expired")) {
-                throw new AuthenticationException("Access token expired") {
+                throw new AuthenticationException("Access token đã hết hạn") {
                 };
             }
-            throw new AuthenticationException("JWT token is missing or invalid") {
+            throw new AuthenticationException("JWT không hợp lệ hoặc không tồn tại") {
             };
         } catch (IllegalArgumentException e) {
             System.out.println("3");
             System.out.println(e.getMessage());
-            throw new AuthenticationException("JWT token is missing or invalid") {
+            throw new AuthenticationException("JWT không hợp lệ hoặc không tồn tại") {
                 @Override
                 public Authentication getAuthenticationRequest() {
                     return super.getAuthenticationRequest();
