@@ -1,20 +1,11 @@
 import axios from 'axios';
 import { SERVICE_URLS } from './serviceConfig';
+import { attachAuthInterceptors } from '../redux/refreshInterceptor';
 
-function setupInterceptors(instance: ReturnType<typeof axios.create>) {
-    instance.interceptors.response.use(
-        (response: any) => {
-            return response;
-        },
-        (error: any) => {
-            return Promise.reject(error.response?.data || error.message);
-        }
-    );
+function createApi(baseURL: string) {
+    const instance = axios.create({ baseURL });
+    attachAuthInterceptors(instance);
     return instance;
 }
 
-export const userApi = setupInterceptors(axios.create({ baseURL: SERVICE_URLS.user }));
-export const adminApi = setupInterceptors(axios.create({ baseURL: SERVICE_URLS.admin }));
-export const recruitApi = setupInterceptors(axios.create({ baseURL: SERVICE_URLS.recruit }));
-export const notificationApi = setupInterceptors(axios.create({ baseURL: SERVICE_URLS.notification }));
-export const recommendApi = setupInterceptors(axios.create({ baseURL: SERVICE_URLS.recommend }));
+export const gatewayApi = createApi(SERVICE_URLS.gateway);

@@ -141,6 +141,11 @@ public class AuthService {
         return response;
     }
 
+    private LocalDateTime calculateRefreshTokenExpiry() {
+        long expirySeconds = refreshTokenDurationMs / 1000;
+        return LocalDateTime.now().plusSeconds(expirySeconds);
+    }
+
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletResponse response) {
         if (request.email == null || request.email.trim().isEmpty()) {
@@ -165,7 +170,7 @@ public class AuthService {
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
         refreshToken.setToken(refreshTokenStr);
-        refreshToken.setExpiresAt(LocalDateTime.now().plusDays(7));
+        refreshToken.setExpiresAt(calculateRefreshTokenExpiry());
         refreshToken.setCreatedAt(LocalDateTime.now());
         refreshTokenRepository.save(refreshToken);
         Cookie cookie = new Cookie("refreshToken", refreshTokenStr);
@@ -196,8 +201,8 @@ public class AuthService {
     }
 
     @Transactional
-    public LogoutResponse logout(LogoutRequest request) {
-        refreshTokenRepository.deleteByToken(request.refreshToken);
+    public LogoutResponse logout(String refreshToken) {
+        refreshTokenRepository.deleteByToken(refreshToken);
         // TODO: Send event to AdminService
         LogoutResponse response = new LogoutResponse();
         response.message = "Đăng xuất thành công";
@@ -214,7 +219,7 @@ public class AuthService {
         if (otpOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy OTP");
         OtpToken otp = otpOpt.get();
         if (otp.isUsed()) throw new RuntimeException("OTP đã được sử dụng");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP hết hạn, vui lòng nhận OTP mới");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP hết hạn");
         if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Sai OTP");
         otp.setUsed(true);
         otpTokenRepository.save(otp);

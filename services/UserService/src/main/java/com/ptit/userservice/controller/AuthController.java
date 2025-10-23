@@ -41,8 +41,14 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public LogoutResponse logout(@RequestBody LogoutRequest request) {
-        return authService.logout(request);
+    public LogoutResponse logout(@CookieValue(value = "refreshToken", required = false) String refreshToken, HttpServletResponse response) {
+        LogoutResponse result = authService.logout(refreshToken);
+        Cookie cookie = new Cookie("refreshToken", "");
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        return result;
     }
 
     @PostMapping("/verify-otp")
@@ -55,7 +61,7 @@ public class AuthController {
         return authService.resetOtp(request);
     }
 
-    @PostMapping("/forgot-password")
+    @PostMapping("/reset-password")
     public ForgotPasswordResponse forgotPassword(@RequestBody ForgotPasswordRequest request) {
         return authService.forgotPassword(request);
     }

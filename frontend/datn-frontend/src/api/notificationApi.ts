@@ -1,5 +1,4 @@
-import { notificationApi } from './axiosInstances';
+import { gatewayApi } from './axiosInstances';
 
 // Mẫu gọi API cho service Notification
-export const getNotifications = () => notificationApi.get('/notifications');
-export const markNotificationRead = (id: string) => notificationApi.post(`/notifications/${id}/read`);
+export const getNotifications = () => gatewayApi.get('/notifications');

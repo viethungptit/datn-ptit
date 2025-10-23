@@ -1,40 +1,29 @@
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import React, { useState } from "react";
-import { login } from "../redux/authReduxAPI";
-import { useNavigate } from 'react-router-dom';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { registerApi } from "@/api/userApi";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
-import { setAuthData } from "@/redux/authSlice";
 
-const Login: React.FC = () => {
+const RegisterAdmin: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [fullName, setFullName] = useState("");
+    const [phone, setPhone] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
+
     const navigate = useNavigate();
-    const dispatch = useDispatch();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         try {
-            let res = await login({ email, password });
-            if (res.role === 'candidate') {
-                dispatch(setAuthData(res));
-                localStorage.setItem('accessToken', res.accessToken);
-                toast.success("Đăng nhập thành công!");
-                navigate("/");
-            }
-            else {
-                toast.error("Trang đăng nhập này chỉ dành cho ứng viên!");
-            }
+            await registerApi({ email, password, fullName, phone, role: 'admin' });
+            toast.success('Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.');
+            navigate(`/verify-otp?email=${encodeURIComponent(email)}&type=register`);
         } catch (err: any) {
-            console.error("Login failed:", err);
-            toast.error(err || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
-        } finally {
-            setLoading(false);
+            console.error('Register failed:', err);
+            const msg = err?.response?.data?.message || err || err?.message || 'Đăng ký thất bại';
+            toast.error(msg);
         }
     };
 
@@ -45,9 +34,23 @@ const Login: React.FC = () => {
                 className="rounded shadow-lg border w-full max-w-md"
             >
                 <div className="bg-background-red text-text-white p-5 rounded-t">
-                    <h2 className="text-xl font-semibold text-center">Đăng nhập dành cho ứng viên</h2>
+                    <h2 className="text-xl font-semibold text-center">Đăng ký tài khoản quản trị viên</h2>
                 </div>
                 <div className="p-6">
+                    <div className="mb-4">
+                        <label htmlFor="fullName" className="text-left block mb-2 text-sm font-medium text-gray-700">
+                            Họ và tên
+                        </label>
+                        <Input
+                            id="fullName"
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Nhập họ và tên"
+                            required
+                            className="w-full"
+                        />
+                    </div>
                     <div className="mb-4">
                         <label htmlFor="email" className="text-left block mb-2 text-sm font-medium text-gray-700">
                             Email
@@ -58,6 +61,20 @@ const Login: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Nhập email"
+                            required
+                            className="w-full"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="phone" className="text-left block mb-2 text-sm font-medium text-gray-700">
+                            Số điện thoại
+                        </label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Nhập số điện thoại"
                             required
                             className="w-full"
                         />
@@ -74,7 +91,7 @@ const Login: React.FC = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Nhập mật khẩu"
                                 required
-                                className="w-full pr-10"
+                                className="w-full"
                             />
                             <button
                                 type="button"
@@ -86,22 +103,16 @@ const Login: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                    <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
-                        {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                    <Button variant="login" type="submit" className="w-full mb-3">
+                        Đăng ký
                     </Button>
-                    <Link
-                        to="/forgot-password"
-                        className="text-sm text-txt-red font-medium hover:underline mb-2"
-                    >
-                        Quên mật khẩu?
-                    </Link>
-                    <div className="text-center text-sm text-gray-600 ">
-                        Chưa có tài khoản?{" "}
+                    <div className="text-center text-sm text-gray-600 mb-2">
+                        Đã có tài khoản?{" "}
                         <Link
-                            to="/register"
+                            to="/admin/login"
                             className="text-txt-red font-medium hover:underline"
                         >
-                            Đăng ký ngay
+                            Đăng nhập ngay
                         </Link>
                     </div>
                 </div>
@@ -110,4 +121,4 @@ const Login: React.FC = () => {
     );
 };
 
-export default Login;
+export default RegisterAdmin;

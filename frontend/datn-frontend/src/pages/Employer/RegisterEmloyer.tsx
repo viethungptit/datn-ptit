@@ -1,17 +1,30 @@
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { registerApi } from "@/api/userApi";
+import { toast } from "react-toastify";
 
 const RegisterEmployer: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ email, password, full_name: fullName, phone });
+        try {
+            await registerApi({ email, password, fullName, phone, role: 'employer' });
+            toast.success('Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.');
+            navigate(`/verify-otp?email=${encodeURIComponent(email)}&type=register`);
+        } catch (err: any) {
+            console.error('Register failed:', err);
+            const msg = err?.response?.data?.message || err || err?.message || 'Đăng ký thất bại';
+            toast.error(msg);
+        }
     };
 
     return (
@@ -70,15 +83,25 @@ const RegisterEmployer: React.FC = () => {
                         <label htmlFor="password" className="text-left block mb-2 text-sm font-medium text-gray-700">
                             Mật khẩu
                         </label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Nhập mật khẩu"
-                            required
-                            className="w-full"
-                        />
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Nhập mật khẩu"
+                                required
+                                className="w-full"
+                            />
+                            <button
+                                type="button"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-txt-red text-sm"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                tabIndex={-1}
+                            >
+                                {showPassword ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>}
+                            </button>
+                        </div>
                     </div>
                     <Button variant="login" type="submit" className="w-full mb-3">
                         Đăng ký

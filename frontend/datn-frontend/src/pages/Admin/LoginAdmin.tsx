@@ -1,16 +1,40 @@
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { login } from "@/redux/authReduxAPI";
+import { setAuthData } from "@/redux/authSlice";
+import { toast } from "react-toastify";
 
-const LoginEmployer: React.FC = () => {
+const LoginAdmin: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ email, password });
+        setLoading(true);
+        try {
+            let res = await login({ email, password });
+            if (res.role === 'admin') {
+                dispatch(setAuthData(res));
+                localStorage.setItem('accessToken', res.accessToken);
+                toast.success("Đăng nhập thành công!");
+                navigate("/admin/dashboard");
+            }
+            else {
+                toast.error("Trang đăng nhập này chỉ dành cho quản trị viên!");
+            }
+        } catch (err: any) {
+            console.error("Login failed:", err);
+            toast.error(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -20,7 +44,7 @@ const LoginEmployer: React.FC = () => {
                 className="rounded shadow-lg border w-full max-w-md"
             >
                 <div className="bg-background-red text-text-white p-5 rounded-t">
-                    <h2 className="text-xl font-semibold text-center">Đăng nhập dành cho nhà tuyển dụng</h2>
+                    <h2 className="text-xl font-semibold text-center">Đăng nhập dành cho quản trị viên</h2>
                 </div>
                 <div className="p-6">
                     <div className="mb-4">
@@ -61,13 +85,13 @@ const LoginEmployer: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                    <Button variant="login" type="submit" className="w-full mb-3">
-                        Đăng nhập
+                    <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
+                        {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
                     <div className="text-center text-sm text-gray-600 mb-2">
                         Chưa có tài khoản?{" "}
                         <Link
-                            to="/employer/register"
+                            to="/admin/register"
                             className="text-txt-red font-medium hover:underline"
                         >
                             Đăng ký ngay
@@ -79,4 +103,4 @@ const LoginEmployer: React.FC = () => {
     );
 };
 
-export default LoginEmployer;
+export default LoginAdmin;

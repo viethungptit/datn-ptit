@@ -8,6 +8,8 @@ import com.ptit.userservice.exception.BusinessException;
 import com.ptit.userservice.exception.ResourceNotFoundException;
 import com.ptit.userservice.repository.OtpTokenRepository;
 import com.ptit.userservice.repository.UserRepository;
+import com.ptit.userservice.repository.CandidateRepository;
+import com.ptit.userservice.repository.EmployerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,6 +34,13 @@ public class UserService {
     private OtpTokenRepository otpTokenRepository;
     @Autowired
     private EventPublisher eventPublisher;
+
+    @Autowired
+    private CandidateRepository candidateRepository;
+    @Autowired
+    private EmployerRepository employerRepository;
+    @Autowired
+    private UserProfileService userProfileService;
 
     @Value("${notification.exchange}")
     private String notificationExchange;
@@ -162,6 +171,21 @@ public class UserService {
         User user = userRepository.findById(currentUserId)
                 .filter(u -> !u.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
-        return toResponse(user);
+        UserResponse response = toResponse(user);
+        // attach profile data depending on role
+        if (user.getRole() == User.Role.candidate) {
+            candidateRepository.findByUser_UserId(currentUserId)
+                    .ifPresent(candidate -> response.setCandidate(userProfileService.toCandidateResponse(candidate)));
+        }
+        else if (user.getRole() == User.Role.employer) {
+            employerRepository.findByUser_UserId(currentUserId)
+                    .ifPresent(employer -> {
+                        response.setEmployer(userProfileService.toEmployerResponse(employer));
+                        if (employer.getCompany() != null) {
+                            response.setCompany(userProfileService.toCompanyResponse(employer.getCompany()));
+                        }
+                    });
+        }
+        return response;
     }
 }

@@ -1,14 +1,13 @@
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import React, { useState } from "react";
-import { login } from "../redux/authReduxAPI";
-import { useNavigate } from 'react-router-dom';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
+import { login } from "@/redux/authReduxAPI";
 import { setAuthData } from "@/redux/authSlice";
 
-const Login: React.FC = () => {
+const LoginEmployer: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -21,18 +20,18 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             let res = await login({ email, password });
-            if (res.role === 'candidate') {
+            if (res.role === 'employer') {
                 dispatch(setAuthData(res));
-                localStorage.setItem('accessToken', res.accessToken);
                 toast.success("Đăng nhập thành công!");
-                navigate("/");
+                localStorage.setItem('accessToken', res.accessToken);
+                navigate("/employer/profile");
             }
             else {
-                toast.error("Trang đăng nhập này chỉ dành cho ứng viên!");
+                toast.error("Trang đăng nhập này chỉ dành cho nhà tuyển dụng!");
             }
         } catch (err: any) {
             console.error("Login failed:", err);
-            toast.error(err || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+            toast.error(err.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
         } finally {
             setLoading(false);
         }
@@ -45,7 +44,7 @@ const Login: React.FC = () => {
                 className="rounded shadow-lg border w-full max-w-md"
             >
                 <div className="bg-background-red text-text-white p-5 rounded-t">
-                    <h2 className="text-xl font-semibold text-center">Đăng nhập dành cho ứng viên</h2>
+                    <h2 className="text-xl font-semibold text-center">Đăng nhập dành cho nhà tuyển dụng</h2>
                 </div>
                 <div className="p-6">
                     <div className="mb-4">
@@ -89,16 +88,10 @@ const Login: React.FC = () => {
                     <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
-                    <Link
-                        to="/forgot-password"
-                        className="text-sm text-txt-red font-medium hover:underline mb-2"
-                    >
-                        Quên mật khẩu?
-                    </Link>
-                    <div className="text-center text-sm text-gray-600 ">
+                    <div className="text-center text-sm text-gray-600 mb-2">
                         Chưa có tài khoản?{" "}
                         <Link
-                            to="/register"
+                            to="/employer/register"
                             className="text-txt-red font-medium hover:underline"
                         >
                             Đăng ký ngay
@@ -110,4 +103,4 @@ const Login: React.FC = () => {
     );
 };
 
-export default Login;
+export default LoginEmployer;

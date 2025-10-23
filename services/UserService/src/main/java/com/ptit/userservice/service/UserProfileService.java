@@ -15,6 +15,7 @@ import com.ptit.userservice.repository.EmployerRepository;
 import com.ptit.userservice.repository.UserRepository;
 import com.ptit.userservice.entity.Company;
 import com.ptit.userservice.repository.CompanyRepository;
+import com.ptit.userservice.dto.CompanyResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -184,6 +185,24 @@ public class UserProfileService {
             userInfo.setUsername(employer.getUser().getFullName());
         }
         response.setUser(userInfo);
+        return response;
+    }
+
+    public CompanyResponse toCompanyResponse(Company company) {
+        if (company == null) return null;
+        CompanyResponse response = new CompanyResponse();
+        response.setCompanyId(company.getCompanyId());
+        response.setCompanyName(company.getCompanyName());
+        response.setIndustry(company.getIndustry());
+        response.setCompanySize(company.getCompanySize());
+        response.setLocation(company.getLocation());
+        response.setLogoUrl(company.getLogoUrl());
+        response.setWebsite(company.getWebsite());
+        response.setDeleted(company.isDeleted());
+        response.setVerified(company.isVerified());
+        response.setCreatedAt(company.getCreatedAt());
+        response.setCoverImgUrl(company.getCoverImgUrl());
+        response.setDescription(company.getDescription());
         return response;
     }
 }

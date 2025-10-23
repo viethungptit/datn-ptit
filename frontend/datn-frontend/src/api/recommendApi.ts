@@ -1,5 +1,4 @@
-import { recommendApi } from './axiosInstances';
+import { gatewayApi } from './axiosInstances';
 
 // Mẫu gọi API cho service Recommend
-export const getRecommendations = () => recommendApi.get('/recommendations');
-export const addRecommendation = (data: any) => recommendApi.post('/recommendations', data);
+export const addRecommendation = (data: any) => gatewayApi.post('/recommendations', data);
