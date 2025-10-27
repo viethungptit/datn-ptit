@@ -96,9 +96,8 @@ function LayoutEditor({ layout, onChange }: LayoutEditorProps) {
 
     return (
         <div className="mt-4">
-            <h2 className="text-xl font-bold mb-2">Cấu hình chung</h2>
             <div className="mb-2 flex justify-between items-center gap-4">
-                <div className="flex items-center">
+                <div className="flex items-center text-sm">
                     <label className="font-semibold">Số cột của dòng mới:</label>
                     <div className="ml-2 w-24">
                         <Select value={String(newRowColSpan)} onValueChange={val => handleNewRowColSpanChange({ target: { value: val } } as ChangeEvent<HTMLSelectElement>)}>
@@ -113,7 +112,7 @@ function LayoutEditor({ layout, onChange }: LayoutEditorProps) {
                         </Select>
                     </div>
                 </div>
-                <div className={`flex items-center ${newRowColSpan !== 3 ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className={`flex text-sm items-center ${newRowColSpan !== 3 ? 'opacity-50 pointer-events-none' : ''}`}>
                     <label className="font-semibold">Kiểu chia cột:</label>
                     <div className="ml-2 w-32">
                         <Select value={colPattern} onValueChange={setColPattern} disabled={newRowColSpan !== 3}>
@@ -130,7 +129,7 @@ function LayoutEditor({ layout, onChange }: LayoutEditorProps) {
                     <span className="ml-2 text-xs text-gray-500">(2-1: cột đầu chiếm 2, 1-2: cột cuối chiếm 2)</span>
                 </div>
                 <Button onClick={addRow}>
-                    <i className="fa-xs mr-1 fa-solid fa-plus"></i>
+                    <i className="fa-xs text-sm mr-1 fa-solid fa-plus"></i>
                     Thêm dòng
                 </Button>
             </div>

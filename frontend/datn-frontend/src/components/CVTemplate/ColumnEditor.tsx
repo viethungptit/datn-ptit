@@ -40,9 +40,9 @@ function ColumnEditor({ col, onChange, onMoveUp, onMoveDown, usedSections, idx, 
     }
 
     return (
-        <div className="border rounded p-2 bg-white">
+        <div className="border rounded p-2 text-sm bg-white">
             <div className="flex items-center mb-2">
-                <span className="font-semibold">Cột {idx + 1}</span>
+                <span className="font-medium">Cột {idx + 1}</span>
                 <button className={`ml-2 btn btn-secondary ${idx === 0 ? 'hidden' : ''}`} onClick={onMoveUp}>
                     <i className="fa-lg fa-solid fa-caret-left"></i>
                 </button>

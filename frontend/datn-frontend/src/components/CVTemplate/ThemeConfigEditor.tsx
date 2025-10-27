@@ -13,15 +13,18 @@ interface Theme {
     alignTextPosition: string;
     borderRadiusAvatar: number;
     sizeAvatar: number;
-    [key: string]: string | number;
+    language?: string | number;
+    [key: string]: string | number | undefined;
 }
 
 interface ThemeConfigEditorProps {
     theme: Theme;
     onChange: (theme: Theme) => void;
+    templateName?: string;
+    onTemplateNameChange?: (name: string) => void;
 }
 
-function ThemeConfigEditor({ theme, onChange }: ThemeConfigEditorProps) {
+function ThemeConfigEditor({ theme, onChange, templateName, onTemplateNameChange }: ThemeConfigEditorProps) {
     // Các trường size
     const sizeFields = [
         { key: "size", label: "Cỡ chữ chung" },
@@ -58,9 +61,32 @@ function ThemeConfigEditor({ theme, onChange }: ThemeConfigEditorProps) {
     return (
         <div className="bg-white rounded border p-4 mb-2">
             <h2 className="font-bold mb-2">Cấu hình khác</h2>
-            <div className="mb-4">
-                <h3 className="font-semibold mb-1">Kích thước</h3>
-                <div className="grid grid-cols-2 gap-4">
+            {/* Template name input (placed above language selector) */}
+            <div className="mb-6">
+                <label className="font-semibold mb-1 text-sm block">Tên mẫu</label>
+                <input
+                    className="border rounded px-2 py-1 text-sm w-1/2"
+                    value={templateName ?? ''}
+                    onChange={e => onTemplateNameChange && onTemplateNameChange(e.target.value)}
+                    placeholder="Nhập tên mẫu CV"
+                />
+            </div>
+            <div className="mb-6">
+                <h3 className="font-semibold mb-1 text-sm">Ngôn ngữ</h3>
+                <div className="flex items-center justify-center">
+                    <select
+                        value={String(theme.language || 'vi')}
+                        onChange={e => handleAlignChange('language', e.target.value)}
+                        className="text-sm border rounded px-2 py-1 w-1/2"
+                    >
+                        <option value="vi">Tiếng Việt</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+            </div>
+            <div className="mb-6">
+                <h3 className="font-semibold mb-1 text-sm">Kích thước</h3>
+                <div className="grid grid-cols-2 gap-5">
                     {sizeFields.map(f => (
                         <div key={f.key} className="flex items-center gap-2">
                             <label className="text-sm text-left w-32">{f.label}</label>
@@ -69,14 +95,14 @@ function ThemeConfigEditor({ theme, onChange }: ThemeConfigEditorProps) {
                                 min={0}
                                 value={Number(theme[f.key])}
                                 onChange={e => handleSizeChange(f.key, Number(e.target.value))}
-                                className="text-sm border rounded px-2 py-1 w-20"
+                                className="text-sm border rounded px-2 py-1 w-14"
                             />
                         </div>
                     ))}
                 </div>
             </div>
-            <div className="mb-4">
-                <h3 className="font-semibold mb-1">Màu sắc</h3>
+            <div className="mb-6">
+                <h3 className="font-semibold mb-1 text-sm">Màu sắc</h3>
                 <div className="grid grid-cols-2 gap-4">
                     {colorFields.map(f => (
                         <div key={f.key} className="flex items-center gap-2">
@@ -92,8 +118,8 @@ function ThemeConfigEditor({ theme, onChange }: ThemeConfigEditorProps) {
                     ))}
                 </div>
             </div>
-            <div className="mb-4">
-                <h3 className="font-semibold mb-1">Căn lề</h3>
+            <div className="mb-6">
+                <h3 className="font-semibold mb-1 text-sm">Căn lề</h3>
                 <div className="grid grid-cols-2 gap-4">
                     {alignFields.map(f => (
                         <div key={f.key} className="flex items-center gap-2">

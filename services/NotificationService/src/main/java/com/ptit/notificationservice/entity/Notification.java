@@ -1,5 +1,6 @@
 package com.ptit.notificationservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -41,9 +42,11 @@ public class Notification {
     @org.hibernate.annotations.CreationTimestamp
     private Timestamp createdAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "notification")
     private List<EmailDelivery> emailDeliveries;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "notification")
     private List<InappDelivery> inappDeliveries;
 

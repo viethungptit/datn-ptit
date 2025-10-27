@@ -45,14 +45,14 @@ function RowEditor({ row, onChange, onDelete, onMoveUp, onMoveDown, usedSections
     }
 
     return (
-        <div className="border rounded p-2 mb-2 bg-gray-50">
+        <div className="border rounded p-2 mb-2 text-sm">
             <div className="flex items-center mb-2">
-                <span className="font-semibold">Dòng {idx + 1}</span>
+                <span className="font-medium">Dòng {idx + 1}</span>
                 <button className="ml-2 btn btn-danger" onClick={onDelete}><i className="fa-solid fa-trash"></i></button>
                 <button className={`ml-2 btn btn-secondary ${idx === 0 ? 'hidden' : ''}`} onClick={onMoveUp}><i className="fa-lg fa-solid fa-caret-up"></i></button>
                 <button className={`ml-2 btn btn-secondary ${idx === totalRows - 1 ? 'hidden' : ''}`} onClick={onMoveDown}><i className="fa-lg fa-solid fa-caret-down"></i></button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2">
                 {cols.map((col, colIdx) => (
                     <ColumnEditor
                         key={col.id}

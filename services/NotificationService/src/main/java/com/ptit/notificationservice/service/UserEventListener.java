@@ -8,12 +8,15 @@ import com.ptit.notificationservice.entity.InappDelivery;
 import com.ptit.notificationservice.entity.Notification;
 import com.ptit.notificationservice.entity.NotificationTemplate;
 import com.ptit.notificationservice.feign.UserServiceFeign;
+import org.apache.commons.text.StringSubstitutor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 public class UserEventListener {
@@ -32,27 +35,27 @@ public class UserEventListener {
     @Autowired
     private UserServiceFeign userServiceFeign;
 
+    @Value("${internal.secret}")
+    private String internalSecret;
+
     public UserResponse getUserByEmail(String email) {
-        return userServiceFeign.getUserByEmail(email);
+        return userServiceFeign.getUserByEmail(email, internalSecret);
     }
 
     @RabbitListener(queues = "${notification.user.queue}")
     public void handleUserRegisterEvent(String message) {
         try {
+            System.out.println("📩 Received message: " + message);
             JsonNode event = objectMapper.readTree(message);
-            String email = event.get("email").asText();
-            String name = event.get("name").asText();
-            String otp = event.get("otp").asText();
             String eventType = event.get("event_type").asText();
+            String email = event.get("to").asText();
+            Map data = objectMapper.convertValue(event.get("data"), Map.class);
 
             NotificationTemplate template = templateService.getTemplateByEventType(eventType);
-            String subject = template.getEmailSubjectTemplate()
-                .replace("{{name}}", name)
-                .replace("{{otp}}", otp);
-            String body = template.getEmailBodyTemplate()
-                .replace("{{name}}", name)
-                .replace("{{otp}}", otp)
-                .replace("{{email}}", email);
+
+            StringSubstitutor sub = new StringSubstitutor(data, "{{", "}}");
+            String subject = sub.replace(template.getEmailSubjectTemplate());
+            String body = sub.replace(template.getEmailBodyTemplate());
 
             UserResponse user = null;
             try {

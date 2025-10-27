@@ -1,5 +1,6 @@
 package com.ptit.notificationservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -20,6 +21,7 @@ public class EmailDelivery {
     @Column(name = "email_deli_id", nullable = false, updatable = false)
     private UUID emailDeliId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "notification_id")
     private Notification notification;

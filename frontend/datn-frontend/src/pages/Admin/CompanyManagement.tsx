@@ -185,7 +185,7 @@ const CompanyManagement = () => {
         <div className="px-4 py-2">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý công ty</h2>
-                <Button onClick={() => openDialogCompany()}>Thêm công ty</Button>
+                <Button variant="login" size="sm" onClick={() => openDialogCompany()}>Thêm công ty</Button>
             </div>
             <div className="border rounded-lg overflow-x-auto">
                 <Table className="text-sm text-gray-700">

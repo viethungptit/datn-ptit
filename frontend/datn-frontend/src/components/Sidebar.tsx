@@ -168,7 +168,7 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, headerOffset }) => {
                                     </SidebarMenuItem>
                                     <SidebarMenuItem>
                                         <NavLink
-                                            to="/admin/cv-templates"
+                                            to="/admin/templates"
                                             className={({ isActive }) =>
                                                 `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
                                             }
@@ -186,6 +186,28 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, headerOffset }) => {
                                         >
                                             <i className="fa-solid fa-bell"></i>
                                             {!collapsed && <span>Quản lý thông báo</span>}
+                                        </NavLink>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <NavLink
+                                            to="/admin/notification-templates"
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                                            }
+                                        >
+                                            <i className="fa-solid fa-envelope"></i>
+                                            {!collapsed && <span>Quản lý mẫu thông báo</span>}
+                                        </NavLink>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <NavLink
+                                            to="/admin/notification-emails"
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                                            }
+                                        >
+                                            <i className="fa-solid fa-at"></i>
+                                            {!collapsed && <span>Quản lý thông báo email</span>}
                                         </NavLink>
                                     </SidebarMenuItem>
                                     <SidebarMenuItem>

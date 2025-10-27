@@ -79,11 +79,16 @@ public class AuthService {
                 otpTokenRepository.save(otp);
 
                 // Send event
+                Map<String, Object> data = new HashMap<>();
+                data.put("name", existingUser.getFullName());
+                data.put("otp", otpCode);
+                data.put("email", existingUser.getEmail());
+
                 Map<String, Object> event = new HashMap<>();
-                event.put("email", existingUser.getEmail());
-                event.put("name", existingUser.getFullName());
-                event.put("otp", otpCode);
                 event.put("event_type", registerRoutingKey);
+                event.put("to", existingUser.getEmail());
+                event.put("data", data);
+
                 eventPublisher.publish(notificationExchange, registerRoutingKey, event);
 
                 // Response
@@ -246,11 +251,15 @@ public class AuthService {
         otpTokenRepository.save(otp);
 
         // TODO: Send event to NotificationService
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", user.getFullName());
+        data.put("otp", otpCode);
+        data.put("email", user.getEmail());
+
         Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
         event.put("event_type", registerRoutingKey);
+        event.put("to", user.getEmail());
+        event.put("data", data);
         eventPublisher.publish(notificationExchange, registerRoutingKey, event);
 
         ResetOtpResponse response = new ResetOtpResponse();
@@ -271,12 +280,17 @@ public class AuthService {
         otp.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         otp.setCreatedAt(LocalDateTime.now());
         otpTokenRepository.save(otp);
+
         // Send OTP event to RabbitMQ
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", user.getFullName());
+        data.put("otp", otpCode);
+        data.put("email", user.getEmail());
+
         Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
         event.put("event_type", resetPasswordRoutingKey);
+        event.put("to", user.getEmail());
+        event.put("data", data);
         eventPublisher.publish(notificationExchange, resetPasswordRoutingKey, event);
     }
 

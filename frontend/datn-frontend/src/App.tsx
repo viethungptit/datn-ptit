@@ -7,7 +7,7 @@ import CVBuilder from './pages/CVBuilder';
 import Home from './pages/Home';
 import CVManager from './pages/CVManager';
 import { Routes, Route } from 'react-router-dom';
-import CVTemplateBuilder from './pages/CVTemplateBuilder';
+import CVTemplateEditor from './pages/Admin/CVTemplateEditor';
 import Header from './components/Header';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -36,6 +36,11 @@ import EmployerProfile from './pages/Employer/EmployerProfile';
 
 import UserManagement from './pages/Admin/UserManagement';
 import CompanyManagement from './pages/Admin/CompanyManagement';
+import TagManagement from './pages/Admin/TagManagement';
+import CVTemplateManagement from './pages/Admin/CVTemplateManagement';
+import NotificationTemplates from './pages/Admin/NotificationTemplates';
+import NotificationEmails from './pages/Admin/NotificationEmails';
+import Notifications from './pages/Admin/Notifications';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -100,7 +105,6 @@ function App() {
           <Route path="/manage-cvs" element={<RoleRoute element={<CVManager />} allowedRoles={['candidate']} />} />
           <Route path="/manage-cvs/:cvId" element={<RoleRoute element={<CVBuilder />} allowedRoles={['candidate']} />} />
           <Route path="/preview-cv/:cvId" element={<RoleRoute element={<CVPreviewPage />} allowedRoles={['candidate']} />} />
-          <Route path="/templates" element={<RoleRoute element={<CVTemplateBuilder />} allowedRoles={['candidate']} />} />
           <Route path="/upload-cv" element={<RoleRoute element={<UploadCV />} allowedRoles={['candidate']} />} />
           <Route path="/cv-templates" element={<RoleRoute element={<CVTemplatesList />} allowedRoles={['candidate']} />} />
           <Route path="/favorite" element={<RoleRoute element={<FavoriteJobs />} allowedRoles={['candidate']} />} />
@@ -111,6 +115,14 @@ function App() {
           {/* Admin user management route */}
           <Route path="/admin/users" element={<RoleRoute element={<UserManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
+          <Route path="/admin/tags" element={<RoleRoute element={<TagManagement />} allowedRoles={['admin']} />} />
+          <Route path="/admin/templates" element={<RoleRoute element={<CVTemplateManagement />} allowedRoles={['admin']} />} />
+          <Route path="/admin/templates/new" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />
+          <Route path="/admin/templates/:templateId" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />
+
+          <Route path="/admin/notification-templates" element={<RoleRoute element={<NotificationTemplates />} allowedRoles={['admin']} />} />
+          <Route path="/admin/notifications" element={<RoleRoute element={<Notifications />} allowedRoles={['admin']} />} />
+          <Route path="/admin/notification-emails" element={<RoleRoute element={<NotificationEmails />} allowedRoles={['admin']} />} />
 
 
 

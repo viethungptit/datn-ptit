@@ -14,8 +14,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/notification-service/notifications")
-public class NotificationStatusController {
+@RequestMapping("/api/notification-service/inapp-deliveries")
+public class InAppDeliveryController {
     @Autowired
     private InappDeliveryService inappDeliveryService;
 

@@ -30,7 +30,8 @@ interface Theme {
     alignTextPosition: string;
     borderRadiusAvatar: number;
     sizeAvatar: number;
-    [key: string]: string | number;
+    language?: string | number;
+    [key: string]: string | number | undefined;
 }
 interface CVPreviewProps {
     layout_json?: LayoutJson;
@@ -124,9 +125,40 @@ function SectionPreview({ section, initialData, theme }: SectionPreviewProps) {
             fontWeight: 600,
         };
     }
+    const labelFor = (sec: string) => {
+        const lang = (theme?.language as string) || 'vi';
+        const SECTION_LABELS: Record<string, Record<string, string>> = {
+            vi: {
+                avatar: 'ẢNH',
+                name: 'HỌ VÀ TÊN',
+                position: 'VỊ TRÍ',
+                summary: 'TÓM TẮT',
+                personal_info: 'THÔNG TIN CÁ NHÂN',
+                skills: 'KỸ NĂNG',
+                certificates: 'CHỨNG CHỈ',
+                experience: 'KINH NGHIỆM',
+                projects: 'DỰ ÁN',
+                education: 'HỌC VẤN',
+            },
+            en: {
+                avatar: 'AVATAR',
+                name: 'NAME',
+                position: 'POSITION',
+                summary: 'SUMMARY',
+                personal_info: 'PERSONAL INFO',
+                skills: 'SKILLS',
+                certificates: 'CERTIFICATES',
+                experience: 'EXPERIENCE',
+                projects: 'PROJECTS',
+                education: 'EDUCATION',
+            }
+        };
+        return SECTION_LABELS[lang]?.[sec] || sec.toUpperCase();
+    };
+
     return (
         <div className="mb-2">
-            <div className="font-semibold mb-1" style={titleStyle}>{section.toUpperCase()}</div>
+            <div className="font-semibold mb-1" style={titleStyle}>{labelFor(section)}</div>
             <div style={style}>
                 <ReactMarkdown>{initialData[section] || ""}</ReactMarkdown>
             </div>

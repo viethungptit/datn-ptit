@@ -112,7 +112,7 @@ const UserManagement = () => {
         <div className="px-4 py-2">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý người dùng</h2>
-                <Button onClick={() => openDialogUser()}>Thêm người dùng</Button>
+                <Button variant="login" size="sm" onClick={() => openDialogUser()}>Thêm người dùng</Button>
             </div>
             <div className="border rounded-lg overflow-x-auto">
                 <Table className="text-sm text-gray-700">

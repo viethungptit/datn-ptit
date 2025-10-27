@@ -32,7 +32,7 @@ const Login: React.FC = () => {
             }
         } catch (err: any) {
             console.error("Login failed:", err);
-            toast.error(err || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
+            toast.error(err?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
         } finally {
             setLoading(false);
         }

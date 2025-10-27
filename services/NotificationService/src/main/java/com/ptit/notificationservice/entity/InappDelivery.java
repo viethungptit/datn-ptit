@@ -1,5 +1,6 @@
 package com.ptit.notificationservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.sql.Timestamp;
@@ -19,6 +20,7 @@ public class InappDelivery {
     @Column(name = "inapp_deli_id", nullable = false, updatable = false)
     private UUID inappDeliId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "notification_id")
     private Notification notification;

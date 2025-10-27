@@ -88,6 +88,12 @@ const LoginEmployer: React.FC = () => {
                     <Button variant="login" type="submit" className="w-full mb-3" disabled={loading}>
                         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </Button>
+                    <Link
+                        to="/forgot-password"
+                        className="text-sm text-txt-red font-medium hover:underline mb-2"
+                    >
+                        Quên mật khẩu?
+                    </Link>
                     <div className="text-center text-sm text-gray-600 mb-2">
                         Chưa có tài khoản?{" "}
                         <Link

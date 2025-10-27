@@ -81,6 +81,12 @@ const Header = () => {
                                 Đăng nhập
                             </Button>
                         </NavLink>
+                        <NavLink to="/employer/login">
+                            <Button variant="secondary">
+                                <i className="fa-solid fa-user"></i>
+                                Đăng tuyển
+                            </Button>
+                        </NavLink>
                     </>
                 )}
                 {isAuthenticated && (

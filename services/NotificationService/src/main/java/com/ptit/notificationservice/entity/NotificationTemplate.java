@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.GenericGenerator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -41,6 +42,7 @@ public class NotificationTemplate {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "template")
     private List<Notification> notifications;
 
