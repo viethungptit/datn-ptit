@@ -56,6 +56,10 @@ public class JobService {
         return externalUserServiceFeignClient.getCompanyByUserId(userId, internalSecret);
     }
 
+    public CompanyResponse getCompanyByCompanyId(UUID companyId) {
+        return externalUserServiceFeignClient.getCompanyByCompanyId(companyId, internalSecret);
+    }
+
     @Transactional
     public JobDto createJob(JobCreateRequest request, UUID currentUserId) {
         CompanyResponse company = getCompanyByUserId(currentUserId);
@@ -70,7 +74,7 @@ public class JobService {
         job.setQuantity(request.getQuantity());
         job.setDeadline(request.getDeadline());
         job.setJobType(Job.JobType.valueOf(request.getJobType().replace("|", "_")));
-        job.setStatus(Job.Status.open);
+        job.setStatus(Job.Status.pending);
         job.setIsDeleted(false);
         job = jobRepository.save(job);
         final Job savedJob = job;
@@ -236,9 +240,9 @@ public class JobService {
     public JobDto closeJob(UUID jobId, UUID currentUserId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
-        CompanyResponse company = getCompanyByUserId(currentUserId);
+        CompanyResponse company = getCompanyByCompanyId(job.getCompanyId());
         boolean isEmployer = company != null && job.getCompanyId().equals(company.getCompanyId());
-        boolean isAdmin = company == null; // If company is null, treat as admin (adjust if you have a better admin check)
+        boolean isAdmin = company == null;
         if (!isEmployer && !isAdmin) {
             throw new AccessDeniedException("Bạn không có quyền đóng công việc này");
         }
@@ -259,6 +263,34 @@ public class JobService {
                         .targetType("JOB")
                         .targetId(job.getJobId().toString())
                         .description(String.format("Nhà tuyển dụng %s đã đóng công việc %s tại công ty %s",
+                                currentUserId, job.getTitle(), company.getCompanyName()))
+                        .build()
+        );
+        return toDto(job);
+    }
+
+    @Transactional
+    public JobDto approveJob(UUID jobId, UUID currentUserId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
+        CompanyResponse company = getCompanyByCompanyId(job.getCompanyId());
+        if (job.getStatus() == Job.Status.open) {
+            throw new BusinessException("Công việc đã được mở trước đó");
+        }
+        job.setStatus(Job.Status.open);
+        job = jobRepository.save(job);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("APPROVE_JOB")
+                        .targetType("JOB")
+                        .targetId(jobId.toString())
+                        .description(String.format("Quản trị viên %s đã duyệt công việc %s tại công ty %s",
                                 currentUserId, job.getTitle(), company.getCompanyName()))
                         .build()
         );

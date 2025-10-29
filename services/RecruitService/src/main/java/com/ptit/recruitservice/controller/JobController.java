@@ -75,4 +75,12 @@ public class JobController {
         String currentUserId = (String) auth.getPrincipal();
         return jobService.closeJob(jobId, UUID.fromString(currentUserId));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{job_id}/approve")
+    public JobDto approveJob(@PathVariable("job_id") UUID jobId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return jobService.approveJob(jobId, UUID.fromString(currentUserId));
+    }
 }

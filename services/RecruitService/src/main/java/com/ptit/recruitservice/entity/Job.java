@@ -44,7 +44,7 @@ public class Job {
     @Column(name = "job_type", length = 20)
     private JobType jobType;
 
-    public enum Status { open, closed }
+    public enum Status {pending, open, closed }
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private Status status;
