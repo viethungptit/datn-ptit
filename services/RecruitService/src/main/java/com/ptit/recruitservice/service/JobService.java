@@ -1,9 +1,7 @@
 package com.ptit.recruitservice.service;
 
-import com.ptit.recruitservice.dto.CompanyResponse;
-import com.ptit.recruitservice.dto.JobCreateRequest;
-import com.ptit.recruitservice.dto.JobUpdateRequest;
-import com.ptit.recruitservice.dto.JobDto;
+import com.ptit.recruitservice.config.EventPublisher;
+import com.ptit.recruitservice.dto.*;
 import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.entity.JobTagMapping;
 import com.ptit.recruitservice.entity.JobGroupTagMapping;
@@ -16,6 +14,7 @@ import com.ptit.recruitservice.repository.GroupJobTagRepository;
 import com.ptit.recruitservice.exception.ResourceNotFoundException;
 import com.ptit.recruitservice.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -41,14 +40,26 @@ public class JobService {
     private GroupJobTagRepository groupJobTagRepository;
     @Autowired
     private UserServiceFeign externalUserServiceFeignClient;
+    @Autowired
+    private EventPublisher eventPublisher;
+
+    @Value("${internal.secret}")
+    private String internalSecret;
+
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
     public CompanyResponse getCompanyByUserId(UUID userId) {
-        return externalUserServiceFeignClient.getCompanyByUserId(userId);
+        return externalUserServiceFeignClient.getCompanyByUserId(userId, internalSecret);
     }
 
     @Transactional
     public JobDto createJob(JobCreateRequest request, UUID currentUserId) {
-        UUID companyId = getCompanyByUserId(currentUserId).getCompanyId();
+        CompanyResponse company = getCompanyByUserId(currentUserId);
+        UUID companyId = company.getCompanyId();
         Job job = new Job();
         job.setCompanyId(companyId);
         job.setTitle(request.getTitle());
@@ -87,6 +98,22 @@ public class JobService {
                 }).collect(Collectors.toList());
             jobGroupTagMappingRepository.saveAll(groupTagMappings);
         }
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("EMPLOYER")
+                        .action("CREATE_JOB")
+                        .targetType("JOB")
+                        .targetId(job.getJobId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã tạo công việc mới %s tại công ty %s",
+                                currentUserId, job.getTitle(), company.getCompanyName() ))
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(job);
     }
@@ -148,15 +175,48 @@ public class JobService {
                 }).collect(Collectors.toList());
             jobGroupTagMappingRepository.saveAll(groupTagMappings);
         }
+
+        // Gửi log sang AdminService
+        CompanyResponse company = getCompanyByUserId(currentUserId);
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("EMPLOYER")
+                        .action("UPDATE_JOB")
+                        .targetType("JOB")
+                        .targetId(job.getJobId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã tạo công việc mới %s tại công ty %s",
+                                currentUserId, job.getTitle(), company.getCompanyName()))
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(job);
     }
 
-    public JobDto deleteJob(UUID jobId) {
+    public JobDto deleteJob(UUID jobId, UUID currentUserId) {
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         job.setIsDeleted(true);
         job = jobRepository.save(job);
+
+        // Gửi log sang AdminService
+        CompanyResponse company = getCompanyByUserId(currentUserId);
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("DELETE_JOB")
+                        .targetType("JOB")
+                        .targetId(job.getJobId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã xóa công việc %s tại công ty %s",
+                                currentUserId, job.getTitle(), company.getCompanyName()))
+                        .build()
+        );
         return toDto(job);
     }
 
@@ -187,10 +247,25 @@ public class JobService {
         }
         job.setStatus(Job.Status.closed);
         job = jobRepository.save(job);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("CLOSE_JOB")
+                        .targetType("JOB")
+                        .targetId(job.getJobId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã đóng công việc %s tại công ty %s",
+                                currentUserId, job.getTitle(), company.getCompanyName()))
+                        .build()
+        );
         return toDto(job);
     }
 
-    @Scheduled(cron = "0 0 1 * * *") // Runs daily at 1:00 AM
+    @Scheduled(cron = "0 0 0 * * *") // Runs daily at 0:00 AM
     @Transactional
     public void closeExpiredJobs() {
         List<Job> expiredJobs = jobRepository.findByStatusAndDeadlineBefore(Job.Status.open, Timestamp.from(Instant.now()));

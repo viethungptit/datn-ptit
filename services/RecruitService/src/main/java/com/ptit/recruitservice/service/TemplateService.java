@@ -1,5 +1,7 @@
 package com.ptit.recruitservice.service;
 
+import com.ptit.recruitservice.config.EventPublisher;
+import com.ptit.recruitservice.dto.ActivityEvent;
 import com.ptit.recruitservice.dto.TemplateDto;
 import com.ptit.recruitservice.dto.TemplateUpsertRequest;
 import com.ptit.recruitservice.entity.Template;
@@ -32,6 +34,15 @@ public class TemplateService {
     private String bucketName;
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private EventPublisher eventPublisher;
+
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
 
     private String uploadPreviewImage(MultipartFile previewImage) {
@@ -77,7 +88,7 @@ public class TemplateService {
         }
     }
 
-    public TemplateDto createTemplate(TemplateUpsertRequest request) {
+    public TemplateDto createTemplate(TemplateUpsertRequest request, UUID currentUserId) {
         Template entity = new Template();
         entity.setName(request.getName());
         entity.setLayoutJson(validateAndConvertJson(request.getLayoutJson(), "layoutJson"));
@@ -89,14 +100,45 @@ public class TemplateService {
             entity.setPreviewUrl(previewUrl);
         }
         entity = templateRepository.save(entity);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("CREATE_CV_TEMPLATE")
+                        .targetType("TEMPLATE")
+                        .targetId(entity.getTemplateId().toString())
+                        .description(String.format("Quản trị viên %s đã tạo mẫu CV mới với tên %s",
+                                currentUserId, entity.getName()))
+                        .build()
+        );
         return toDto(entity);
     }
 
-    public TemplateDto deleteTemplate(UUID templateId) {
+    public TemplateDto deleteTemplate(UUID templateId, UUID currentUserId) {
         Template entity = templateRepository.findById(templateId)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV:  " + templateId));
         entity.setIsDeleted(true);
         templateRepository.save(entity);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("DELETE_CV_TEMPLATE")
+                        .targetType("TEMPLATE")
+                        .targetId(entity.getTemplateId().toString())
+                        .description(String.format("Quản trị viên %s đã xóa mẫu CV với tên %s",
+                                currentUserId, entity.getName()))
+                        .build()
+        );
+
         return toDto(entity);
     }
 
@@ -113,7 +155,7 @@ public class TemplateService {
         return toDto(entity);
     }
 
-    public TemplateDto updateTemplate(UUID templateId, TemplateUpsertRequest request) {
+    public TemplateDto updateTemplate(UUID templateId, TemplateUpsertRequest request, UUID currentUserId) {
         Template entity = templateRepository.findById(templateId)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV:  " + templateId));
         entity.setName(request.getName());
@@ -128,6 +170,22 @@ public class TemplateService {
             entity.setPreviewUrl(previewUrl);
         }
         templateRepository.save(entity);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("UPDATE_CV_TEMPLATE")
+                        .targetType("TEMPLATE")
+                        .targetId(entity.getTemplateId().toString())
+                        .description(String.format("Quản trị viên %s đã chỉnh sửa mẫu CV có tên %s",
+                                currentUserId, entity.getName()))
+                        .build()
+        );
+
         return toDto(entity);
     }
 

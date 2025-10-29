@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.sql.Timestamp;
 import java.util.UUID;
 import java.time.Instant;
 
@@ -20,8 +21,8 @@ public class SystemStat {
     @Column(name = "stat_id", nullable = false, updatable = false)
     private UUID statId;
 
-    @Column(name = "total_users", nullable = false)
-    private int totalUsers;
+    @Column(name = "total_admins", nullable = false)
+    private int totalAdmins;
 
     @Column(name = "total_candidates", nullable = false)
     private int totalCandidates;
@@ -29,11 +30,11 @@ public class SystemStat {
     @Column(name = "total_employers", nullable = false)
     private int totalEmployers;
 
-    @Column(name = "total_company", nullable = false)
-    private int totalCompany;
+    @Column(name = "total_companies", nullable = false)
+    private int totalCompanies;
 
-    @Column(name = "total_apply", nullable = false)
-    private int totalApply;
+    @Column(name = "total_applies", nullable = false)
+    private int totalApplies;
 
     @Column(name = "total_jobs", nullable = false)
     private int totalJobs;
@@ -45,5 +46,81 @@ public class SystemStat {
     private float avgMatchScore;
 
     @Column(name = "collected_at", nullable = false)
-    private Instant collectedAt;
+    private Instant collectedAt = Instant.now();
+
+    public Instant getCollectedAt() {
+        return collectedAt;
+    }
+
+    public float getAvgMatchScore() {
+        return avgMatchScore;
+    }
+
+    public void setAvgMatchScore(float avgMatchScore) {
+        this.avgMatchScore = avgMatchScore;
+    }
+
+    public int getActiveJobs() {
+        return activeJobs;
+    }
+
+    public void setActiveJobs(int activeJobs) {
+        this.activeJobs = activeJobs;
+    }
+
+    public int getTotalJobs() {
+        return totalJobs;
+    }
+
+    public void setTotalJobs(int totalJobs) {
+        this.totalJobs = totalJobs;
+    }
+
+    public int getTotalApplies() {
+        return totalApplies;
+    }
+
+    public void setTotalApplies(int totalApplies) {
+        this.totalApplies = totalApplies;
+    }
+
+    public int getTotalCompanies() {
+        return totalCompanies;
+    }
+
+    public void setTotalCompanies(int totalCompanies) {
+        this.totalCompanies = totalCompanies;
+    }
+
+    public int getTotalEmployers() {
+        return totalEmployers;
+    }
+
+    public void setTotalEmployers(int totalEmployers) {
+        this.totalEmployers = totalEmployers;
+    }
+
+    public int getTotalCandidates() {
+        return totalCandidates;
+    }
+
+    public void setTotalCandidates(int totalCandidates) {
+        this.totalCandidates = totalCandidates;
+    }
+
+    public int getTotalAdmins() {
+        return totalAdmins;
+    }
+
+    public void setTotalAdmins(int totalAdmins) {
+        this.totalAdmins = totalAdmins;
+    }
+
+    public UUID getStatId() {
+        return statId;
+    }
+
+    public void setStatId(UUID statId) {
+        this.statId = statId;
+    }
 }

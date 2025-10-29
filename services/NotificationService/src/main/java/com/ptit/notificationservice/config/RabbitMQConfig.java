@@ -13,7 +13,7 @@ public class RabbitMQConfig {
     @Value("${notification.exchange}")
     private String notificationExchange;
 
-    @Value("${notification.user.queue}")
+    @Value("${notification.queue}")
     private String userQueue;
 
     @Value("${notification.user.register.routing-key}")
@@ -21,6 +21,24 @@ public class RabbitMQConfig {
 
     @Value("${notification.user.reset-password.routing-key}")
     private String userResetPasswordRoutingKey;
+
+    @Value("${notification.application.status.routing-key}")
+    private String applicationStatusRoutingKey;
+
+    @Value("${notification.application.created.routing-key}")
+    private String applicationCreatedRoutingKey;
+
+    @Value("${notification.cv.upload.routing-key}")
+    private String cvUploadRoutingKey;
+
+    @Value("${alert.exchange}")
+    private String alertExchange;
+
+    @Value("${alert.queue}")
+    private String alertQueue;
+
+    @Value("${alert.system.routing-key}")
+    private String systemAlertRoutingKey;
 
     @Bean
     public TopicExchange notificationExchange() {
@@ -44,5 +62,43 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(userQueue())
                 .to(notificationExchange())
                 .with(userResetPasswordRoutingKey);
+    }
+
+    @Bean
+    public Binding applicationStatusBinding() {
+        return BindingBuilder.bind(userQueue())
+                .to(notificationExchange())
+                .with(applicationStatusRoutingKey);
+    }
+
+    @Bean
+    public Binding applicationCreatedBinding() {
+        return BindingBuilder.bind(userQueue())
+                .to(notificationExchange())
+                .with(applicationCreatedRoutingKey);
+    }
+
+    @Bean
+    public Binding cvUploadBinding() {
+        return BindingBuilder.bind(userQueue())
+                .to(notificationExchange())
+                .with(cvUploadRoutingKey);
+    }
+
+    @Bean
+    public TopicExchange alertExchange() {
+        return new TopicExchange(alertExchange);
+    }
+
+    @Bean
+    public Queue alertQueue() {
+        return new Queue(alertQueue, true);
+    }
+
+    @Bean
+    public Binding systemAlertBinding() {
+        return BindingBuilder.bind(alertQueue())
+                .to(alertExchange())
+                .with(systemAlertRoutingKey);
     }
 }

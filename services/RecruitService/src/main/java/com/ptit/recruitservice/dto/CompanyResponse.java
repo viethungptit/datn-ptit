@@ -5,4 +5,5 @@ import java.util.UUID;
 @Data
 public class CompanyResponse {
     private UUID companyId;
+    private String companyName;
 }

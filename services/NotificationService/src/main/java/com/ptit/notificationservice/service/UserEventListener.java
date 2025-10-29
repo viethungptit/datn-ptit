@@ -42,10 +42,10 @@ public class UserEventListener {
         return userServiceFeign.getUserByEmail(email, internalSecret);
     }
 
-    @RabbitListener(queues = "${notification.user.queue}")
+    @RabbitListener(queues = "${notification.queue}")
     public void handleUserRegisterEvent(String message) {
         try {
-            System.out.println("📩 Received message: " + message);
+            System.out.println("Received message: " + message);
             JsonNode event = objectMapper.readTree(message);
             String eventType = event.get("event_type").asText();
             String email = event.get("to").asText();
@@ -56,6 +56,7 @@ public class UserEventListener {
             StringSubstitutor sub = new StringSubstitutor(data, "{{", "}}");
             String subject = sub.replace(template.getEmailSubjectTemplate());
             String body = sub.replace(template.getEmailBodyTemplate());
+            String notificationContent = sub.replace(template.getInappBodyTemplate());
 
             UserResponse user = null;
             try {
@@ -87,7 +88,7 @@ public class UserEventListener {
             InappDelivery inappDelivery = InappDelivery.builder()
                 .notification(notification)
                 .userId(user != null ? user.getUserId() : null)
-                .content(template.getInappBodyTemplate())
+                .content(notificationContent)
                 .isRead(false)
                 .isDeleted(false)
                 .createdAt(Timestamp.valueOf(LocalDateTime.now()))
@@ -105,4 +106,59 @@ public class UserEventListener {
             e.printStackTrace();
         }
     }
+
+    @RabbitListener(queues = "${alert.queue}")
+    public void handleSystemAlert(String message) {
+        try {
+            System.out.println("Received alert message: " + message);
+            JsonNode event = objectMapper.readTree(message);
+
+            String eventType = event.get("event_type").asText();
+            String to = event.get("to").asText();
+            Map<String, Object> data = objectMapper.convertValue(event.get("data"), Map.class);
+
+            NotificationTemplate template = templateService.getTemplateByEventType(eventType);
+            if (template == null) {
+                System.err.println("Không tìm thấy template cho event_type: " + eventType);
+                return;
+            }
+
+            StringSubstitutor sub = new StringSubstitutor(data, "{{", "}}");
+            String subject = sub.replace(template.getEmailSubjectTemplate());
+            String body = sub.replace(template.getEmailBodyTemplate());
+
+            String[] emails = to.split(",");
+            for (String email : emails) {
+                try {
+                    mailService.sendMail(email.trim(), subject, body);
+                    System.out.println("Gửi alert email thành công tới " + email);
+                } catch (Exception ex) {
+                    System.err.println("Gửi email thất bại tới " + email + ": " + ex.getMessage());
+                }
+            }
+
+            Notification notification = Notification.builder()
+                    .template(template)
+                    .eventType(eventType)
+                    .payload(message)
+                    .build();
+            notification = notificationService.save(notification);
+
+            for (String email : emails) {
+                EmailDelivery emailDelivery = EmailDelivery.builder()
+                        .notification(notification)
+                        .email(email.trim())
+                        .subject(subject)
+                        .body(body)
+                        .status(EmailDelivery.EmailDeliveryStatus.success)
+                        .build();
+                emailDeliveryService.save(emailDelivery);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }

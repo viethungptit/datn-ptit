@@ -33,23 +33,20 @@ public class UserService {
     @Autowired
     private OtpTokenRepository otpTokenRepository;
     @Autowired
-    private EventPublisher eventPublisher;
-
-    @Autowired
     private CandidateRepository candidateRepository;
     @Autowired
     private EmployerRepository employerRepository;
     @Autowired
     private UserProfileService userProfileService;
 
-    @Value("${notification.exchange}")
-    private String notificationExchange;
+    @Autowired
+    private EventPublisher eventPublisher;
 
-    @Value("${notification.user.register.routing-key}")
-    private String registerRoutingKey;
+    @Value("${log.exchange}")
+    private String logExchange;
 
-    @Value("${notification.user.reset-password.routing-key}")
-    private String resetPasswordRoutingKey;
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
     public UserResponse updateUser(UUID userId, UserUpdateAdminRequest request, String currentUserId, boolean isAdmin) {
         if (!isAdmin && !userId.equals(UUID.fromString(currentUserId))) {
@@ -62,10 +59,24 @@ public class UserService {
         existingUser.setPhone(request.getPhone());
         existingUser.setRole(request.getRole());
         userRepository.save(existingUser);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId)
+                        .actorRole("ADMIN")
+                        .action("UPDATE_USER")
+                        .targetType("USER")
+                        .targetId(existingUser.getUserId().toString())
+                        .description(String.format("Quản trị viên %s đã cập nhật thông tin người dùng %s", currentUserId, existingUser.getUserId()))
+                        .build()
+        );
         return toResponse(existingUser);
     }
 
-    public UserResponse createUser(UserRequest request) {
+    public UserResponse createUser(UserRequest request, String currentUserId) {
         Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
         if (existingUserOpt.isPresent()) {
             User existingUser = existingUserOpt.get();
@@ -94,15 +105,43 @@ public class UserService {
                 .createdAt(LocalDateTime.now())
                 .build();
         userRepository.save(user);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId)
+                        .actorRole("ADMIN")
+                        .action("CREATE_USER")
+                        .targetType("USER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Quản trị viên %s đã tạo người dùng %s", currentUserId, user.getUserId()))
+                        .build()
+        );
         return toResponse(user);
     }
 
-    public void deleteUser(UUID userId) {
+    public void deleteUser(UUID userId, String currentUserId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         user.setDeleted(true);
         user.setActive(false);
         userRepository.save(user);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId)
+                        .actorRole("ADMIN")
+                        .action("DELETE_USER")
+                        .targetType("USER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Quản trị viên %s đã xóa người dùng %s", currentUserId, user.getUserId()))
+                        .build()
+        );
     }
 
     public UserResponse getUser(UUID userId, String currentUserId, boolean isPrivilegedUser) {
@@ -124,6 +163,13 @@ public class UserService {
 
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
+                .filter(u -> !u.isDeleted())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+        return toResponse(user);
+    }
+
+    public UserResponse getUserByUserId(UUID userId) {
+        User user = userRepository.findById(userId)
                 .filter(u -> !u.isDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
         return toResponse(user);
@@ -155,6 +201,21 @@ public class UserService {
         }
         user.setPassword(passwordEncoder.encode(request.newPassword));
         userRepository.save(user);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId)
+                        .actorRole("USER")
+                        .action("CHANGE_PASSWORD")
+                        .targetType("USER")
+                        .targetId(currentUserId)
+                        .description(String.format("Người dùng %s đã đổi mật khẩu trên hệ thống", currentUserId))
+                        .build()
+        );
+
         return new ForgotPasswordResponse("Đổi mật khẩu thành công");
     }
 
@@ -164,6 +225,21 @@ public class UserService {
         existingUser.setFullName(request.getFullName());
         existingUser.setPhone(request.getPhone());
         userRepository.save(existingUser);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("USER")
+                        .action("UPDATE_USER_PROFILE")
+                        .targetType("USER")
+                        .targetId(currentUserId.toString())
+                        .description(String.format("Người dùng %s đã cập nhật thông tin cá nhân", currentUserId))
+                        .build()
+        );
+
         return toResponse(existingUser);
     }
 

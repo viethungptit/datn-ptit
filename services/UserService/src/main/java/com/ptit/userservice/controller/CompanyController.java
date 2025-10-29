@@ -31,10 +31,11 @@ public class CompanyController {
         @ModelAttribute  CompanyCreateRequest request
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
         boolean isAdmin = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        return ResponseEntity.ok(companyService.createCompany(request, isAdmin));
+        return ResponseEntity.ok(companyService.createCompany(request, isAdmin, UUID.fromString(currentUserId)));
     }
 
     @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
@@ -55,19 +56,27 @@ public class CompanyController {
         @PathVariable UUID companyId,
         @ModelAttribute  CompanyUpdateRequest request
     ) {
-        return ResponseEntity.ok(companyService.updateCompany(companyId, request));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(companyService.updateCompany(companyId, request, isAdmin, UUID.fromString(currentUserId)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{companyId}/verify")
     public ResponseEntity<CompanyResponse> verifyCompany(@PathVariable UUID companyId) {
-        return ResponseEntity.ok(companyService.verifyCompany(companyId));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return ResponseEntity.ok(companyService.verifyCompany(companyId, UUID.fromString(currentUserId)));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> deleteCompany(@PathVariable UUID companyId) {
-        return ResponseEntity.ok(companyService.deleteCompany(companyId));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return ResponseEntity.ok(companyService.deleteCompany(companyId, UUID.fromString(currentUserId)));
     }
 
 
@@ -77,5 +86,13 @@ public class CompanyController {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }
         return ResponseEntity.ok(companyService.getCompanyByUserId(userId));
+    }
+
+    @GetMapping("/by-companyId/{companyId}")
+    public ResponseEntity<CompanyResponse> getCompanyByCompanyId(@PathVariable UUID companyId, @RequestHeader("X-Internal-Secret") String secret) {
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
+        return ResponseEntity.ok(companyService.getCompanyByCompanyId(companyId));
     }
 }

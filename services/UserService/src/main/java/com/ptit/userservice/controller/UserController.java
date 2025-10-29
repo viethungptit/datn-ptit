@@ -26,7 +26,9 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@RequestBody UserRequest request) {
-        UserResponse response = userService.createUser(request);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        UserResponse response = userService.createUser(request, currentUserId);
         return ResponseEntity.ok(response);
     }
 
@@ -55,7 +57,9 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
-        userService.deleteUser(userId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        userService.deleteUser(userId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 
@@ -67,12 +71,21 @@ public class UserController {
     }
 
     // API to get user by email, protected by internal secret
-    @GetMapping("/by-email")
-    public ResponseEntity<UserResponse> getUserByEmail(@RequestParam String email, @RequestHeader("X-Internal-Secret") String secret) {
+    @GetMapping("/by-email/{email}")
+    public ResponseEntity<UserResponse> getUserByEmail(@PathVariable String email, @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }
         UserResponse response = userService.getUserByEmail(email);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/by-userId/{userId}")
+    public ResponseEntity<UserResponse> getUserByUserId(@PathVariable UUID userId, @RequestHeader("X-Internal-Secret") String secret) {
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
+        UserResponse response = userService.getUserByUserId(userId);
         return ResponseEntity.ok(response);
     }
 

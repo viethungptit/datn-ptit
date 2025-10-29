@@ -13,10 +13,10 @@ public class RabbitMQConfig {
     @Value("${log.exchange}")
     private String exchangeName;
 
-    @Value("${log.admin.queue}")
+    @Value("${log.activity.queue}")
     private String queueName;
 
-    @Value("${log.admin.routing-key}")
+    @Value("${log.activity.routing-key}")
     private String routingKey;
 
     @Bean
@@ -25,13 +25,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue adminQueue() {
+    public Queue activityQueue() {
         return new Queue(queueName, true);
     }
 
     @Bean
     public Binding adminBinding() {
-        return BindingBuilder.bind(adminQueue())
+        return BindingBuilder.bind(activityQueue())
                 .to(logExchange())
                 .with(routingKey);
     }

@@ -2,15 +2,16 @@ package com.ptit.adminservice.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ptit.adminservice.dto.CreateAdminLogRequest;
+import com.ptit.adminservice.dto.CreateActivityLogRequest;
 import com.ptit.adminservice.dto.UserResponse;
 import com.ptit.adminservice.feign.UserServiceFeign;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class LogEventListener {
@@ -18,39 +19,39 @@ public class LogEventListener {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private AdminLogService adminLogService;
-    @Autowired
-    private UserServiceFeign externalUserServiceFeignClient;
+    private ActivityLogService activityLogService;
 
-    public UserResponse getUserByEmail(String email) {
-        return externalUserServiceFeignClient.getUserByEmail(email);
-    }
+//    @Autowired
+//    private UserServiceFeign externalUserServiceFeignClient;
+//    @Value("${internal.secret}")
+//    private String internalSecret;
+//
+//    public UserResponse getUserByEmail(String email) {
+//        return externalUserServiceFeignClient.getUserByEmail(email, internalSecret);
+//    }
 
-    @RabbitListener(queues = "${log.admin.queue}")
-    public void receiveLogEvent(String message) {
+    @RabbitListener(queues = "${log.activity.queue}")
+    public void receiveActivityEvent(String message) {
         try {
             JsonNode event = objectMapper.readTree(message);
-            String email = event.get("email").asText();
-            String action = event.get("action").asText();
-            String detail = event.get("detail").asText();
+            Map<String, Object> data = objectMapper.convertValue(event, Map.class);
 
-            UserResponse user = null;
-            try {
-                user = getUserByEmail(email);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+            CreateActivityLogRequest logRequest = new CreateActivityLogRequest();
+            logRequest.setActorId(getUuid(data.get("actorId")));
+            logRequest.setActorRole((String) data.get("actorRole"));
+            logRequest.setAction((String) data.get("action"));
+            logRequest.setTargetType((String) data.get("targetType"));
+            logRequest.setTargetId(getUuid(data.get("targetId")));
+            logRequest.setDescription((String) data.get("description"));
 
-            CreateAdminLogRequest create = new CreateAdminLogRequest();
-            create.setUserId(user != null ? user.getUserId() : null);
-            create.setAction(action);
-            create.setDetails(detail);
-            adminLogService.createAdminLog(create);
-
-
+            activityLogService.createLog(logRequest);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private UUID getUuid(Object value) {
+        return value != null ? UUID.fromString(value.toString()) : null;
     }
 
 }

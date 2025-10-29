@@ -1,10 +1,8 @@
 package com.ptit.userservice.service;
 
-import com.ptit.userservice.dto.CandidateUpdateRequest;
-import com.ptit.userservice.dto.EmployerResponse;
-import com.ptit.userservice.dto.EmployerUpdateRequest;
+import com.ptit.userservice.config.EventPublisher;
+import com.ptit.userservice.dto.*;
 import com.ptit.userservice.entity.Candidate;
-import com.ptit.userservice.dto.CandidateResponse;
 import com.ptit.userservice.entity.Employer;
 import com.ptit.userservice.entity.User;
 import com.ptit.userservice.entity.Candidate.Gender;
@@ -15,7 +13,6 @@ import com.ptit.userservice.repository.EmployerRepository;
 import com.ptit.userservice.repository.UserRepository;
 import com.ptit.userservice.entity.Company;
 import com.ptit.userservice.repository.CompanyRepository;
-import com.ptit.userservice.dto.CompanyResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -46,6 +43,15 @@ public class UserProfileService {
     private MinioClient minioClient;
     @Value("${minio.bucket}")
     private String bucketName;
+
+    @Autowired
+    private EventPublisher eventPublisher;
+
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
     private String uploadAvatar(MultipartFile avatar) {
         if (avatar == null || avatar.isEmpty()) return null;
@@ -117,6 +123,25 @@ public class UserProfileService {
             candidate.setAvatarUrl(uploadAvatar(request.getAvatar()));
         }
         candidate = candidateRepository.save(candidate);
+
+        // Gửi log sang AdminService
+        String role = isAdmin ? "ADMIN" : "CANDIDATE";
+        String desc = String.format("%s %s đã cập nhật thông tin người dùng %s",
+                isAdmin ? "Quản trị viên" : "Người dùng", currentUserId, user.getUserId()
+        );
+
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole(role)
+                        .action("UPDATE_CANDIDATE_PROFILE")
+                        .targetType("CANDIDATE")
+                        .targetId(user.getUserId().toString())
+                        .description(desc)
+                        .build()
+        );
         return toCandidateResponse(candidate);
     }
 
@@ -142,6 +167,25 @@ public class UserProfileService {
         employer.setActive(company.isVerified());
         if (request.getPosition() != null) employer.setPosition(request.getPosition());
         employer = employerRepository.save(employer);
+
+        // Gửi log sang AdminService
+        String role = isAdmin ? "ADMIN" : "EMPLOYER";
+        String desc = String.format("%s %s đã cập nhật thông tin nhà tuyển dụng %s",
+                isAdmin ? "Quản trị viên" : "Nhà tuyển dụng", currentUserId, user.getUserId()
+        );
+
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole(role)
+                        .action("UPDATE_EMPLOYER_PROFILE")
+                        .targetType("EMPLOYER")
+                        .targetId(user.getUserId().toString())
+                        .description(desc)
+                        .build()
+        );
         return toEmployerResponse(employer);
     }
 

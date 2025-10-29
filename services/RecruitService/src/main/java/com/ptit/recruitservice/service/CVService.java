@@ -3,9 +3,11 @@ package com.ptit.recruitservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ptit.recruitservice.config.EventPublisher;
 import com.ptit.recruitservice.dto.*;
 import com.ptit.recruitservice.entity.CV;
 import com.ptit.recruitservice.entity.Template;
+import com.ptit.recruitservice.feign.UserServiceFeign;
 import com.ptit.recruitservice.repository.CVRepository;
 import com.ptit.recruitservice.repository.TemplateRepository;
 import com.ptit.recruitservice.exception.ResourceNotFoundException;
@@ -39,6 +41,14 @@ public class CVService {
     @Value("${minio.bucket}")
     private String bucketName;
 
+    @Autowired
+    private EventPublisher eventPublisher;
+
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
     private String uploadCV(MultipartFile cvFile) {
         if (cvFile == null || cvFile.isEmpty()) return null;
@@ -101,6 +111,21 @@ public class CVService {
         cv.setIsDeleted(false);
         cv.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         cv = cvRepository.save(cv);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(userId.toString())
+                        .actorRole("CANDIDATE")
+                        .action("CREATE_CV")
+                        .targetType("CV")
+                        .targetId(cv.getCvId().toString())
+                        .description(String.format("Người dùng %s đã tạo CV mới với tên %s", userId, cv.getTitle()))
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(cv);
     }
@@ -123,6 +148,21 @@ public class CVService {
         cv.setIsDeleted(false);
         cv.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         cv = cvRepository.save(cv);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(userId.toString())
+                        .actorRole("CANDIDATE")
+                        .action("UPLOAD_CV")
+                        .targetType("CV")
+                        .targetId(cv.getCvId().toString())
+                        .description(String.format("Người dùng %s đã tải lên CV mới với tên %s", userId, cv.getTitle()))
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(cv);
     }
@@ -155,6 +195,21 @@ public class CVService {
         cv.setSourceType(CV.SourceType.system);
         cv.setStatus(CV.Status.pending_embbeding);
         cv = cvRepository.save(cv);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("CANDIDATE")
+                        .action("UPDATE_CV")
+                        .targetType("CV")
+                        .targetId(cv.getCvId().toString())
+                        .description(String.format("Người dùng %s đã cập nhật CV với tên %s", currentUserId, cv.getTitle()))
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(cv);
     }
@@ -167,10 +222,29 @@ public class CVService {
             throw new AccessDeniedException("Bạn không thể xóa CV của người khác");
         }
         if (cv.getFileUrl() != null && !cv.getFileUrl().isEmpty()) {
-            deleteCVInMinio(cv.getFileUrl()); // Remove file from MinIO if exists
+            deleteCVInMinio(cv.getFileUrl());
         }
         cv.setIsDeleted(true);
         cv = cvRepository.save(cv);
+
+        // Gửi log sang AdminService
+        String role = isAdmin ? "ADMIN" : "CANDIDATE";
+        String desc = String.format("%s %s đã xóa CV với tên %s",
+                isAdmin ? "Quản trị viên" : "Người dùng", currentUserId, cv.getTitle()
+        );
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole(role)
+                        .action("CREATE_CV")
+                        .targetType("CV")
+                        .targetId(cv.getCvId().toString())
+                        .description(desc)
+                        .build()
+        );
+
         // TODO: Publish event to AI Service
         return toDto(cv);
     }

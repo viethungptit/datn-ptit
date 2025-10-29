@@ -50,6 +50,12 @@ public class AuthService {
     @Value("${notification.user.reset-password.routing-key}")
     private String resetPasswordRoutingKey;
 
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
+
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -185,6 +191,19 @@ public class AuthService {
         cookie.setMaxAge(expirySeconds);
         response.addCookie(cookie);
 
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(user.getUserId().toString())
+                        .actorRole("USER")
+                        .action("LOGIN")
+                        .targetType("USER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Người dùng %s đăng nhập hệ thống", user.getUserId()))
+                        .build()
+        );
         LoginResponse result = new LoginResponse();
         result.accessToken = accessToken;
         return result;
@@ -208,7 +227,6 @@ public class AuthService {
     @Transactional
     public LogoutResponse logout(String refreshToken) {
         refreshTokenRepository.deleteByToken(refreshToken);
-        // TODO: Send event to AdminService
         LogoutResponse response = new LogoutResponse();
         response.message = "Đăng xuất thành công";
         return response;
@@ -309,6 +327,20 @@ public class AuthService {
         otpTokenRepository.save(otp);
         user.setPassword(passwordEncoder.encode(request.newPassword));
         userRepository.save(user);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(user.getUserId().toString())
+                        .actorRole("USER")
+                        .action("FORGOT_PASSWORD")
+                        .targetType("USER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Người dùng %s đặt lại mật khẩu thành công", user.getUserId()))
+                        .build()
+        );
         return new ForgotPasswordResponse("Đặt lại mật khẩu thành công");
     }
 }

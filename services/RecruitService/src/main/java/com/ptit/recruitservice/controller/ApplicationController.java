@@ -23,24 +23,27 @@ public class ApplicationController {
     @PreAuthorize("hasRole('CANDIDATE')")
     @PostMapping
     public ResponseEntity<ApplicationResponse> applyForJob(@RequestBody ApplicationRequest request) {
-        // TODO: Check role = candidate
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
         ApplicationResponse response = applicationService.applyForJob(request, UUID.fromString(currentUserId));
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
+    @PreAuthorize("hasRole('EMPLOYER')")
     @PutMapping("/{applicationId}")
     public ResponseEntity<ApplicationResponse> updateStatus(@PathVariable UUID applicationId, @RequestBody ApplicationStatusUpdateRequest request) {
-        ApplicationResponse response = applicationService.updateStatus(applicationId, request.getStatus());
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        ApplicationResponse response = applicationService.updateStatus(applicationId, request.getStatus(), UUID.fromString(currentUserId));
         return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{applicationId}")
     public ResponseEntity<ApplicationResponse> deleteApplication(@PathVariable UUID applicationId) {
-        ApplicationResponse response = applicationService.deleteApplication(applicationId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        ApplicationResponse response = applicationService.deleteApplication(applicationId, UUID.fromString(currentUserId));
         return ResponseEntity.ok(response);
     }
 

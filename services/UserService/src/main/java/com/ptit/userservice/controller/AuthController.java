@@ -70,13 +70,4 @@ public class AuthController {
     public void requestResetPassword(@RequestBody RequestResetPasswordRequest request) {
         authService.requestResetPassword(request);
     }
-
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        return ResponseEntity.ok(Map.of(
-                "status", "UP",
-                "service", "UserService",
-                "timestamp", LocalDateTime.now()
-        ));
-    }
 }

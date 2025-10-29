@@ -1,5 +1,7 @@
 package com.ptit.userservice.service;
 
+import com.ptit.userservice.config.EventPublisher;
+import com.ptit.userservice.dto.ActivityEvent;
 import com.ptit.userservice.dto.CompanyCreateRequest;
 import com.ptit.userservice.dto.CompanyUpdateRequest;
 import com.ptit.userservice.dto.CompanyResponse;
@@ -12,6 +14,7 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +31,15 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final EmployerRepository employerRepository ;
     private final MinioClient minioClient;
+
+    @Autowired
+    private EventPublisher eventPublisher;
+
+    @Value("${log.exchange}")
+    private String logExchange;
+
+    @Value("${log.activity.routing-key}")
+    private String logActivityRoutingKey;
 
     @Value("${minio.bucket}")
     private String bucketName;
@@ -117,7 +129,7 @@ public class CompanyService {
         return response;
     }
 
-    public CompanyResponse createCompany(CompanyCreateRequest request, boolean isAdmin) {
+    public CompanyResponse createCompany(CompanyCreateRequest request, boolean isAdmin, UUID currentUserId) {
         Company company = new Company();
         company.setCompanyName(request.getCompanyName());
         company.setIndustry(request.getIndustry());
@@ -135,6 +147,25 @@ public class CompanyService {
             company.setCoverImgUrl(uploadCoverImg(request.getCoverImg()));
         }
         company = companyRepository.save(company);
+
+        // Gửi log sang AdminService
+        String role = isAdmin ? "ADMIN" : "EMPLOYER";
+        String desc = String.format("%s %s đã tạo công ty %s",
+                isAdmin ? "Quản trị viên" : "Nhà tuyển dụng", currentUserId, company.getCompanyName()
+        );
+
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole(role)
+                        .action("CREATE_COMPANY")
+                        .targetType("COMPANY")
+                        .targetId(company.getCompanyId().toString())
+                        .description(desc)
+                        .build()
+        );
         return toResponse(company);
     }
 
@@ -152,7 +183,7 @@ public class CompanyService {
                 .collect(Collectors.toList());
     }
 
-    public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request) {
+    public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request, boolean isAdmin, UUID currentUserId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         if (request.getCompanyName() != null) company.setCompanyName(request.getCompanyName());
@@ -174,10 +205,29 @@ public class CompanyService {
             company.setCoverImgUrl(uploadCoverImg(request.getCoverImg()));
         }
         company = companyRepository.save(company);
+
+        // Gửi log sang AdminService
+        String role = isAdmin ? "ADMIN" : "EMPLOYER";
+        String desc = String.format("%s %s đã cập nhật thông tin công ty %s",
+                isAdmin ? "Quản trị viên" : "Nhà tuyển dụng", currentUserId, company.getCompanyName()
+        );
+
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole(role)
+                        .action("UPDATE_COMPANY")
+                        .targetType("COMPANY")
+                        .targetId(company.getCompanyId().toString())
+                        .description(desc)
+                        .build()
+        );
         return toResponse(company);
     }
 
-    public CompanyResponse verifyCompany(UUID companyId) {
+    public CompanyResponse verifyCompany(UUID companyId, UUID currentUserId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         company.setVerified(true);
@@ -190,14 +240,43 @@ public class CompanyService {
             employer.setActive(true);
             employerRepository.save(employer);
         }
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("VERIFY_COMPANY")
+                        .targetType("COMPANY")
+                        .targetId(company.getCompanyId().toString())
+                        .description(String.format("Quản trị viên %s đã xác thực công ty %s", currentUserId, company.getCompanyName()))
+                        .build()
+        );
         return toResponse(company);
     }
 
-    public CompanyResponse deleteCompany(UUID companyId) {
+    public CompanyResponse deleteCompany(UUID companyId, UUID currentUserId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         company.setDeleted(true);
         company = companyRepository.save(company);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("DELETE_COMPANY")
+                        .targetType("COMPANY")
+                        .targetId(company.getCompanyId().toString())
+                        .description(String.format("Quản trị viên %s đã xóa công ty %s", currentUserId, company.getCompanyName()))
+                        .build()
+        );
+
         return toResponse(company);
     }
 
@@ -207,6 +286,12 @@ public class CompanyService {
             .findFirst()
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Company company = employer.getCompany();
+        return toResponse(company);
+    }
+
+    public CompanyResponse getCompanyByCompanyId(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         return toResponse(company);
     }
 }

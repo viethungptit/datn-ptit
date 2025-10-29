@@ -18,9 +18,6 @@ import java.util.List;
 public class SystemStatController {
     private final SystemStatService systemStatService;
 
-    @Value("${internal.secret}")
-    private String internalSecret;
-
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<SystemStatDto> getDashboardStats() {
@@ -33,17 +30,6 @@ public class SystemStatController {
     public ResponseEntity<List<SystemStatDto>> getAllStats() {
         List<SystemStatDto> stats = systemStatService.getAllStats();
         return ResponseEntity.ok(stats);
-    }
-
-
-    @PostMapping
-    public ResponseEntity<SystemStatDto> createSystemStat(@RequestBody CreateSystemStatRequest request,
-                                                          @RequestHeader("X-Internal-Secret") String secret) {
-        if (!internalSecret.equals(secret)) {
-            throw new AccessDeniedException("Bạn không thể thực hiện hành động này");
-        }
-        SystemStatDto stat = systemStatService.createSystemStat(request);
-        return ResponseEntity.ok(stat);
     }
 }
 

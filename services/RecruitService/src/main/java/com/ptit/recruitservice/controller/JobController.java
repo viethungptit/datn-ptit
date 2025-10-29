@@ -45,7 +45,9 @@ public class JobController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{job_id}")
     public JobDto deleteJob(@PathVariable("job_id") UUID jobId) {
-        return jobService.deleteJob(jobId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        return jobService.deleteJob(jobId, UUID.fromString(currentUserId));
     }
 
     @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
