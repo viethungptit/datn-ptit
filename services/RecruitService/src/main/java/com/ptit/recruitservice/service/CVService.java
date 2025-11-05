@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ptit.recruitservice.config.EventPublisher;
 import com.ptit.recruitservice.dto.*;
 import com.ptit.recruitservice.entity.CV;
+import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.entity.Template;
 import com.ptit.recruitservice.feign.UserServiceFeign;
 import com.ptit.recruitservice.repository.CVRepository;
@@ -24,7 +25,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +43,8 @@ public class CVService {
     private MinioClient minioClient;
     @Value("${minio.bucket}")
     private String bucketName;
+    @Value("${minio.url}")
+    private String minioUrl;
 
     @Autowired
     private EventPublisher eventPublisher;
@@ -49,6 +54,15 @@ public class CVService {
 
     @Value("${log.activity.routing-key}")
     private String logActivityRoutingKey;
+
+    @Value("${embedding.exchange}")
+    private String embeddingExchange;
+
+    @Value("${embedding.cv.routing-key}")
+    private String embeddingCVRoutingKey;
+
+    @Value("${embedding.delete.cv.routing-key}")
+    private String deleteCVRoutingKey;
 
     private String uploadCV(MultipartFile cvFile) {
         if (cvFile == null || cvFile.isEmpty()) return null;
@@ -93,8 +107,20 @@ public class CVService {
         }
     }
 
+    private String buildRawTextFromDataJson(JsonNode data) {
+        StringBuilder rawText = new StringBuilder();
+
+        rawText.append("Position: ").append(data.path("position").asText("")).append("\n");
+        rawText.append("Summary: ").append(data.path("summary").asText("")).append("\n");
+        rawText.append("Skills: ").append(data.path("skills").asText("")).append("\n");
+        rawText.append("Experience: ").append(data.path("experience").asText("")).append("\n");
+        rawText.append("Projects: ").append(data.path("projects").asText(""));
+        return rawText.toString().trim().replaceAll("\\s+", " ");
+    }
+
     @Transactional
     public CVDto createCV(CVCreateRequest request, UUID userId) {
+        JsonNode data = validateAndConvertJson(request.getDataJson(), "dataJson");
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             throw new BusinessException("Tên CV không được để trống");
         }
@@ -105,12 +131,19 @@ public class CVService {
         cv.setSourceType(CV.SourceType.system);
         cv.setTemplate(template);
         cv.setTitle(request.getTitle());
-        cv.setDataJson(validateAndConvertJson(request.getDataJson(), "dataJson"));
+        cv.setDataJson(data);
         cv.setFileUrl(null);
-        cv.setStatus(CV.Status.pending_embbeding);
+        cv.setStatusEmbedding(CV.StatusEmbedding.pending);
         cv.setIsDeleted(false);
         cv.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         cv = cvRepository.save(cv);
+
+        // Gửi sang RecommendService để embedding
+        String rawText = buildRawTextFromDataJson(data);
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("cv_id", cv.getCvId());
+        event1.put("raw_text", rawText);
+        eventPublisher.publish(embeddingExchange, embeddingCVRoutingKey, event1);
 
         // Gửi log sang AdminService
         eventPublisher.publish(
@@ -125,8 +158,6 @@ public class CVService {
                         .description(String.format("Người dùng %s đã tạo CV mới với tên %s", userId, cv.getTitle()))
                         .build()
         );
-
-        // TODO: Publish event to AI Service
         return toDto(cv);
     }
 
@@ -144,10 +175,16 @@ public class CVService {
         cv.setTitle(file.getOriginalFilename());
         cv.setDataJson(null);
         cv.setFileUrl(objectName); // Store MinIO object name
-        cv.setStatus(CV.Status.pending_embbeding);
+        cv.setStatusEmbedding(CV.StatusEmbedding.pending);
         cv.setIsDeleted(false);
         cv.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         cv = cvRepository.save(cv);
+
+        // Gửi sang RecommendService để embedding
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("cv_id", cv.getCvId());
+        event1.put("file_url", cv.getFileUrl());
+        eventPublisher.publish(embeddingExchange, embeddingCVRoutingKey, event1);
 
         // Gửi log sang AdminService
         eventPublisher.publish(
@@ -162,8 +199,6 @@ public class CVService {
                         .description(String.format("Người dùng %s đã tải lên CV mới với tên %s", userId, cv.getTitle()))
                         .build()
         );
-
-        // TODO: Publish event to AI Service
         return toDto(cv);
     }
 
@@ -186,15 +221,23 @@ public class CVService {
         if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             throw new BusinessException("Tên CV không được để trống");
         }
+        JsonNode data = validateAndConvertJson(request.getDataJson(), "dataJson");
         Template template = templateRepository.findById(request.getTemplateId())
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mẫu CV " + request.getTemplateId()));
         cv.setTemplate(template);
         cv.setTitle(request.getTitle());
-        cv.setDataJson(validateAndConvertJson(request.getDataJson(), "dataJson"));
+        cv.setDataJson(data);
         cv.setFileUrl(null);
         cv.setSourceType(CV.SourceType.system);
-        cv.setStatus(CV.Status.pending_embbeding);
+        cv.setStatusEmbedding(CV.StatusEmbedding.pending);
         cv = cvRepository.save(cv);
+
+        // Gửi sang RecommendService để embedding
+        String rawText = buildRawTextFromDataJson(data);
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("cv_id", cv.getCvId());
+        event1.put("raw_text", rawText);
+        eventPublisher.publish(embeddingExchange, embeddingCVRoutingKey, event1);
 
         // Gửi log sang AdminService
         eventPublisher.publish(
@@ -209,8 +252,18 @@ public class CVService {
                         .description(String.format("Người dùng %s đã cập nhật CV với tên %s", currentUserId, cv.getTitle()))
                         .build()
         );
+        return toDto(cv);
+    }
 
-        // TODO: Publish event to AI Service
+    @Transactional
+    public CVDto updateNameCV(UUID cvId, String name, UUID currentUserId) {
+        CV cv = cvRepository.findById(cvId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
+        if(!currentUserId.equals(cv.getUserId())){
+            throw new AccessDeniedException("Bạn không thể chỉnh sửa CV của người khác");
+        }
+        cv.setTitle(name);
+        cv = cvRepository.save(cv);
         return toDto(cv);
     }
 
@@ -226,6 +279,11 @@ public class CVService {
         }
         cv.setIsDeleted(true);
         cv = cvRepository.save(cv);
+
+        // Gửi sang RecommendService để xóa embedding
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("cv_id", cv.getCvId());
+        eventPublisher.publish(embeddingExchange, deleteCVRoutingKey, event1);
 
         // Gửi log sang AdminService
         String role = isAdmin ? "ADMIN" : "CANDIDATE";
@@ -244,8 +302,6 @@ public class CVService {
                         .description(desc)
                         .build()
         );
-
-        // TODO: Publish event to AI Service
         return toDto(cv);
     }
 
@@ -253,27 +309,38 @@ public class CVService {
     public CVExportResponse exportCV(UUID cvId) {
         CV cv = cvRepository.findById(cvId)
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV:  " + cvId));
-        if (cv.getSourceType() != CV.SourceType.system) {
-            throw new BusinessException("Chỉ có thể xuất CV được tạo từ hệ thống");
+        if(!cv.getSourceType().equals(CV.SourceType.upload)) {
+            throw new BusinessException("Chỉ có thể xuất các CV được tải lên");
         }
-        // TODO: Render PDF from dataJson using iText
-        // InputStream pdfStream = ...; // Rendered PDF stream
-        // MultipartFile pdfFile = ...; // Convert to MultipartFile if needed
-        // String objectName = uploadCV(pdfFile); // Upload PDF to MinIO
-        // cv.setFileUrl(objectName);
-        // For now, keep placeholder
-        String fileUrl = "minio-url/exported-" + cv.getCvId() + ".pdf"; // Placeholder
-        cv.setFileUrl(fileUrl);
-        cv = cvRepository.save(cv);
         CVExportResponse response = new CVExportResponse();
-        response.setFileUrl(fileUrl);
+        String fullURL = minioUrl + "/" + bucketName + "/" + cv.getFileUrl();
+        response.setFileUrl(fullURL);
         return response;
     }
 
-    public List<CVDto> getAllCVsByUser(UUID userId, UUID currentUserId, boolean isAdmin) {
-        if(!isAdmin && !userId.equals(currentUserId)){
-            throw new AccessDeniedException("Bạn không thể xem CV của người khác");
+    public List<CVDto> getAllCVsMe(UUID currentUserId, String sourceTypeStr) {
+        if (sourceTypeStr == null || sourceTypeStr.trim().isEmpty()) {
+            return cvRepository.findByUserIdAndIsDeletedFalse(currentUserId)
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
         }
+
+        CV.SourceType sourceType;
+        try {
+            sourceType = CV.SourceType.valueOf(sourceTypeStr.trim());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("Invalid sourceType: " + sourceTypeStr);
+        }
+
+        return cvRepository.findByUserIdAndIsDeletedFalse(currentUserId)
+                .stream()
+                .filter(cv -> cv.getSourceType() == sourceType)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<CVDto> getAllCVsByUser(UUID userId) {
         return cvRepository.findByUserIdAndIsDeletedFalse(userId).stream().map(this::toDto).collect(Collectors.toList());
     }
 
@@ -290,9 +357,63 @@ public class CVService {
         dto.setDataJson(cv.getDataJson() != null ? cv.getDataJson() : null);
         dto.setFileUrl(cv.getFileUrl());
         dto.setTitle(cv.getTitle());
-        dto.setStatus(cv.getStatus().name());
+        dto.setStatusEmbedding(cv.getStatusEmbedding().name());
         dto.setDeleted(Boolean.TRUE.equals(cv.getIsDeleted()));
         dto.setCreatedAt(cv.getCreatedAt());
         return dto;
+    }
+
+    @Transactional
+    public CVDto retryEmbedding(UUID cvId, UUID currentUserId) {
+        CV cv = cvRepository.findById(cvId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
+        cv.setStatusEmbedding(CV.StatusEmbedding.pending);
+        cv = cvRepository.save(cv);
+
+        // Gửi sang RecommendService để embedding lại
+        Map<String, Object> event = new HashMap<>();
+        if (cv.getSourceType() == CV.SourceType.upload) {
+            event.put("cv_id", cv.getCvId());
+            event.put("file_url", cv.getFileUrl());
+        } else {
+            String rawText = buildRawTextFromDataJson(cv.getDataJson());
+            event.put("cv_id", cv.getCvId());
+            event.put("raw_text", rawText);
+        }
+        eventPublisher.publish(embeddingExchange, embeddingCVRoutingKey, event);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("CANDIDATE")
+                        .action("RETRY_EMBEDDING")
+                        .targetType("CV")
+                        .targetId(cv.getCvId().toString())
+                        .description(String.format("Người dùng %s đã thử lại việc embedding cho CV %s",
+                                currentUserId, cv.getTitle()))
+                        .build()
+        );
+        return toDto(cv);
+    }
+
+    @Transactional
+    public CVDto updateStatusEmbedding(UUID cvId, CV.StatusEmbedding status) {
+        CV cv = cvRepository.findById(cvId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
+        if (status == null) {
+            throw new BusinessException("status must be provided");
+        }
+        if (CV.StatusEmbedding.embedded.equals(status)) {
+            cv.setStatusEmbedding(CV.StatusEmbedding.embedded);
+        } else if (CV.StatusEmbedding.failed.equals(status)) {
+            cv.setStatusEmbedding(CV.StatusEmbedding.failed);
+        } else {
+            throw new BusinessException("Invalid statusEmbedding: " + status + ". Allowed values: embedded, failed");
+        }
+        cv = cvRepository.save(cv);
+        return toDto(cv);
     }
 }

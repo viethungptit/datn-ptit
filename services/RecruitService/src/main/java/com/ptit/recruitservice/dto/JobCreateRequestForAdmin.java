@@ -1,10 +1,10 @@
 package com.ptit.recruitservice.dto;
+import com.ptit.recruitservice.entity.Job;
 
-import java.sql.Timestamp;
+import java.util.List;
 import java.util.UUID;
 
-public class JobDto {
-    private UUID jobId;
+public class JobCreateRequestForAdmin {
     private UUID companyId;
     private String title;
     private String description;
@@ -12,22 +12,21 @@ public class JobDto {
     private String location;
     private String city;
     private String jobType;
-    private String status;
-    private String statusEmbedding;
-    private boolean isDeleted;
+    private Job.Status status;
+    private List<UUID> groupTagIds;
+    private List<UUID> jobTagIds;
     private Integer quantity;
     private java.sql.Timestamp deadline;
-    private Timestamp createdAt;
 
     // Getters and setters
-    public UUID getJobId() { return jobId; }
-    public void setJobId(UUID jobId) { this.jobId = jobId; }
     public UUID getCompanyId() { return companyId; }
     public void setCompanyId(UUID companyId) { this.companyId = companyId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public Job.Status getStatus() {return status;}
+    public void setStatus(Job.Status status) {this.status = status;}
     public String getSalaryRange() { return salaryRange; }
     public void setSalaryRange(String salaryRange) { this.salaryRange = salaryRange; }
     public String getLocation() { return location; }
@@ -36,16 +35,13 @@ public class JobDto {
     public void setCity(String city) { this.city = city; }
     public String getJobType() { return jobType; }
     public void setJobType(String jobType) { this.jobType = jobType; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getStatusEmbedding() { return statusEmbedding; }
-    public void setStatusEmbedding(String statusEmbedding) { this.statusEmbedding = statusEmbedding; }
-    public boolean isDeleted() { return isDeleted; }
-    public void setDeleted(boolean deleted) { isDeleted = deleted; }
+    public List<UUID> getGroupTagIds() { return groupTagIds; }
+    public void setGroupTagIds(List<UUID> groupTagIds) { this.groupTagIds = groupTagIds; }
+    public List<UUID> getJobTagIds() { return jobTagIds; }
+    public void setJobTagIds(List<UUID> jobTagIds) { this.jobTagIds = jobTagIds; }
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
     public java.sql.Timestamp getDeadline() { return deadline; }
     public void setDeadline(java.sql.Timestamp deadline) { this.deadline = deadline; }
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt;}
 }
+

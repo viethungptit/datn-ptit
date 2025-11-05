@@ -1,5 +1,5 @@
 # Dev environment configuration
-server.port=
+server.port=5003
 spring.main.allow-bean-definition-overriding=true
 
 # PostgreSQL datasource
@@ -14,8 +14,8 @@ spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # Mail config
-spring.mail.host=
-spring.mail.port=
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
 spring.mail.username=
 spring.mail.password=
 spring.mail.properties.mail.smtp.auth=true
@@ -24,18 +24,38 @@ spring.mail.properties.mail.debug=true
 
 # RabbitMQ connection
 spring.rabbitmq.host=
-spring.rabbitmq.port=
+spring.rabbitmq.port=5672
 spring.rabbitmq.username=
 spring.rabbitmq.password=
 
 # User register event queue/exchange/routing key
-notification.exchange=
-notification.user.queue=
-notification.user.register.routing-key=
-notification.user.reset-password.routing-key=
+notification.exchange=notification.exchange
+notification.queue=notification.queue
+notification.user.register.routing-key=user.register
+notification.user.reset-password.routing-key=user.reset-password
+notification.application.status.routing-key=application.status
+notification.application.created.routing-key=application.created
+notification.cv.upload.routing-key=cv.upload
+
+log.exchange=log.exchange
+log.activity.routing-key=activity.log
+
+# RabbitMQ cho c?nh báo
+alert.exchange=alert.exchange
+alert.queue=alert.queue
+alert.system.routing-key=system.alert
 
 # External service configuration
 external.user.service.url=
+internal.secret=
 
 # CORS configuration
-cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx
+cors.allowed-origins=
+
+# --- Actuator configuration ---
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
+
+# --- Add service name tag for easier identification ---
+management.metrics.tags.application=notification-service
+

@@ -62,6 +62,15 @@ public class ApplicationService {
     @Value("${notification.application.created.routing-key}")
     private String notificationApplicationCreatedRoutingKey;
 
+    @Value("${embedding.exchange}")
+    private String embeddingExchange;
+
+    @Value("${embedding.application.routing-key}")
+    private String embeddingApplicationRoutingKey;
+
+    @Value("${embedding.application.delete.routing-key}")
+    private String embeddingApplicationDeleteRoutingKey;
+
     private String getVietnameseStatusLog(Application.Status status) {
         return switch (status) {
             case applied -> "nộp";
@@ -99,6 +108,12 @@ public class ApplicationService {
         application.setAppliedAt(new Timestamp(System.currentTimeMillis()));
         application = applicationRepository.save(application);
 
+        // Đồng bộ DB với RecommendService
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("job_id", job.getJobId());
+        event1.put("cv_id", cv.getCvId());
+        eventPublisher.publish(embeddingExchange, embeddingApplicationRoutingKey, event1);
+
         // Gửi notification sang NotificationService
         UserResponse user = getUserByUserId(userId);
         CompanyResponse company = getCompanyByCompanyId(job.getCompanyId());
@@ -108,11 +123,11 @@ public class ApplicationService {
         data.put("job_title", job.getTitle());
         data.put("company_name", company.getCompanyName());
 
-        Map<String, Object> event = new HashMap<>();
-        event.put("event_type", notificationApplicationCreatedRoutingKey);
-        event.put("to", user.getEmail());
-        event.put("data", data);
-        eventPublisher.publish(notificationExchange, notificationApplicationCreatedRoutingKey, event);
+        Map<String, Object> event2 = new HashMap<>();
+        event2.put("event_type", notificationApplicationCreatedRoutingKey);
+        event2.put("to", user.getEmail());
+        event2.put("data", data);
+        eventPublisher.publish(notificationExchange, notificationApplicationCreatedRoutingKey, event2);
 
         // Gửi log sang AdminService
         eventPublisher.publish(
@@ -175,6 +190,11 @@ public class ApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn ứng tuyển"));
         application.setIsDeleted(true);
         application = applicationRepository.save(application);
+
+        // Đồng bộ DB với RecommendService
+        Map<String, Object> event = new HashMap<>();
+        event.put("application_id", application.getApplicationId());
+        eventPublisher.publish(embeddingExchange, embeddingApplicationDeleteRoutingKey, event);
 
         // Gửi log sang AdminService
         eventPublisher.publish(

@@ -35,13 +35,11 @@ public class JobTagController {
         return jobTagService.updateJobTag(jobTagId, dto);
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/all")
     public List<JobTagDto> getAllJobTags() {
         return jobTagService.getAllJobTags();
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/mapping")
     public List<JobTagMappingDto> getJobTagsByJob(@RequestParam("job_id") UUID jobId) {
         return jobTagService.getJobTagsByJob(jobId);

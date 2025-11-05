@@ -1,9 +1,13 @@
 import { useRef, useState } from 'react';
 import { Button } from '../components/ui/button';
+import { toast } from 'react-toastify';
+import { uploadCV } from '@/api/recruitApi';
+import { useNavigate } from 'react-router-dom';
 
 const UploadCV = () => {
     const [file, setFile] = useState<File | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
 
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -22,13 +26,21 @@ const UploadCV = () => {
         inputRef.current?.click();
     };
 
-    const handleUpload = () => {
-        if (!file) {
-            alert('Vui lòng chọn file trước khi tải lên!');
-            return;
+    const handleUpload = async () => {
+        try {
+            if (!file) {
+                toast.error('Vui lòng chọn file trước khi tải lên!');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('cv', file);
+            await uploadCV(fd);
+            toast.success('Tải CV lên thành công');
+            navigate('/manage-cvs');
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || "Tải CV lên thất bại";
+            toast.error(msg);
         }
-        // Logic upload file
-        alert('Đã tải lên file: ' + file.name);
     };
 
     return (

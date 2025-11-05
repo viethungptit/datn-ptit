@@ -14,28 +14,44 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # RabbitMQ connection
 spring.rabbitmq.host=
-spring.rabbitmq.port=
+spring.rabbitmq.port=5672
 spring.rabbitmq.username=
 spring.rabbitmq.password=
 
 # User register event queue/exchange/routing key
-notification.recruit.exchange=
-notification.recruit.queue=
-notification.recruit.status.routing-key=
+notification.exchange=notification.exchange
+notification.application.status.routing-key=application.status
+notification.application.created.routing-key=application.created
+notification.cv.upload.routing-key=cv.upload
 
-embbedding.exchange=
-embbedding.cv.queue=
-embbedding.cv.routing-key=
-embbedding.jd.routing-key=
+embedding.exchange=embedding.exchange
+embedding.cv.routing-key=embedding.cv
+embedding.jd.routing-key=embedding.jd
+embedding.delete.cv.routing-key=embedding.delete.cv
+embedding.delete.jd.routing-key=embedding.delete.jd
+embedding.application.routing-key=embedding.application
+embedding.application.delete.routing-key=embedding.delete.application
+
+log.exchange=log.exchange
+log.activity.routing-key=activity.log
 
 # MinIO configuration
 minio.url=
 minio.access-key=
 minio.secret-key=
-minio.bucket=
+minio.bucket=datn
 
 # External service configuration
-external.user.service.url=http://localhost:xxxx
+external.user.service.url=
 
 # CORS configuration
-cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx
+cors.allowed-origins=
+
+# --- Actuator configuration ---
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
+
+# --- Add service name tag for easier identification ---
+management.metrics.tags.application=recruit-service
+
+internal.secret=

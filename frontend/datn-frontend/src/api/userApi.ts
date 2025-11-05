@@ -69,6 +69,15 @@ export const upsertEmployerApi = (userId: string, request: { position?: string; 
 export const upsertCandidateApi = (userId: string, payload: FormData) =>
     gatewayApi.put(`/api/user-service/user-profile/candidate/${userId}`, payload, { headers: { 'Content-Type': 'multipart/form-data' } });
 
+export const getAllFilesByMeApi = () =>
+    gatewayApi.get('/api/user-service/files/me');
+
+export const uploadFileApi = (payload: FormData) =>
+    gatewayApi.post('/api/user-service/files/upload', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const deleteFileApi = (fileId: string) =>
+    gatewayApi.delete(`/api/user-service/files/${fileId}`);
+
 export const getCompanyByUserIdApi = (userId: string, internalSecret?: string) =>
     gatewayApi.get(`/api/user-service/companies/by-user/${userId}`, {
         headers: internalSecret ? { 'X-Internal-Secret': internalSecret } : undefined,

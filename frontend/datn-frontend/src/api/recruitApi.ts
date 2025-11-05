@@ -4,22 +4,11 @@ import { gatewayApi } from './axiosInstances';
 export const getJob = (jobId: string) =>
     gatewayApi.get(`/api/recruit-service/jobs/${jobId}`);
 
-export const updateJob = (
-    jobId: string,
-    payload: {
-        companyId?: string;
-        title?: string;
-        description?: string;
-        salaryRange?: string;
-        location?: string;
-        city?: string;
-        jobType?: string;
-        groupTagIds?: string[];
-        jobTagIds?: string[];
-        quantity?: number;
-        deadline?: string;
-    }
-) => gatewayApi.put(`/api/recruit-service/jobs/${jobId}`, payload);
+export const updateJob = (jobId: string, payload: { companyId?: string; title?: string; description?: string; salaryRange?: string; location?: string; city?: string; jobType?: string; groupTagIds?: string[]; jobTagIds?: string[]; quantity?: number; deadline?: string; }) =>
+    gatewayApi.put(`/api/recruit-service/jobs/${jobId}`, payload);
+
+export const updateJobForAdmin = (jobId: string, payload: { companyId?: string; title?: string; status?: string; description?: string; salaryRange?: string; location?: string; city?: string; jobType?: string; groupTagIds?: string[]; jobTagIds?: string[]; quantity?: number; deadline?: string; }) =>
+    gatewayApi.put(`/api/recruit-service/jobs/admin/${jobId}`, payload);
 
 export const deleteJob = (jobId: string) =>
     gatewayApi.delete(`/api/recruit-service/jobs/${jobId}`);
@@ -27,8 +16,14 @@ export const deleteJob = (jobId: string) =>
 export const closeJob = (jobId: string) =>
     gatewayApi.put(`/api/recruit-service/jobs/${jobId}/close`);
 
+export const approveJob = (jobId: string) =>
+    gatewayApi.put(`/api/recruit-service/jobs/${jobId}/approve`);
+
 export const createJob = (payload: { title: string; description?: string; salaryRange?: string; location?: string; city?: string; jobType?: string; groupTagIds?: string[]; jobTagIds?: string[]; quantity?: number; deadline?: string; }) =>
     gatewayApi.post('/api/recruit-service/jobs', payload);
+
+export const createJobForAdmin = (payload: { companyId: string, status: string, title: string; description?: string; salaryRange?: string; location?: string; city?: string; jobType?: string; groupTagIds?: string[]; jobTagIds?: string[]; quantity?: number; deadline?: string; }) =>
+    gatewayApi.post('/api/recruit-service/jobs/admin', payload);
 
 export const createJobTag = (payload: { jobName: string }) =>
     gatewayApi.post('/api/recruit-service/job-tag', payload);
@@ -78,14 +73,20 @@ export const addFavorite = (payload: { jobId: string }) =>
 export const removeFavorite = (favoriteId: string) =>
     gatewayApi.delete(`/api/recruit-service/favorite/${favoriteId}`);
 
-export const createCV = (payload: { templateId?: string; title?: string; dataJson?: string }) =>
-    gatewayApi.post('/api/recruit-service/cvs', payload);
+export const createCV = (payload: FormData) =>
+    gatewayApi.post('/api/recruit-service/cvs', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const getCVMe = (type: string) =>
+    gatewayApi.get(`/api/recruit-service/cvs/me?source_type=${type}`);
 
 export const getCV = (cvId: string) =>
     gatewayApi.get(`/api/recruit-service/cvs/${cvId}`);
 
-export const updateCV = (cvId: string, payload: { templateId?: string; title?: string; dataJson?: string }) =>
-    gatewayApi.put(`/api/recruit-service/cvs/${cvId}`, payload);
+export const updateCV = (cvId: string, payload: FormData) =>
+    gatewayApi.put(`/api/recruit-service/cvs/${cvId}`, payload, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+export const updateNameCV = (cvId: string, name: string) =>
+    gatewayApi.put(`/api/recruit-service/cvs/${cvId}/name/${name}`);
 
 export const deleteCV = (cvId: string) =>
     gatewayApi.delete(`/api/recruit-service/cvs/${cvId}`);

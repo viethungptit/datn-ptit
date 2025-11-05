@@ -38,13 +38,11 @@ public class CompanyController {
         return ResponseEntity.ok(companyService.createCompany(request, isAdmin, UUID.fromString(currentUserId)));
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/{companyId}")
     public ResponseEntity<CompanyResponse> getCompany(@PathVariable UUID companyId) {
         return ResponseEntity.ok(companyService.getCompany(companyId));
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
         return ResponseEntity.ok(companyService.getAllCompanies());

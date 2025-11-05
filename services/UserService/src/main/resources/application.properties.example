@@ -1,5 +1,5 @@
 # Dev environment configuration
-server.port=
+server.port=5000
 
 # PostgreSQL datasource
 spring.datasource.url=
@@ -14,28 +14,38 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # JWT settings
 jwt.secret=
-jwt.expirationMs=
-jwt.refreshExpirationMs=
+jwt.expirationMs=3600000
+jwt.refreshExpirationMs=604800000
 
 # RabbitMQ connection
 spring.rabbitmq.host=
-spring.rabbitmq.port=
+spring.rabbitmq.port=5672
 spring.rabbitmq.username=
 spring.rabbitmq.password=
 
 # User register event queue/exchange/routing key
-notification.exchange=
-notification.user.queue=
-notification.user.register.routing-key=
-notification.user.reset-password.routing-key=
+notification.exchange=notification.exchange
+notification.user.register.routing-key=user.register
+notification.user.reset-password.routing-key=user.reset-password
+
+log.exchange=log.exchange
+log.activity.routing-key=activity.log
+
 
 # MinIO configuration
 minio.url=
 minio.access-key=
 minio.secret-key=
-minio.bucket=
+minio.bucket=datn
 
 internal.secret=
 
 # CORS configuration
-cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx
+cors.allowed-origins=
+
+# --- Actuator configuration ---
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
+
+# --- Add service name tag for easier identification ---
+management.metrics.tags.application=user-service

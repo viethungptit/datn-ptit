@@ -2,8 +2,7 @@ import './App.css';
 import type { ReactNode } from 'react';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectRole } from './redux/authSlice';
-import { Navigate, useLocation } from 'react-router-dom';
-import CVBuilder from './pages/CVBuilder';
+import { Navigate, useLocation, matchPath } from 'react-router-dom';
 import Home from './pages/Home';
 import CVManager from './pages/CVManager';
 import { Routes, Route } from 'react-router-dom';
@@ -17,7 +16,6 @@ import JobDetail from './pages/JobDetail';
 import SearchJob from './pages/SearchJob';
 import UploadCV from './pages/UploadCV';
 import CVTemplatesList from './pages/CVTemplatesList';
-import CVPreviewPage from './pages/CVPreviewPage';
 import FavoriteJobs from './pages/FavoriteJobs';
 import AppliedJobs from './pages/AppliedJobs';
 import VerifyOtpPage from './pages/VerifyOtpPage';
@@ -33,7 +31,6 @@ import RegisterAdmin from './pages/Admin/RegisterAdmin';
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import EmployerProfile from './pages/Employer/EmployerProfile';
-
 import UserManagement from './pages/Admin/UserManagement';
 import CompanyManagement from './pages/Admin/CompanyManagement';
 import TagManagement from './pages/Admin/TagManagement';
@@ -41,6 +38,10 @@ import CVTemplateManagement from './pages/Admin/CVTemplateManagement';
 import NotificationTemplates from './pages/Admin/NotificationTemplates';
 import NotificationEmails from './pages/Admin/NotificationEmails';
 import Notifications from './pages/Admin/Notifications';
+import CVBuilderTemplate from './pages/CVBuilderTemplate';
+import CVEditTemplate from './pages/CVEditTemplate';
+import CVPreviewPage from './pages/CVPreviewPage';
+import JobManagement from './pages/Admin/JobManagement';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -62,9 +63,10 @@ function App() {
     '/employer/register',
     '/admin/login',
     '/admin/register',
+    '/preview-cvs/:cvId',
   ];
 
-  const hideHeaderForPath = noHeaderPaths.includes(location.pathname);
+  const hideHeaderForPath = noHeaderPaths.some((path) => matchPath({ path, end: true }, location.pathname));
   const showHeader = (!isAuthenticated || userRole === 'candidate') && !hideHeaderForPath;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -93,6 +95,7 @@ function App() {
           <Route path="/employer/register" element={<RegisterEmployer />} />
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route path="/admin/register" element={<RegisterAdmin />} />
+          <Route path="/preview-cvs/:cvId" element={<CVPreviewPage />} />
 
           <Route path="/" element={<Home />} />
           <Route path="/companies" element={<Companies />} />
@@ -103,10 +106,10 @@ function App() {
           {/* Protected candidate routes */}
           <Route path="/profile" element={<RoleRoute element={<MyProfile />} allowedRoles={['candidate']} />} />
           <Route path="/manage-cvs" element={<RoleRoute element={<CVManager />} allowedRoles={['candidate']} />} />
-          <Route path="/manage-cvs/:cvId" element={<RoleRoute element={<CVBuilder />} allowedRoles={['candidate']} />} />
-          <Route path="/preview-cv/:cvId" element={<RoleRoute element={<CVPreviewPage />} allowedRoles={['candidate']} />} />
+          <Route path="/manage-cvs/:cvId" element={<RoleRoute element={<CVEditTemplate />} allowedRoles={['candidate']} />} />
           <Route path="/upload-cv" element={<RoleRoute element={<UploadCV />} allowedRoles={['candidate']} />} />
           <Route path="/cv-templates" element={<RoleRoute element={<CVTemplatesList />} allowedRoles={['candidate']} />} />
+          <Route path="/cv-templates/:templateId" element={<RoleRoute element={<CVBuilderTemplate />} allowedRoles={['candidate']} />} />
           <Route path="/favorite" element={<RoleRoute element={<FavoriteJobs />} allowedRoles={['candidate']} />} />
           <Route path="/applied" element={<RoleRoute element={<AppliedJobs />} allowedRoles={['candidate']} />} />
 
@@ -115,11 +118,11 @@ function App() {
           {/* Admin user management route */}
           <Route path="/admin/users" element={<RoleRoute element={<UserManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
+          <Route path="/admin/jobs" element={<RoleRoute element={<JobManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/tags" element={<RoleRoute element={<TagManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates" element={<RoleRoute element={<CVTemplateManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates/new" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates/:templateId" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />
-
           <Route path="/admin/notification-templates" element={<RoleRoute element={<NotificationTemplates />} allowedRoles={['admin']} />} />
           <Route path="/admin/notifications" element={<RoleRoute element={<Notifications />} allowedRoles={['admin']} />} />
           <Route path="/admin/notification-emails" element={<RoleRoute element={<NotificationEmails />} allowedRoles={['admin']} />} />
