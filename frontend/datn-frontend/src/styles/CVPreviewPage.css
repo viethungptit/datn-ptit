@@ -1,0 +1,24 @@
+@media print {
+
+    navbar,
+    header {
+        display: none !important;
+    }
+
+    .nav {
+        display: none !important;
+    }
+
+    .cv-content {
+        display: block !important;
+        width: 210mm;
+        height: 297mm;
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: 0;
+        padding: 10mm;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+}

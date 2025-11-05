@@ -44,10 +44,15 @@ public class Job {
     @Column(name = "job_type", length = 20)
     private JobType jobType;
 
-    public enum Status { open, closed }
+    public enum Status { pending, open, closed }
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private Status status;
+
+    public enum StatusEmbedding { pending, embedded, failed }
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_embedding", length = 30)
+    private StatusEmbedding statusEmbedding;
 
     @Column(name = "is_deleted")
     private Boolean isDeleted;
@@ -113,6 +118,15 @@ public class Job {
     public void setStatus(Status status) {
         this.status = status;
     }
+
+    public StatusEmbedding getStatusEmbedding() {
+        return statusEmbedding;
+    }
+
+    public void setStatusEmbedding(StatusEmbedding statusEmbedding) {
+        this.statusEmbedding = statusEmbedding;
+    }
+
     public Boolean getIsDeleted() {
         return isDeleted;
     }

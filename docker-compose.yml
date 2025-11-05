@@ -30,7 +30,7 @@ services:
       - micro_net
 
   recommend-db:
-    image: postgres:15-alpine
+    image: ankane/pgvector
     container_name: recommend-db
     environment:
       POSTGRES_USER: recommend_service

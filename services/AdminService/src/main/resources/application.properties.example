@@ -1,5 +1,5 @@
 # Dev environment configuration
-server.port=
+server.port=5001
 spring.main.allow-bean-definition-overriding=true
 
 # PostgreSQL datasource
@@ -16,21 +16,37 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
 # RabbitMQ connection
 spring.rabbitmq.host=
-spring.rabbitmq.port=
+spring.rabbitmq.port=5672
 spring.rabbitmq.username=
 spring.rabbitmq.password=
 
 # Log event queue/exchange/routing key
-log.exchange=
-log.admin.queue=
-log.admin.routing-key=
+log.exchange=log.exchange
+log.activity.queue=log.queue
+log.activity.routing-key=activity.log
+
+# RabbitMQ cho c?nh báo
+alert.exchange=alert.exchange
+alert.queue=alert.queue
+alert.routing-key=system.alert
+
+# Health check config
+health.check.interval=60000
 
 # External service configuration
 external.user.service.url=
 external.recruit.service.url=
 external.recommend.service.url=
+external.notification.service.url=
 
 internal.secret=
 
 # CORS configuration
-cors.allowed-origins=http://localhost:xxxx,http://localhost:xxxx
+cors.allowed-origins=
+
+# --- Actuator configuration ---
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=always
+
+# --- Add service name tag for easier identification ---
+management.metrics.tags.application=admin-service

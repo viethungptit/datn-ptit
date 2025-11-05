@@ -6,4 +6,4 @@ class CVRequest(BaseModel):
     position: str
     section: str
     content: str
-    styles: Optional[str] = None
+    styles: str = "professional"

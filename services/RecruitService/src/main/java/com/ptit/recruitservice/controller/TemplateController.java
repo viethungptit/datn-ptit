@@ -35,7 +35,6 @@ public class TemplateController {
         return templateService.deleteTemplate(templateId, UUID.fromString(currentUserId));
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/all")
     public List<TemplateDto> getAllTemplates() {
         return templateService.getAllTemplates();

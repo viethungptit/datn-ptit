@@ -1,43 +1,37 @@
+import { getAllTemplates } from "@/api/recruitApi";
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const cvTemplates = [
-    {
-        id: 1,
-        name: 'CV Mẫu Đơn Giản',
-        img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        id: 2,
-        name: 'CV Chuyên Nghiệp',
-        img: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        id: 3,
-        name: 'CV Sáng Tạo',
-        img: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        id: 4,
-        name: 'CV Hiện Đại',
-        img: 'https://images.unsplash.com/photo-1503676382389-4809596d5290?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        id: 5,
-        name: 'CV Sinh Viên',
-        img: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    },
-    {
-        id: 6,
-        name: 'CV Kinh Nghiệm',
-        img: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-    },
-];
+export type CVTemplate = {
+    templateId: string;
+    name: string;
+    previewUrl: string;
+};
 
 const CVTemplatesList = () => {
+    const [cvTemplates, setTemplateCVs] = useState<CVTemplate[]>([]);
+    const navigate = useNavigate();
+
+    const fetchCVTemplates = async () => {
+        const res = await getAllTemplates();
+        setTemplateCVs(res.data);
+    };
+
+    const navigateToTemplate = (templateId: string) => {
+        navigate(`/cv-templates/${templateId}`);
+    };
+
+    useEffect(() => {
+        fetchCVTemplates();
+    }, []);
+
+
     return (
-        <div>
-            <div className='flex flex-row px-[100px] py-28' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>
+        <div className="h-full flex flex-col justify-between">
+            <div className='flex flex-row px-[100px] py-16' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>
                 <div className='w-full'>
                     <div className="text-center mb-6">
                         <p className="text-2xl font-bold text-txt-red mb-2">Các mẫu CV nổi bật mới nhất 2025</p>
@@ -47,13 +41,20 @@ const CVTemplatesList = () => {
             </div>
             <div className="px-[100px] py-8">
                 <div className="grid grid-cols-4 gap-8">
-                    {cvTemplates.map(template => (
-                        <div key={template.id} className="border rounded-lg shadow p-4 flex flex-col">
-                            <img src={template.img} alt={template.name} className="w-full h-[350px] object-cover rounded mb-3" />
-                            <span className="font-semibold text-left text-lg mb-2">{template.name}</span>
-                            <Button variant="seek" size="lg" className="w-full max-w-sm mt-4">Dùng mẫu</Button>
-                        </div>
-                    ))}
+                    {
+                        cvTemplates.length === 0 ? (
+                            <p className="text-center col-span-4">Không có mẫu CV hệ thống nào</p>
+                        ) :
+                            (
+                                cvTemplates.map(template => (
+                                    <div key={template.templateId} className="border rounded-lg shadow p-4 flex flex-col">
+                                        <img src={`${MINIO_ENDPOINT}/datn/${template.previewUrl}`} alt={template.name} className="w-full h-[300px] object-cover rounded mb-3" />
+                                        <span className="font-semibold text-left text-lg mb-2">{template.name}</span>
+                                        <Button variant="seek" size="lg" className="w-full max-w-sm mt-4" onClick={() => navigateToTemplate(template.templateId)}>Dùng mẫu</Button>
+                                    </div>
+                                ))
+                            )
+                    }
                 </div>
             </div>
             <Footer />

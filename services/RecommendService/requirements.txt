@@ -4,3 +4,11 @@ pydantic
 requests
 python-dotenv
 langdetect
+asyncio
+aio-pika
+aiohttp 
+aiofiles 
+PyPDF2 
+python-docx
+httpx
+httpx

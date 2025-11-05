@@ -1,60 +1,112 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../components/ui/dropdown-menu';
 import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
+import { deleteCV, exportCV, getCVMe, updateNameCV } from '@/api/recruitApi';
+import { toast } from 'react-toastify';
 
-// Dummy data for CVs
-const sampleCVs = [
-    {
-        id: 1,
-        name: 'CV Nguyen Van A Software Engineer',
-        type: 'template',
-        url: '#',
-        img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-        updatedAt: '20-09-2025',
-    },
-    {
-        id: 2,
-        name: 'CV Nguyen Van B Designer',
-        type: 'template',
-        url: '#',
-        img: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80',
-        updatedAt: '18-09-2025',
-    },
-];
-const uploadedCVs = [
-    {
-        id: 3,
-        name: 'CV_Nguyen_Van_C.pdf',
-        type: 'uploaded',
-        url: '#',
-        img: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
-        updatedAt: '21-09-2025',
-    },
-];
+export type CVItem = {
+    cvId: string;
+    title: string;
+    createdAt: string;
+    statusEmbedding: string;
+};
 
 const CVManager = () => {
-    const [templateCVs] = useState(sampleCVs);
-    const [uploadedCVList] = useState(uploadedCVs);
+    const [templateCVs, setTemplateCVs] = useState<CVItem[]>([]);
+    const [uploadedCVList, setUploadedCVList] = useState<CVItem[]>([]);
     const navigate = useNavigate();
 
-    const handleCreateCV = () => {
-        navigate("/cv-templates");
+    const handlePrintClick = async (cvId: string) => {
+        try {
+            const res = await exportCV(cvId);
+            const pdfUrl = res.data.fileUrl;
+            if (pdfUrl) {
+                window.open(pdfUrl, "_blank");
+            } else {
+                console.error("Không tìm thấy link PDF trong response:", res);
+            }
+        } catch (error) {
+            console.error("Error exporting CV:", error);
+        }
     };
 
-    const handleUploadCV = () => {
-        navigate("/upload-cv");
+    const fetchTemplateCVs = async () => {
+        const res = await getCVMe('system');
+        setTemplateCVs(res.data);
     };
 
-    const editCV = () => {
-        navigate("/manage-cvs/1");
+    const fetchUploadedCVs = async () => {
+        const res = await getCVMe('upload');
+        setUploadedCVList(res.data);
+    };
+
+    const handleCreateCV = () => navigate("/cv-templates");
+    const handleUploadCV = () => navigate("/upload-cv");
+    const editCV = (cvId: string) => navigate(`/manage-cvs/${cvId}`);
+    const previewCV = (cvId: string) => navigate(`/preview-cvs/${cvId}`);
+
+    // state for inline renaming
+    const [editing, setEditing] = useState<null | { cvId: string; value: string; listType: 'template' | 'uploaded' }>(null);
+
+    const renameCV = async (cvId: string, newName: string) => {
+        try {
+            await updateNameCV(cvId, newName);
+            toast.success("Đổi tên CV thành công");
+        } catch (error) {
+            toast.error("Đổi tên CV thất bại");
+            console.error("Error renaming CV:", error);
+            throw error;
+        }
     }
 
-    const previewCV = () => {
-        navigate("/preview-cv/1");
+    const deleteCVs = async (cvId: string, listType: 'template' | 'uploaded') => {
+        try {
+            await deleteCV(cvId);
+            toast.success("Xóa CV thành công");
+            if (listType === 'template') {
+                setTemplateCVs(prev => prev.filter(cv => cv.cvId !== cvId));
+            } else {
+                setUploadedCVList(prev => prev.filter(cv => cv.cvId !== cvId));
+            }
+        } catch (error) {
+            toast.error("Xóa CV thất bại");
+            console.error("Error deleting CV:", error);
+            throw error;
+        }
     }
 
+    const startEditing = (cvId: string, currentTitle: string, listType: 'template' | 'uploaded') => {
+        setEditing({ cvId, value: currentTitle, listType });
+    };
+
+    const cancelEditing = () => setEditing(null);
+
+    const saveEditing = async () => {
+        if (!editing) return;
+        const { cvId, value, listType } = editing;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        try {
+            await renameCV(cvId, trimmed);
+
+            if (listType === 'template') {
+                setTemplateCVs(prev => prev.map(cv => cv.cvId === cvId ? { ...cv, title: trimmed } : cv));
+            } else {
+                setUploadedCVList(prev => prev.map(cv => cv.cvId === cvId ? { ...cv, title: trimmed } : cv));
+            }
+
+            setEditing(null);
+        } catch (err) {
+            console.error('Failed to save new name', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchTemplateCVs();
+        fetchUploadedCVs();
+    }, []);
 
     return (
         <div className='flex flex-col gap-8'>
@@ -66,28 +118,58 @@ const CVManager = () => {
                         <Button variant="login" onClick={handleCreateCV}>Tạo CV theo mẫu</Button>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
-                        {templateCVs.map(cv => (
-                            <div key={cv.id} className="border rounded p-4 flex flex-col items-center relative">
-                                <img src={cv.img} alt={cv.name}
-                                    onClick={previewCV}
-                                    className="w-full h-[350px] object-cover rounded mb-2 cursor-pointer" />
-                                <span className="font-semibold mb-2 line-clamp-2 cursor-pointer" onClick={previewCV}>{cv.name}</span>
-                                <span className="text-xs text-gray-500 mb-2">Cập nhật: {cv.updatedAt}</span>
-                                <div className="absolute bottom-5 right-3">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger className="w-10 h-10 flex items-center justify-center border bg-gray-100 hover:bg-gray-200 rounded-full shadow focus:outline-none">
-                                            <i className="fa-solid fa-ellipsis"></i>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => alert('Tải về CV: ' + cv.name)}>Tải về</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={editCV}>Chỉnh sửa</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => alert('Đổi tên CV: ' + cv.name)}>Đổi tên</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => alert('Xóa CV: ' + cv.name)}>Xóa</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                        {templateCVs.length === 0 ? (
+                            <p className='text-left'>Chưa có CV nào</p>
+                        ) : (
+                            templateCVs.map(cv => (
+                                <div key={cv.cvId} className="border rounded p-4 flex flex-col items-center relative">
+                                    <div className="h-32 flex items-center justify-center">
+                                        <i className="fa-solid fa-file fa-5x text-btn-red"></i>
+                                    </div>
+                                    {editing && editing.cvId === cv.cvId && editing.listType === 'template' ? (
+                                        <div className="w-full flex flex-col items-start gap-2">
+                                            <input
+                                                className="w-full border rounded px-2 py-1"
+                                                value={editing.value}
+                                                onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') saveEditing();
+                                                    if (e.key === 'Escape') cancelEditing();
+                                                }}
+                                                autoFocus
+                                            />
+                                            <div className="flex gap-2 py-2">
+                                                <Button variant="login" onClick={saveEditing}>Lưu</Button>
+                                                <Button onClick={cancelEditing}>Hủy</Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span
+                                            className="font-semibold mb-2 line-clamp-2 cursor-pointer"
+                                        >
+                                            {cv.title}
+                                        </span>
+                                    )}
+                                    <span className="text-xs text-gray-500 mb-2">
+                                        Ngày tạo: {cv.createdAt ? new Date(cv.createdAt).toLocaleDateString('vi-VN') : ''}
+                                    </span>
+
+                                    <div className="absolute bottom-5 right-3">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger className="w-10 h-10 flex items-center justify-center border bg-gray-100 hover:bg-gray-200 rounded-full shadow focus:outline-none">
+                                                <i className="fa-solid fa-ellipsis"></i>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => previewCV(cv.cvId)}>Xem trước</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => editCV(cv.cvId)}>Chỉnh sửa</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => startEditing(cv.cvId, cv.title, 'template')}>Đổi tên</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => deleteCVs(cv.cvId, 'template')}>Xóa CV</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
                 {/* CV tải lên */}
@@ -97,28 +179,57 @@ const CVManager = () => {
                         <Button variant="login" onClick={handleUploadCV}>Tải CV từ máy tính</Button>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
-                        {uploadedCVList.map(cv => (
-                            <div key={cv.id} className="border rounded p-4 flex flex-col items-center relative">
-                                <img src={cv.img} alt={cv.name}
-                                    onClick={previewCV}
-                                    className="w-full h-[350px] object-cover rounded mb-2 cursor-pointer" />
-                                <span className="font-semibold mb-1 cursor-pointer" onClick={previewCV}>{cv.name}</span>
-                                <span className="text-xs text-gray-500 mb-2">Cập nhật: {cv.updatedAt}</span>
-                                <div className="absolute bottom-5 right-3">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full shadow focus:outline-none">
-                                            <i className="fa-solid fa-ellipsis"></i>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={() => alert('Tải về CV: ' + cv.name)}>Tải về</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={editCV}>Chỉnh sửa</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => alert('Đổi tên CV: ' + cv.name)}>Đổi tên</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => alert('Xóa CV: ' + cv.name)}>Xóa</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                        {uploadedCVList.length === 0 ? (
+                            <p className='text-left'>Chưa có CV nào</p>
+                        ) : (
+                            uploadedCVList.map(cv => (
+                                <div key={cv.cvId} className="border rounded p-4 flex flex-col items-center relative">
+                                    <div className="h-32 flex items-center justify-center">
+                                        <i className="fa-solid fa-folder-open fa-5x text-btn-red"></i>
+                                    </div>
+                                    {editing && editing.cvId === cv.cvId && editing.listType === 'uploaded' ? (
+                                        <div className="w-full flex flex-col items-start gap-2">
+                                            <input
+                                                className="w-full border rounded px-2 py-1"
+                                                value={editing.value}
+                                                onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') saveEditing();
+                                                    if (e.key === 'Escape') cancelEditing();
+                                                }}
+                                                autoFocus
+                                            />
+                                            <div className="flex gap-2 py-2">
+                                                <Button variant="login" onClick={saveEditing}>Lưu</Button>
+                                                <Button onClick={cancelEditing}>Hủy</Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span
+                                            className="font-semibold mb-1 cursor-pointer"
+                                        >
+                                            {cv.title}
+                                        </span>
+                                    )}
+                                    <span className="text-xs text-gray-500 mb-2">
+                                        Ngày tạo: {cv.createdAt ? new Date(cv.createdAt).toLocaleDateString('vi-VN') : ''}
+                                    </span>
+
+                                    <div className="absolute bottom-5 right-3">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full shadow focus:outline-none">
+                                                <i className="fa-solid fa-ellipsis"></i>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={() => handlePrintClick(cv.cvId)}>Xem trước</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => startEditing(cv.cvId, cv.title, 'uploaded')}>Đổi tên</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => deleteCVs(cv.cvId, 'uploaded')}>Xóa</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

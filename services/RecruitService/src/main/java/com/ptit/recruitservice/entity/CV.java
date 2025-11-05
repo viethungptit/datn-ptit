@@ -40,10 +40,10 @@ public class CV {
     @Column(name = "title")
     private String title;
 
-    public enum Status { pending_embbeding, embbeded, failed }
+    public enum StatusEmbedding { pending, embedded, failed }
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
-    private Status status;
+    @Column(name = "status_embedding", length = 30)
+    private StatusEmbedding statusEmbedding;
 
     @Column(name = "is_deleted")
     private Boolean isDeleted;
@@ -93,11 +93,11 @@ public class CV {
     public void setTitle(String title) {
         this.title = title;
     }
-    public Status getStatus() {
-        return status;
+    public StatusEmbedding getStatusEmbedding() {
+        return statusEmbedding;
     }
-    public void setStatus(Status status) {
-        this.status = status;
+    public void setStatusEmbedding(StatusEmbedding status) {
+        this.statusEmbedding = status;
     }
     public Boolean getIsDeleted() {
         return isDeleted;

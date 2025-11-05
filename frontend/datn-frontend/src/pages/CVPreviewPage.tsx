@@ -1,59 +1,9 @@
-import "../styles/CVBuilder.css";
+import { useEffect, useRef, useState } from "react";
+import "../styles/CVPreviewPage.css";
 import ReactMarkdown from "react-markdown";
-
-// Dùng lại sample layout, theme, data từ CVBuilder
-const layout_json = {
-    layout: {
-        columns: 3,
-        rows: [
-            {
-                id: "header",
-                colSpan: 3,
-                columns: [
-                    { id: "avatar_col", colSpan: 1, sections: ["avatar"] },
-                    { id: "info_col", colSpan: 2, sections: ["name", "position", "summary"] }
-                ]
-            },
-            {
-                id: "main_info",
-                colSpan: 3,
-                columns: [
-                    { id: "col1", colSpan: 1, sections: ["education", "personal_info", "skills", "certificates"] },
-                    { id: "col2", colSpan: 2, sections: ["experience", "projects"] },
-                ]
-            }
-        ]
-    }
-};
-
-const theme_json = {
-    color: "#333",
-    size: 13,
-    colorTitle: "#1976d2",
-    sizeTitle: 16,
-    colorName: "#1976d2",
-    sizeName: 24,
-    colorPosition: "#1976d2",
-    sizePosition: 18,
-    alignTextTitle: "left",
-    alignTextName: "center",
-    alignTextPosition: "center",
-    borderRadiusAvatar: 100,
-    sizeAvatar: 150
-};
-
-const initialData = {
-    avatar: "![image](https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg)",
-    name: "Nguyễn Văn A",
-    position: "Fullstack Developer",
-    summary: "Lập trình viên với hơn 3 năm kinh nghiệm trong phát triển ứng dụng web. Thành thạo Node.js, React, và cơ sở dữ liệu SQL/NoSQL. Đam mê xây dựng sản phẩm tối ưu hiệu suất và trải nghiệm người dùng.",
-    personal_info: `\n- Email: nguyenvana@example.com\n- Số điện thoại: 0987 654 321\n- Địa chỉ: 123 Lê Lợi, Hà Nội\n- LinkedIn: linkedin.com/in/nguyenvana\n- GitHub: github.com/nguyenvana\n  `,
-    skills: `\n- Frontend: React, Redux, HTML5, CSS3, TailwindCSS\n- Backend: Node.js, Express.js, NestJS\n- Database: MySQL, MongoDB, PostgreSQL\n- DevOps: Docker, CI/CD, GitHub Actions\n- Ngôn ngữ: JavaScript, TypeScript, Python\n  `,
-    certificates: `\n- AWS Certified Cloud Practitioner – 2023\n- Google Professional Cloud Developer – 2022\n- TOEIC 850 – 2021\n  `,
-    experience: `\n**Fullstack Developer – Công ty ABC (2022 – nay)**\n- Thiết kế và phát triển hệ thống quản lý khách hàng (CRM).\n- Triển khai API RESTful và GraphQL.\n- Tối ưu hiệu suất ứng dụng, giảm 30% thời gian tải trang.\n\n**Backend Developer – Công ty XYZ (2020 – 2022)**\n- Xây dựng hệ thống quản lý đơn hàng cho eCommerce.\n- Viết test tự động với Jest và Mocha.\n- Tham gia thiết kế kiến trúc microservices.\n  `,
-    projects: `\n**Hệ thống Chatbot hỗ trợ khách hàng**\n- Công nghệ: Node.js, React, MongoDB\n- Vai trò: Leader – phân công công việc, review code, triển khai Docker.\n- Kết quả: Giảm 40% thời gian phản hồi khách hàng.\n\n**Website thương mại điện tử**\n- Công nghệ: ReactJS, NestJS, PostgreSQL\n- Vai trò: Fullstack Developer\n- Kết quả: Hỗ trợ 5000+ người dùng hoạt động hàng ngày.\n  `,
-    education: `\n**Đại học Bách Khoa Hà Nội (2016 – 2020)**\n- Chuyên ngành: Công nghệ thông tin\n- GPA: 3.45/4\n  `
-};
+import { Button } from "@/components/ui/button";
+import { useNavigate, useParams } from "react-router-dom";
+import { getTemplateDetail, getCV } from "@/api/recruitApi";
 
 type SectionId =
     | "avatar"
@@ -67,111 +17,239 @@ type SectionId =
     | "projects"
     | "education";
 
+interface Column {
+    id: string;
+    colSpan?: number;
+    sections: SectionId[];
+}
+
+interface Row {
+    id: string;
+    colSpan: number;
+    columns: Column[];
+}
+
+interface LayoutJson {
+    layout: {
+        columns: number;
+        rows: Row[];
+    };
+}
+
+interface ThemeJson {
+    color: string; // màu chính của CV
+    size: number; // size chữ chính của CV
+    colorTitle: string; // màu của các title như Experience, Skill
+    sizeTitle: number; // size chữ của các title
+    colorName: string; // màu của tên CV
+    sizeName: number; // size chữ của tên CV
+    colorPosition: string; // màu của tên vị trí
+    sizePosition: number; // size chữ của tên vị trí
+    alignTextTitle: "left" | "center" | "right"; // vị trí căn lề của các title
+    alignTextName: "left" | "center" | "right"; // vị trí căn lề của tên
+    alignTextPosition: "left" | "center" | "right"; // vị trí căn lề của tên vị trí
+    borderRadiusAvatar: number; // bo góc cho avatar
+    sizeAvatar: number; // kích thước của avatar
+    language: "vi" | "en"; // ngôn ngữ của CV
+}
+
 type DataJson = Record<SectionId, string>;
 
-const renderSection = (sectionId: SectionId, data: DataJson) => {
-    const rawContent = data[sectionId] || "";
-    if (sectionId === "avatar") {
-        let imgSrc = rawContent;
-        const match = rawContent.match(/!\[.*?\]\((.*?)\)/);
-        if (match) imgSrc = match[1];
-        return (
-            <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
-                <img
-                    src={imgSrc}
-                    alt="avatar"
-                    style={{ width: theme_json.sizeAvatar, height: theme_json.sizeAvatar, objectFit: 'cover', borderRadius: theme_json.borderRadiusAvatar, boxShadow: '0 2px 8px #ccc' }}
-                />
-            </div>
-        );
-    }
-    if (sectionId === "name") {
-        return (
-            <div key={sectionId} className="cv-section" style={{ textAlign: theme_json.alignTextName as any, marginBottom: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: theme_json.sizeName, letterSpacing: 1, color: theme_json.colorName }}>
-                    <ReactMarkdown>{rawContent}</ReactMarkdown>
-                </span>
-            </div>
-        );
-    }
-    if (sectionId === "position") {
-        return (
-            <div key={sectionId} className="cv-section" style={{ textAlign: theme_json.alignTextPosition as any, marginBottom: 12 }}>
-                <span style={{ fontWeight: 600, fontSize: theme_json.sizePosition, color: theme_json.colorPosition }}>
-                    <ReactMarkdown>{rawContent}</ReactMarkdown>
-                </span>
-            </div>
-        );
-    }
-    if (sectionId === "summary") {
-        return (
-            <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
-                <div className="cv-section-content" style={{ color: theme_json.color, fontSize: theme_json.size, wordBreak: 'break-word', textAlign: 'left' }}>
-                    <ReactMarkdown>{rawContent}</ReactMarkdown>
+export default function CVPreviewPage() {
+    const { cvId } = useParams();
+    const navigate = useNavigate();
+    const previewRef = useRef<HTMLDivElement | null>(null);
+    const [data, setData] = useState<DataJson>({} as DataJson);
+    const [themeJson, setThemeJson] = useState<ThemeJson>();
+    const [layoutJson, setLayoutJson] = useState<LayoutJson>();
+    const [title, setTitle] = useState<string>("");
+
+    const fetchData = async () => {
+        if (!cvId) return;
+        try {
+            const res1 = await getCV(cvId);
+            const parsedData = res1.data.dataJson;
+            setData(parsedData);
+            setTitle(res1.data.title || "");
+            if (res1.data.templateId) {
+                const res2 = await getTemplateDetail(res1.data.templateId);
+                setThemeJson(JSON.parse(res2.data.themeJson));
+                setLayoutJson(JSON.parse(res2.data.layoutJson));
+            }
+        } catch (err) {
+            console.error("Failed to fetch CV or template:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, [cvId]);
+
+
+    const labelFor = (sec: SectionId) => {
+        const lang = (themeJson?.language as string) || 'vi';
+        const SECTION_LABELS: Record<string, Record<SectionId, string>> = {
+            vi: {
+                avatar: 'ẢNH',
+                name: 'HỌ VÀ TÊN',
+                position: 'VỊ TRÍ',
+                summary: 'TÓM TẮT',
+                personal_info: 'THÔNG TIN CÁ NHÂN',
+                skills: 'KỸ NĂNG',
+                certificates: 'CHỨNG CHỈ',
+                experience: 'KINH NGHIỆM',
+                projects: 'DỰ ÁN',
+                education: 'HỌC VẤN',
+            },
+            en: {
+                avatar: 'AVATAR',
+                name: 'NAME',
+                position: 'POSITION',
+                summary: 'SUMMARY',
+                personal_info: 'PERSONAL INFO',
+                skills: 'SKILLS',
+                certificates: 'CERTIFICATES',
+                experience: 'EXPERIENCE',
+                projects: 'PROJECTS',
+                education: 'EDUCATION',
+            }
+        };
+        return SECTION_LABELS[lang]?.[sec] || sec.toUpperCase();
+    };
+
+    const renderSection = (sectionId: SectionId) => {
+        const rawContent = data[sectionId] || "";
+        if (sectionId === "avatar") {
+            // Nếu là markdown image thì lấy src, nếu là url thì dùng luôn
+            let imgSrc = rawContent;
+            const match = rawContent.match(/!\[.*?\]\((.*?)\)/);
+            if (match) imgSrc = match[1];
+            return (
+                <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
+                    <img
+                        src={imgSrc}
+                        alt="avatar"
+                        style={{ width: themeJson?.sizeAvatar, height: themeJson?.sizeAvatar, objectFit: 'cover', borderRadius: themeJson?.borderRadiusAvatar, boxShadow: '0 2px 8px #ccc' }}
+                    />
                 </div>
-            </div>
-        );
-    }
-    if (sectionId === "personal_info") {
+            );
+        }
+        if (sectionId === "name") {
+            return (
+                <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextName, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: themeJson?.sizeName, letterSpacing: 1, color: themeJson?.colorName }}>
+                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        }
+        if (sectionId === "position") {
+            return (
+                <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextPosition, marginBottom: 12 }}>
+                    <span style={{ fontWeight: 600, fontSize: themeJson?.sizePosition, color: themeJson?.colorPosition }}>
+                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    </span>
+                </div>
+            );
+        }
+        if (sectionId === "summary") {
+            return (
+                <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
+                    <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word', textAlign: 'left' }}>
+                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    </div>
+                </div>
+            );
+        }
+        if (sectionId === "personal_info") {
+            return (
+                <div key={sectionId} className="cv-section">
+                    <h3
+                        className="cv-section-title"
+                        style={{ color: themeJson?.colorTitle, textAlign: themeJson?.alignTextTitle, fontSize: themeJson?.sizeTitle }}
+                    >
+                        {labelFor('personal_info')}
+                    </h3>
+                    <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
+                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    </div>
+                </div>
+            )
+        };
+
         return (
             <div key={sectionId} className="cv-section">
                 <h3
                     className="cv-section-title"
-                    style={{ color: theme_json.colorTitle, textAlign: theme_json.alignTextTitle as any, fontSize: theme_json.sizeTitle }}
+                    style={{ color: themeJson?.colorTitle, textAlign: themeJson?.alignTextTitle, fontSize: themeJson?.sizeTitle }}
                 >
-                    PERSONAL INFO
+                    {labelFor(sectionId as SectionId)}
                 </h3>
-                <div className="cv-section-content" style={{ color: theme_json.color, fontSize: theme_json.size, wordBreak: 'break-word' }}>
+                <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
                     <ReactMarkdown>{rawContent}</ReactMarkdown>
                 </div>
             </div>
-        )
-    }
-    return (
-        <div key={sectionId} className="cv-section">
-            <h3
-                className="cv-section-title"
-                style={{ color: theme_json.colorTitle, textAlign: theme_json.alignTextTitle as any, fontSize: theme_json.sizeTitle }}
-            >
-                {sectionId.toUpperCase()}
-            </h3>
-            <div className="cv-section-content" style={{ color: theme_json.color, fontSize: theme_json.size, wordBreak: 'break-word' }}>
-                <ReactMarkdown>{rawContent}</ReactMarkdown>
-            </div>
-        </div>
-    );
-};
+        );
+    };
 
-const CVPreviewPage = () => {
-    const data = initialData;
+    const renderPreview = () => {
+        return layoutJson?.layout?.rows.map(row => {
+            // Tính tổng colSpan của các column trong row
+            const totalColSpan = row.columns.reduce((sum, col) => sum + (col.colSpan || 1), 0);
+            return (
+                <div
+                    key={row.id}
+                    className="cv-row"
+                    style={{ display: 'grid', gridTemplateColumns: `repeat(${totalColSpan}, 1fr)` }}
+                >
+                    {row.columns.map(col => (
+                        <div
+                            key={col.id}
+                            className="cv-col text-left"
+                            style={{ gridColumn: `span ${col.colSpan || 1}` }}
+                        >
+                            {col.sections.map(sec => renderSection(sec))}
+                        </div>
+                    ))}
+                </div>
+            );
+        });
+    };
+
+    const handleBack = () => {
+        navigate("/manage-cvs");
+    };
+
+    const handleEditCV = (cvId: string) => {
+        navigate(`/manage-cvs/${cvId}`);
+    }
+
+    const handleDownloadCV = async () => {
+        setTimeout(() => {
+            if (previewRef.current) {
+                window.print();
+            }
+        }, 200);
+    }
+
     return (
-        <div className="cv-builder flex flex-col px-[100px] py-5">
-            <div className="p-6 my-8 flex justify-center">
-                <div className="cv-right">
-                    {layout_json.layout.rows.map(row => {
-                        const totalColSpan = row.columns.reduce((sum, col) => sum + (col.colSpan || 1), 0);
-                        return (
-                            <div
-                                key={row.id}
-                                className="cv-row"
-                                style={{ display: 'grid', gridTemplateColumns: `repeat(${totalColSpan}, 1fr)` }}
-                            >
-                                {row.columns.map(col => (
-                                    <div
-                                        key={col.id}
-                                        className="cv-col text-left"
-                                        style={{ gridColumn: `span ${col.colSpan || 1}` }}
-                                    >
-                                        {col.sections.map(sec => renderSection(sec as SectionId, data))}
-                                    </div>
-                                ))}
-                            </div>
-                        );
-                    })}
+        <div className="flex flex-col items-center pb-10" style={{ backgroundImage: 'url(/background-preview.jpg)', backgroundSize: 'cover', minHeight: '100vh' }}>
+            <div className="nav w-full bg-white sticky top-0 z-10 mb-10">
+                <div className="flex justify-between items-center py-2 px-20">
+                    <h3>{title}</h3>
+                    <div className="flex gap-3">
+                        <Button className="bg-white" onClick={handleBack}>Hủy</Button>
+                        <Button variant="login" onClick={() => handleEditCV(cvId || '')}>Sửa CV</Button>
+                        <Button variant="login" onClick={handleDownloadCV}>Tải CV PDF</Button>
+                    </div>
                 </div>
             </div>
+            <div
+                className="cv-content w-[58%] bg-white p-20"
+                ref={previewRef}
+            >
+                {renderPreview()}
+            </div>
         </div>
     );
-};
-
-export default CVPreviewPage;
+}

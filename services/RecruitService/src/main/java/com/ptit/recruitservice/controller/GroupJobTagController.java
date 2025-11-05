@@ -36,13 +36,11 @@ public class GroupJobTagController {
         return groupJobTagService.updateGroupJobTag(groupTagId, dto);
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/all")
     public List<GroupJobTagDto> getAllGroupJobTags() {
         return groupJobTagService.getAllGroupJobTags();
     }
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'EMPLOYER', 'ADMIN')")
     @GetMapping("/mapping")
     public List<JobGroupTagMappingDto> getGroupJobTagsByJob(@RequestParam("job_id") UUID jobId) {
         return groupJobTagService.getGroupJobTagsByJob(jobId);

@@ -2,64 +2,114 @@ server:
   port: 8080
 jwt:
   secret: your_jwt_secret_key
+  public-endpoints:
+    - path: /api/user-service/auth/**
+      methods: [ GET, POST ]
+    - path: /api/user-service/companies/**
+      methods: [ GET ]
+    - path: /api/recruit-service/jobs/**
+      methods: [ GET ]
+    - path: /api/recruit-service/job-tag/mapping
+      methods: [ GET ]
+    - path: /api/recruit-service/job-tag/all
+      methods: [ GET ]
+    - path: /api/recruit-service/group-tag/mapping
+      methods: [ GET ]
+    - path: /api/recruit-service/group-tag/all
+      methods: [ GET ]
+    - path: /api/recruit-service/cv-templates/all
+      methods: [ GET ]
+    - path: /swagger-ui/**
+      methods: [ GET ]
+    - path: /v3/api-docs/**
+      methods: [ GET ]
+    - path: /api/user-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/admin-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/recommend-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/notification-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/recruit-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /swagger/**
+      methods: [ GET ]
+    - path: /webjars/**
+      methods: [ GET ]
 spring:
   cloud:
     gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
       default-filters:
         - TokenRelay
       routes:
         - id: userservice
-          uri: http://localhost:xxxx
+          uri: http://localhost:5000
           predicates:
             - Path=/api/user-service/**
 
         - id: adminservice
-          uri: http://localhost:xxxx
+          uri: http://localhost:5001
           predicates:
             - Path=/api/admin-service/**
 
         - id: recommendservice
-          uri: http://localhost:xxxx
+          uri: http://localhost:5002
           predicates:
             - Path=/api/recommend-service/**
 
         - id: notificationservice
-          uri: http://localhost:xxxx
+          uri: http://localhost:5003
           predicates:
             - Path=/api/notification-service/**
 
         - id: recruitservice
-          uri: http://localhost:xxxx
+          uri: http://localhost:5004
           predicates:
             - Path=/api/recruit-service/**
 
 
         - id: userservice-swagger
-          uri: http://localhost:xxxx
+          uri: http://localhost:5000
           predicates:
             - Path=/api/user-swagger/v3/api-docs
           filters:
             - RewritePath=/api/user-swagger/v3/api-docs,/v3/api-docs
         - id: adminservice-swagger
-          uri: http://localhost:xxxx
+          uri: http://localhost:5001
           predicates:
             - Path=/api/admin-swagger/v3/api-docs
           filters:
             - RewritePath=/api/admin-swagger/v3/api-docs,/v3/api-docs
         - id: recommendservice-swagger
-          uri: http://localhost:xxxx
+          uri: http://localhost:5002
           predicates:
             - Path=/api/recommend-swagger/v3/api-docs
           filters:
             - RewritePath=/api/recommend-swagger/v3/api-docs,/v3/api-docs
         - id: notificationservice-swagger
-          uri: http://localhost:xxxx
+          uri: http://localhost:5003
           predicates:
             - Path=/api/notification-swagger/v3/api-docs
           filters:
             - RewritePath=/api/notification-swagger/v3/api-docs,/v3/api-docs
         - id: recruitservice-swagger
-          uri: http://localhost:xxxx
+          uri: http://localhost:5004
           predicates:
             - Path=/api/recruit-swagger/v3/api-docs
           filters:

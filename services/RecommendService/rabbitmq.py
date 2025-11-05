@@ -1,0 +1,183 @@
+import asyncio
+import json
+import os
+import aio_pika
+from services.embedding import summarize_text, create_embedding
+from db import get_pool
+from services.extract_text_from_url import extract_text_from_url
+from utils.service_client import update_status_embedding_job, update_status_embedding_cv
+import logging
+from dotenv import load_dotenv
+load_dotenv()
+
+logger = logging.getLogger("rabbitmq")
+
+RABBIT_URL = os.getenv("RABBITMQ_URL")
+EXCHANGE_NAME = os.getenv("EMBEDDING_EXCHANGE")
+CV_QUEUE = os.getenv("EMBEDDING_CV_QUEUE")
+CV_ROUTING_KEY = os.getenv("EMBEDDING_CV_ROUTING_KEY")
+JD_QUEUE = os.getenv("EMBEDDING_JD_QUEUE")
+JD_ROUTING_KEY = os.getenv("EMBEDDING_JD_ROUTING_KEY")
+APPLICATION_QUEUE = os.getenv("EMBEDDING_APPLICATION_QUEUE")
+APPLICATION_ROUTING_KEY = os.getenv("EMBEDDING_APPLICATION_ROUTING_KEY")
+EMBEDDING_DELETE_APPLICATION_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_APPLICATION_ROUTING_KEY")
+EMBEDDING_DELETE_QUEUE = os.getenv("EMBEDDING_DELETE_QUEUE")
+EMBEDDING_DELETE_CV_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_CV_ROUTING_KEY")
+EMBEDDING_DELETE_JD_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_JD_ROUTING_KEY")
+MINIO_URL = os.getenv("MINIO_URL")
+
+async def start_rabbit_listener():
+    connection = await aio_pika.connect_robust(RABBIT_URL)
+    channel = await connection.channel()
+    await channel.set_qos(prefetch_count=10)
+
+    exchange = await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True)
+    cv_queue = await channel.declare_queue(CV_QUEUE, durable=True)
+    jd_queue = await channel.declare_queue(JD_QUEUE, durable=True)
+    application_queue = await channel.declare_queue(APPLICATION_QUEUE, durable=True)
+    delete_queue = await channel.declare_queue(EMBEDDING_DELETE_QUEUE, durable=True)
+
+    await cv_queue.bind(exchange, routing_key=CV_ROUTING_KEY)
+    await jd_queue.bind(exchange, routing_key=JD_ROUTING_KEY)
+    await application_queue.bind(exchange, routing_key=APPLICATION_ROUTING_KEY)
+    await application_queue.bind(exchange, routing_key=EMBEDDING_DELETE_APPLICATION_ROUTING_KEY)
+    await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_CV_ROUTING_KEY)
+    await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_JD_ROUTING_KEY)
+ 
+    await cv_queue.consume(lambda msg: process_event_embedding(msg, "embedding_cv", "cv_id"))
+    await jd_queue.consume(lambda msg: process_event_embedding(msg, "embedding_jd", "job_id"))
+    await application_queue.consume(lambda msg: process_event_application(msg, "applications", "application_id"))
+    await application_queue.consume(lambda msg: process_event_application_delete(msg, "applications", "application_id"))
+    await delete_queue.consume(lambda msg: process_event_delete_embedding(msg))
+
+    logger.info("RabbitMQ listeners started for CV + JD + Application")
+    return connection
+
+
+async def process_event_embedding(message: aio_pika.IncomingMessage, table: str, id_field: str):
+    logger.info("[🐇] Starting RabbitMQ listener...")
+    async with message.process():
+        data = json.loads(message.body)
+        record_id = data.get(id_field)
+        file_url = data.get("file_url")
+        raw_text = data.get("raw_text")
+        if not record_id:
+            logger.warning("Skipping embedding: missing %s in event: %s", id_field, data)
+            return
+
+        status = "failed"
+        try:
+            if file_url:
+                full_url = MINIO_URL + file_url
+                raw_text = await extract_text_from_url(full_url)
+            summary = await summarize_text(raw_text)
+            vector = await create_embedding(summary)
+            pg_vector = "[" + ",".join(str(x) for x in vector) + "]"
+            pool = await get_pool()
+            async with pool.acquire() as conn:
+                await conn.execute(f"""
+                    INSERT INTO {table} ({id_field}, raw_text, embedding_vector, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                    ON CONFLICT ({id_field}) DO UPDATE
+                        SET raw_text = EXCLUDED.raw_text,
+                            embedding_vector = EXCLUDED.embedding_vector,
+                            created_at = NOW()
+                    """, record_id, summary, pg_vector)
+
+            status = "embedded"
+            logger.info("%s updated for %s=%s", table, id_field, record_id)
+        except Exception as e:
+            logger.exception("Error embedding for %s %s=%s", table, id_field, record_id)
+
+        try:
+            if id_field == "job_id":
+                await update_status_embedding_job(record_id, status)
+            elif id_field == "cv_id":
+                await update_status_embedding_cv(record_id, status)
+            else:
+                pass
+        except Exception:
+            logger.exception("Error calling update_status_embedding for %s=%s", id_field, record_id)
+
+async def process_event_application(message: aio_pika.IncomingMessage, table: str, id_field: str):
+    async with message.process():
+        data = json.loads(message.body)
+        application_id = data.get(id_field)
+        job_id = data.get("job_id")
+        cv_id = data.get("cv_id")
+
+        if not application_id or not job_id or not cv_id:
+            logger.warning("Skipping application sync: missing required fields in event: %s", data)
+            return
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(f"""
+                INSERT INTO {table} ({id_field}, job_id, cv_id, applied_at)
+                VALUES ($1, $2, $3, NOW())
+                ON CONFLICT ({id_field}) DO UPDATE
+                    SET job_id = EXCLUDED.job_id,
+                        cv_id = EXCLUDED.cv_id,
+                        applied_at = EXCLUDED.applied_at
+                """, application_id, job_id, cv_id)
+
+        logger.info("%s synced for %s=%s", table, id_field, application_id)
+
+
+async def process_event_application_delete(message: aio_pika.IncomingMessage, table: str, id_field: str):
+    async with message.process():
+        data = json.loads(message.body)
+        application_id = data.get(id_field)
+        if not application_id:
+            logger.warning("Skipping application delete: missing %s in event: %s", id_field, data)
+            return
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.execute(f"DELETE FROM {table} WHERE {id_field} = $1", application_id)
+
+        logger.info("%s delete executed for %s=%s, result=%s", table, id_field, application_id, result)
+
+
+async def process_event_delete_embedding(message: aio_pika.IncomingMessage):
+    async with message.process():
+        try:
+            data = json.loads(message.body)
+        except Exception:
+            logger.warning("Invalid JSON for delete-embedding event: %s", message.body)
+            return
+
+        routing_key = getattr(message, "routing_key", None)
+        pool = await get_pool()
+
+        if routing_key == EMBEDDING_DELETE_CV_ROUTING_KEY:
+            table = "embedding_cv"
+            id_field = "cv_id"
+            id_value = data.get("cv_id")
+        elif routing_key == EMBEDDING_DELETE_JD_ROUTING_KEY:
+            table = "embedding_jd"
+            id_field = "job_id"
+            id_value = data.get("job_id")
+        else:
+            if "cv_id" in data:
+                table = "embedding_cv"
+                id_field = "cv_id"
+                id_value = data.get("cv_id")
+            elif "job_id" in data:
+                table = "embedding_jd"
+                id_field = "job_id"
+                id_value = data.get("job_id")
+            else:
+                logger.warning("Unknown delete-embedding event (no routing key match and no cv_id/job_id): %s", data)
+                return
+
+        if not id_value:
+            logger.warning("Skipping delete-embedding: missing %s in event: %s", id_field, data)
+            return
+
+        async with pool.acquire() as conn:
+            try:
+                result = await conn.execute(f"DELETE FROM {table} WHERE {id_field} = $1", id_value)
+                logger.info("Deleted from %s where %s=%s, result=%s", table, id_field, id_value, result)
+            except Exception:
+                logger.exception("Error deleting embedding from %s for %s=%s", table, id_field, id_value)

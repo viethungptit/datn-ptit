@@ -12,7 +12,7 @@ public class CVDto {
     private JsonNode dataJson;
     private String fileUrl;
     private String title;
-    private String status;
+    private String statusEmbedding;
     private boolean isDeleted;
     private Timestamp createdAt;
 
@@ -30,8 +30,8 @@ public class CVDto {
     public void setFileUrl(String fileUrl) { this.fileUrl = fileUrl; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getStatusEmbedding() { return statusEmbedding; }
+    public void setStatusEmbedding(String status) { this.statusEmbedding = status; }
     public boolean isDeleted() { return isDeleted; }
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
     public Timestamp getCreatedAt() { return createdAt; }
