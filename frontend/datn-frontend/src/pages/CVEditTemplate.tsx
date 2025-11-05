@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/CVBuilder.css";
 import ReactMarkdown from "react-markdown";
 import MDEditor from "@uiw/react-md-editor";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { getTemplateDetail, getCV, updateCV } from "@/api/recruitApi";
+import { suggestSectionCV } from "@/api/recommendApi";
 import { getAllFilesByMeApi, uploadFileApi, deleteFileApi } from "@/api/userApi";
 import { toast } from "react-toastify";
 import { Input } from "@/components/ui/input";
@@ -77,6 +79,9 @@ export default function CVEditTemplate() {
     const [showFileModal, setShowFileModal] = useState(false);
     const [files, setFiles] = useState<Array<any>>([]);
     const [uploading, setUploading] = useState(false);
+    const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
+    const [aiOptions, setAiOptions] = useState<Record<string, { style: string }>>({});
+    const [aiSuggestions, setAiSuggestions] = useState<Record<string, { newText: string; originalText: string }>>({});
 
     const fetchData = async () => {
         if (!cvId) return;
@@ -103,6 +108,65 @@ export default function CVEditTemplate() {
 
     const handleChange = (key: SectionId, value: string) => {
         setDraftData(prev => ({ ...prev, [key]: value }));
+    };
+
+    const cleanMarkdown = (text?: string) => text?.replace(/\\/g, "") ?? "";
+
+    const handleAISuggest = async (sectionId: SectionId) => {
+        try {
+            setAiLoading(prev => ({ ...prev, [sectionId]: true }));
+            const opts = aiOptions[sectionId] || { style: 'professional' };
+            const position = draftData.position || data.position || '';
+            const payload = {
+                language: themeJson?.language || 'vi',
+                position,
+                section: sectionId,
+                content: draftData[sectionId] || '',
+                styles: opts.style,
+            };
+
+            const res = await suggestSectionCV(payload);
+            const suggestion = res?.data?.data || res?.data?.suggestion || res?.data?.content || res?.data || '';
+            let suggestionText = suggestion?.suggested || suggestion?.text || suggestion || '';
+            if (!suggestionText) {
+                toast.error('Không nhận được gợi ý từ AI');
+            } else {
+                const original = draftData[sectionId] || '';
+                const combined = original ? `~~${original}~~\n\n${suggestionText}` : suggestionText;
+                setAiSuggestions(prev => ({ ...prev, [sectionId]: { newText: suggestionText, originalText: original } }));
+                handleChange(sectionId, combined);
+            }
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || 'Gợi ý thất bại';
+            toast.error('Lỗi hệ thống khi gợi ý AI. Vui lòng thử lại sau.');
+            console.error('AI suggest failed', msg);
+        } finally {
+            setAiLoading(prev => ({ ...prev, [sectionId]: false }));
+        }
+    };
+
+    const acceptSuggestion = (sectionId: SectionId) => {
+        const sug = aiSuggestions[sectionId];
+        if (!sug) return;
+        handleChange(sectionId, sug.newText);
+        setData(prev => ({ ...prev, [sectionId]: sug.newText }));
+        setAiSuggestions(prev => {
+            const copy = { ...prev } as any;
+            delete copy[sectionId];
+            return copy;
+        });
+    };
+
+    const declineSuggestion = (sectionId: SectionId) => {
+        const sug = aiSuggestions[sectionId];
+        if (sug) {
+            handleChange(sectionId, sug.originalText || '');
+        }
+        setAiSuggestions(prev => {
+            const copy = { ...prev } as any;
+            delete copy[sectionId];
+            return copy;
+        });
     };
 
     const fetchFiles = async () => {
@@ -229,10 +293,45 @@ export default function CVEditTemplate() {
                                     value={draftData[key as SectionId]}
                                     onChange={val => handleChange(key as SectionId, val || "")}
                                     height={150}
-                                    previewOptions={{}} // Tắt live preview
-                                    preview="edit"
+                                    previewOptions={{}}
+                                    preview={((draftData[key as SectionId] || "").includes('~~')) ? 'live' : 'edit'}
                                 />
                             </div>
+
+                            {/* AI Suggestion controls - only for certain sections */}
+                            {['summary', 'experience', 'projects', 'education', 'skills', 'certificates'].includes(key as SectionId) && (
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-sm">Phong cách</label>
+                                        <select
+                                            className="border rounded px-2 py-1 text-sm"
+                                            value={aiOptions[key as SectionId]?.style || 'professional'}
+                                            onChange={(e) => setAiOptions(prev => ({ ...prev, [key as SectionId]: { ...(prev[key as SectionId] || { style: 'professional' }), style: e.target.value } }))}
+                                        >
+                                            <option value="professional">Chuyên nghiệp</option>
+                                            <option value="concise">Ngắn gọn</option>
+                                            <option value="impact">Ấn tượng</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <Button
+                                            variant="login"
+                                            onClick={() => handleAISuggest(key as SectionId)}
+                                            disabled={!!aiLoading[key as SectionId]}
+                                        >
+                                            {aiLoading[key as SectionId] ? 'Đang gợi ý...' : 'Gợi ý bằng AI'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {aiSuggestions[key as SectionId] && (
+                                <div className="mt-3 flex items-center gap-2">
+                                    <Button onClick={() => acceptSuggestion(key as SectionId)}>Chấp nhận</Button>
+                                    <Button variant="destructive" onClick={() => declineSuggestion(key as SectionId)}>Từ chối</Button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -261,7 +360,7 @@ export default function CVEditTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextName, marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: themeJson?.sizeName, letterSpacing: 1, color: themeJson?.colorName }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -270,7 +369,7 @@ export default function CVEditTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextPosition, marginBottom: 12 }}>
                     <span style={{ fontWeight: 600, fontSize: themeJson?.sizePosition, color: themeJson?.colorPosition }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -279,7 +378,7 @@ export default function CVEditTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
                     <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word', textAlign: 'left' }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </div>
                 </div>
             );
@@ -294,7 +393,7 @@ export default function CVEditTemplate() {
                         {labelFor('personal_info')}
                     </h3>
                     <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </div>
                 </div>
             )
@@ -309,7 +408,7 @@ export default function CVEditTemplate() {
                     {labelFor(sectionId as SectionId)}
                 </h3>
                 <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
-                    <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                 </div>
             </div>
         );
