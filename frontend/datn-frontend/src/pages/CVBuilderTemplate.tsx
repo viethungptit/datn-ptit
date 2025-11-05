@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import { translateSection } from "@/utils/translateSection";
+import remarkGfm from "remark-gfm";
 
 type SectionId =
     | "avatar"
@@ -132,6 +133,7 @@ export default function CVBuilderTemplate() {
     const [uploading, setUploading] = useState(false);
     const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
     const [aiOptions, setAiOptions] = useState<Record<string, { style: string }>>({});
+    const [aiSuggestions, setAiSuggestions] = useState<Record<string, { newText: string; originalText: string }>>({});
 
     const handleChange = (key: SectionId, value: string) => {
         setDraftData(prev => ({ ...prev, [key]: value }));
@@ -235,6 +237,8 @@ export default function CVBuilderTemplate() {
         return SECTION_LABELS[lang]?.[sec] || sec.toUpperCase();
     };
 
+    const cleanMarkdown = (text?: string) => text?.replace(/\\/g, "") ?? "";
+
     const renderInputs = () => {
         return (
             <div className="form-group">
@@ -265,6 +269,7 @@ export default function CVBuilderTemplate() {
                     }
 
                     const sectionId = key as SectionId;
+                    const hasStrikeThrough = (draftData[sectionId] || '').includes('~~');
 
                     return (
                         <div key={key} className="mb-10">
@@ -274,8 +279,8 @@ export default function CVBuilderTemplate() {
                                     value={draftData[key as SectionId]}
                                     onChange={val => handleChange(key as SectionId, val || "")}
                                     height={150}
-                                    previewOptions={{}} // Tắt live preview
-                                    preview="edit"
+                                    previewOptions={{}}
+                                    preview={hasStrikeThrough ? 'live' : 'edit'}
                                 />
                             </div>
 
@@ -306,6 +311,13 @@ export default function CVBuilderTemplate() {
                                     </div>
                                 </div>
                             )}
+
+                            {aiSuggestions[sectionId] && (
+                                <div className="mt-3 flex items-center gap-2">
+                                    <Button onClick={() => acceptSuggestion(sectionId)}>Chấp nhận</Button>
+                                    <Button variant="destructive" onClick={() => declineSuggestion(sectionId)}>Từ chối</Button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -328,35 +340,52 @@ export default function CVBuilderTemplate() {
             };
 
             const res = await suggestSectionCV(payload);
-
-            // try to extract suggestion text from several common shapes
             const suggestion = res?.data?.data || res?.data?.suggestion || res?.data?.content || res?.data || '';
-            let suggestionText = '';
-            if (typeof suggestion === 'string') suggestionText = suggestion;
-            else if (typeof suggestion === 'object' && suggestion !== null) {
-                if (typeof suggestion.text === 'string') suggestionText = suggestion.text;
-                else suggestionText = JSON.stringify(suggestion);
-            } else suggestionText = String(suggestion || '');
-
+            let suggestionText = suggestion?.suggested;
             if (!suggestionText) {
                 toast.error('Không nhận được gợi ý từ AI');
             } else {
-                setDraftData(prev => ({ ...prev, [sectionId]: suggestionText }));
-                toast.success('Gợi ý đã được chèn vào ô input');
+                const original = draftData[sectionId] || '';
+                const combined = original ? `~~${original}~~\n\n${suggestionText}` : suggestionText;
+                setAiSuggestions(prev => ({ ...prev, [sectionId]: { newText: suggestionText, originalText: original } }));
+                handleChange(sectionId, combined);
             }
         } catch (err: any) {
             const msg = err?.response?.data?.message || err?.message || 'Gợi ý thất bại';
-            toast.error(msg);
-            console.error('AI suggest failed', err);
+            toast.error("Lỗi hệ thống khi gợi ý AI. Vui lòng thử lại sau.");
+            console.error('AI suggest failed', msg);
         } finally {
             setAiLoading(prev => ({ ...prev, [sectionId]: false }));
         }
     };
 
+    const acceptSuggestion = (sectionId: SectionId) => {
+        const sug = aiSuggestions[sectionId];
+        if (!sug) return;
+        handleChange(sectionId, sug.newText);
+        setData(prev => ({ ...prev, [sectionId]: sug.newText }));
+        setAiSuggestions(prev => {
+            const copy = { ...prev } as any;
+            delete copy[sectionId];
+            return copy;
+        });
+    };
+
+    const declineSuggestion = (sectionId: SectionId) => {
+        const sug = aiSuggestions[sectionId];
+        if (sug) {
+            handleChange(sectionId, sug.originalText || '');
+        }
+        setAiSuggestions(prev => {
+            const copy = { ...prev } as any;
+            delete copy[sectionId];
+            return copy;
+        });
+    };
+
     const renderSection = (sectionId: SectionId) => {
         const rawContent = data[sectionId] || "";
         if (sectionId === "avatar") {
-            // Nếu là markdown image thì lấy src, nếu là url thì dùng luôn
             let imgSrc = rawContent;
             const match = rawContent.match(/!\[.*?\]\((.*?)\)/);
             if (match) imgSrc = match[1];
@@ -374,7 +403,7 @@ export default function CVBuilderTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextName, marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: themeJson?.sizeName, letterSpacing: 1, color: themeJson?.colorName }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -383,7 +412,7 @@ export default function CVBuilderTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ textAlign: themeJson?.alignTextPosition, marginBottom: 12 }}>
                     <span style={{ fontWeight: 600, fontSize: themeJson?.sizePosition, color: themeJson?.colorPosition }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </span>
                 </div>
             );
@@ -392,7 +421,7 @@ export default function CVBuilderTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
                     <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word', textAlign: 'left' }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </div>
                 </div>
             );
@@ -407,7 +436,7 @@ export default function CVBuilderTemplate() {
                         {labelFor('personal_info')}
                     </h3>
                     <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
-                        <ReactMarkdown>{rawContent}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                     </div>
                 </div>
             )
@@ -422,7 +451,7 @@ export default function CVBuilderTemplate() {
                     {labelFor(sectionId as SectionId)}
                 </h3>
                 <div className="cv-section-content" style={{ color: themeJson?.color, fontSize: themeJson?.size, wordBreak: 'break-word' }}>
-                    <ReactMarkdown>{rawContent}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanMarkdown(rawContent)}</ReactMarkdown>
                 </div>
             </div>
         );
@@ -532,7 +561,6 @@ export default function CVBuilderTemplate() {
                         )}
                     </div>
 
-                    {/* File List Section */}
                     <div>
                         <h4 className="text-lg font-semibold mb-3">Ảnh của bạn</h4>
 

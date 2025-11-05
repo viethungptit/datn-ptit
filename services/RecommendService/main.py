@@ -37,14 +37,6 @@ app = FastAPI(
     openapi_url="/v3/api-docs",
 )
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Thêm middleware (giống Filter)
 app.add_middleware(HeaderAuthMiddleware)
 
