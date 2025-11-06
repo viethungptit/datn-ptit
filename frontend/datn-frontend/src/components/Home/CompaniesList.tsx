@@ -1,84 +1,29 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
+import { getAllCompaniesApi } from "@/api/userApi";
+import type { Company } from "@/pages/Admin/CompanyManagement";
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 
-const companies = [
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "ITC JSC",
-        location: "Hà Nội",
-        industry: "Công nghệ",
-        link: "/companies/ytb9wk953f2wwni",
-        jobs: 24
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "ABC Corp PTIT Group PTIT Group PTIT Group",
-        location: "Hồ Chí Minh PTIT Group PTIT Group",
-        industry: "Marketing và truyền thông. PTIT Group",
-        link: "#",
-        jobs: 18
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "XYZ Solutions",
-        location: "Đà Nẵng",
-        industry: "Phần mềm",
-        link: "#",
-        jobs: 30
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "PTIT Group PTIT Group PTIT Group PTIT Group PTIT Group",
-        location: "Hà Nội",
-        industry: "Công nghệ và giáo dục.",
-        link: "#",
-        jobs: 12
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "ITC JSC",
-        location: "Hà Nội",
-        industry: "Công nghệ",
-        link: "/companies/ytb9wk953f2wwni",
-        jobs: 24
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "ABC Corp PTIT Group PTIT Group PTIT Group",
-        location: "Hồ Chí Minh PTIT Group PTIT Group",
-        industry: "Marketing và truyền thông. PTIT Group",
-        link: "#",
-        jobs: 18
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "XYZ Solutions",
-        location: "Đà Nẵng",
-        industry: "Phần mềm",
-        link: "#",
-        jobs: 30
-    },
-    {
-        logo: "https://www.bigfootdigital.co.uk/wp-content/uploads/2020/07/image-optimisation-scaled.jpg",
-        name: "PTIT Group PTIT Group PTIT Group PTIT Group PTIT Group",
-        location: "Hà Nội",
-        industry: "Công nghệ và giáo dục.",
-        link: "#",
-        jobs: 12
-    }
-];
 
 const CompaniesList: React.FC = () => {
-
+    const [companies, setCompanies] = useState<Company[]>([]);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        getAllCompaniesApi().then((response) => {
+            setCompanies(response.data);
+        });
+    }, []);
 
     const handleViewAll = () => {
         navigate("/companies");
     }
 
-    const handleViewDetailCompany = () => {
-        navigate("/companies/1");
+    const handleViewDetailCompany = (id: number) => {
+        navigate(`/companies/${id}`);
+        console.log(id);
+
     }
 
     return (
@@ -87,13 +32,15 @@ const CompaniesList: React.FC = () => {
             <div className="grid grid-cols-5 gap-5 w-full">
                 {companies.map((company, idx) => (
                     <div key={idx}
-                        onClick={handleViewDetailCompany}
+                        onClick={() => handleViewDetailCompany(idx)}
                         className="flex flex-col items-center bg-white rounded-xl shadow-lg p-4 border border-gray-100 hover:scale-105 transition-transform cursor-pointer">
-                        <img src={company.logo} alt={company.name} className="w-28 h-28 rounded-md object-cover mb-4 mr-4" />
+                        <img 
+                        src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'}
+                        alt={company.companyName} className="w-28 h-28 rounded-md object-cover mb-4 mr-4" />
                         <div className="flex flex-col gap-2">
-                            <span className="font-semibold text-base text-txt-red w-[220px] text-center line-clamp-2">{company.name}</span>
+                            <span className="font-semibold text-base text-txt-red w-[220px] text-center line-clamp-2">{company.companyName}</span>
                             <p className="text-sm text-gray-700 line-clamp-2 w-[220px] text-center truncate">{company.industry}</p>
-                            <span className="text-sm text-gray-500 text-center">{company.jobs} việc làm</span>
+                            <span className="text-sm text-gray-500 text-center">{company.companySize} việc làm</span>
                         </div>
                     </div>
                 ))}

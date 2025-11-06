@@ -39,7 +39,7 @@ type Company = {
     companyName: string;
 };
 
-type Job = {
+export type Job = {
     jobId: string;
     companyId?: string;
     title: string;
