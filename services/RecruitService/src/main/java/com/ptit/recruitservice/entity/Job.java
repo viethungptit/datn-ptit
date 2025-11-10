@@ -3,12 +3,14 @@ package com.ptit.recruitservice.entity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.util.List;
 import java.util.UUID;
 import java.sql.Timestamp;
 
 @Entity
 @Table(name = "jobs")
 public class Job {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
@@ -30,8 +32,17 @@ public class Job {
     @Column(name = "deadline")
     private Timestamp deadline;
 
-    @Column(name = "salary_range", length = 100)
-    private String salaryRange;
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<JobGroupTagMapping> jobGroupTagMappings;
+
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<JobTagMapping> jobTagMappings;
+
+    @Column(name = "min_salary")
+    private Integer minSalary;
+
+    @Column(name = "max_salary")
+    private Integer maxSalary;
 
     @Column(name = "location", columnDefinition = "TEXT")
     private String location;
@@ -66,52 +77,86 @@ public class Job {
     public void setJobId(UUID jobId) {
         this.jobId = jobId;
     }
+
     public UUID getCompanyId() {
         return companyId;
     }
+
     public void setCompanyId(UUID companyId) {
         this.companyId = companyId;
     }
+
     public String getTitle() {
         return title;
     }
     public void setTitle(String title) {
         this.title = title;
     }
+
     public String getDescription() {
         return description;
     }
     public void setDescription(String description) {
         this.description = description;
     }
-    public Integer getQuantity() {return quantity;}
-    public void setQuantity(Integer quantity) {this.quantity = quantity;}
-    public Timestamp getDeadline() {return deadline;}
-    public void setDeadline(Timestamp deadline) {this.deadline = deadline;}
-    public String getSalaryRange() {
-        return salaryRange;
+
+    public Integer getQuantity() {
+        return quantity;
     }
-    public void setSalaryRange(String salaryRange) {
-        this.salaryRange = salaryRange;
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
+
+    public Timestamp getDeadline() {
+        return deadline;
+    }
+    public void setDeadline(Timestamp deadline) {
+        this.deadline = deadline;
+    }
+
+    public Integer getMinSalary() {
+        return minSalary;
+    }
+    public void setMinSalary(Integer minSalary) {
+        this.minSalary = minSalary;
+    }
+
+    public Boolean getDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        isDeleted = deleted;
+    }
+
+    public Integer getMaxSalary() {
+        return maxSalary;
+    }
+    public void setMaxSalary(Integer maxSalary) {
+        this.maxSalary = maxSalary;
+    }
+
     public String getLocation() {
         return location;
     }
     public void setLocation(String location) {
         this.location = location;
     }
+
     public String getCity() {
         return city;
     }
     public void setCity(String city) {
         this.city = city;
     }
+
     public JobType getJobType() {
         return jobType;
     }
     public void setJobType(JobType jobType) {
         this.jobType = jobType;
     }
+
     public Status getStatus() {
         return status;
     }
@@ -122,7 +167,6 @@ public class Job {
     public StatusEmbedding getStatusEmbedding() {
         return statusEmbedding;
     }
-
     public void setStatusEmbedding(StatusEmbedding statusEmbedding) {
         this.statusEmbedding = statusEmbedding;
     }
@@ -133,6 +177,7 @@ public class Job {
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted;
     }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }

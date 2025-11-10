@@ -1,9 +1,6 @@
 package com.ptit.userservice.controller;
 
-import com.ptit.userservice.dto.CandidateResponse;
-import com.ptit.userservice.dto.CandidateUpdateRequest;
-import com.ptit.userservice.dto.EmployerResponse;
-import com.ptit.userservice.dto.EmployerUpdateRequest;
+import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.UserProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,25 +17,57 @@ public class UserProfileController {
     @Autowired
     private UserProfileService userProfileService;
 
-    @PreAuthorize("hasAnyRole('CANDIDATE', 'ADMIN')")
-    @PutMapping(value = "/candidate/{userId}", consumes = "multipart/form-data")
-    public ResponseEntity<CandidateResponse> upsertCandidate(@PathVariable UUID userId, @ModelAttribute CandidateUpdateRequest request) {
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @PutMapping(value = "/candidate/me")
+    public ResponseEntity<CandidateResponse> upsertCandidate(@RequestBody CandidateUpdate2Request request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        CandidateResponse response = userProfileService.upsertCandidateByUserId(userId, UUID.fromString(currentUserId), request, isAdmin);
+        CandidateResponse response = userProfileService.upsertCandidateByUserId(UUID.fromString(currentUserId), request);
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
-    @PutMapping(value = "/employer/{userId}")
-    public ResponseEntity<EmployerResponse> upsertEmployer(@PathVariable UUID userId, @ModelAttribute EmployerUpdateRequest request) {
+    @PreAuthorize("hasRole('EMPLOYER')")
+    @PutMapping(value = "/employer/me")
+    public ResponseEntity<EmployerResponse> upsertEmployer(@RequestBody EmployerUpdateRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        boolean isAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        EmployerResponse response = userProfileService.upsertEmployerByUserId(userId, UUID.fromString(currentUserId), request, isAdmin);
+        EmployerResponse response = userProfileService.upsertEmployerByUserId(UUID.fromString(currentUserId), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/candidate/for-admin/{userId}", consumes = "multipart/form-data")
+    public ResponseEntity<CandidateResponse> upsertCandidateForAdmin(@PathVariable UUID userId, @ModelAttribute CandidateUpdateRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        CandidateResponse response = userProfileService.upsertCandidateForAdminByUserId(userId, UUID.fromString(currentUserId), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/employer/for-admin/{userId}")
+    public ResponseEntity<EmployerResponse> upsertEmployerForAdmin(@PathVariable UUID userId, @RequestBody EmployerUpdateRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        EmployerResponse response = userProfileService.upsertEmployerForAdminByUserId(userId, UUID.fromString(currentUserId), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('EMPLOYER')")
+    @PutMapping(value = "/employer/me/leave")
+    public ResponseEntity<EmployerResponse> leaveCompany() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        EmployerResponse response = userProfileService.leaveCompanyByUserId(UUID.fromString(currentUserId));
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/employer/for-admin/{userId}/leave")
+    public ResponseEntity<EmployerResponse> leaveCompanyForAdmin(@PathVariable UUID userId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserId = (String) auth.getPrincipal();
+        EmployerResponse response = userProfileService.leaveCompanyForAdminByUserId(userId, UUID.fromString(currentUserId));
         return ResponseEntity.ok(response);
     }
 }

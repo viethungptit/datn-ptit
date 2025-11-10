@@ -18,7 +18,6 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -88,12 +87,92 @@ public class UserProfileService {
     }
 
     @Transactional
-    public CandidateResponse upsertCandidateByUserId(UUID userId, UUID currentUserId, CandidateUpdateRequest request, boolean isAdmin) {
-        if (!isAdmin && !userId.equals(currentUserId)) {
-            throw new AccessDeniedException("Bạn không thể cập nhật thông tin của người khác");
+    public CandidateResponse upsertCandidateByUserId(UUID currentUserId, CandidateUpdate2Request request) {
+        User user = userRepository.findById(currentUserId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không thấy người dùng với ID: " + currentUserId));
+        Candidate candidate = candidateRepository.findByUser_UserId(currentUserId).orElse(null);
+        if (candidate == null) {
+            candidate = new Candidate();
+            candidate.setUser(user);
         }
+        if (request.getDob() != null) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("[yyyy-MM-dd][dd/MM/yyyy][yyyy/MM/dd]");
+                candidate.setDob(LocalDate.parse(request.getDob(), formatter));
+            } catch (Exception e) {
+                throw new BusinessException("Lỗi định dạng ngày sinh: " + request.getDob());
+            }
+        }
+
+        if (request.getGender() != null) {
+            try {
+                candidate.setGender(Gender.valueOf(request.getGender()));
+            } catch (Exception e) {
+                throw new BusinessException("Lỗi giá trị giới tính: " + request.getGender());
+            }
+        }
+        if (request.getAddress() != null) candidate.setAddress(request.getAddress());
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isEmpty()) {
+            candidate.setAvatarUrl(request.getAvatarUrl());
+        }
+        candidate = candidateRepository.save(candidate);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("EMPLOYER")
+                        .action("UPDATE_CANDIDATE_PROFILE")
+                        .targetType("CANDIDATE")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Ứng viên %s đã cập nhật thông tin cá nhân", currentUserId))
+                        .build()
+        );
+        return toCandidateResponse(candidate);
+    }
+
+    @Transactional
+    public EmployerResponse upsertEmployerByUserId(UUID currentUserId, EmployerUpdateRequest request) {
+        User user = userRepository.findById(currentUserId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + currentUserId));
+        Employer employer = employerRepository.findByUser_UserId(currentUserId).orElse(null);
+        if (employer == null) {
+            employer = new Employer();
+            employer.setUser(user);
+            employer.setCreatedAt(LocalDateTime.now());
+        }
+        if (request.getCompanyId() == null) {
+            throw new BusinessException("ID công ty không được để trống");
+        }
+        Company company = companyRepository.findById(request.getCompanyId())
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
+        employer.setCompany(company);
+        employer.setActive(company.isVerified());
+        if (request.getPosition() != null) employer.setPosition(request.getPosition());
+        employer = employerRepository.save(employer);
+
+        // Gửi log sang AdminService
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("EMPLOYER")
+                        .action("UPDATE_EMPLOYER_PROFILE")
+                        .targetType("EMPLOYER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã cập nhật thông tin cá nhân", currentUserId))
+                        .build()
+        );
+        return toEmployerResponse(employer);
+    }
+
+    @Transactional
+    public CandidateResponse upsertCandidateForAdminByUserId(UUID userId, UUID currentUserId, CandidateUpdateRequest request) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Không thấy người dùng với ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không thấy người dùng với ID: " + userId));
         Candidate candidate = candidateRepository.findByUser_UserId(userId).orElse(null);
         if (candidate == null) {
             candidate = new Candidate();
@@ -125,33 +204,25 @@ public class UserProfileService {
         candidate = candidateRepository.save(candidate);
 
         // Gửi log sang AdminService
-        String role = isAdmin ? "ADMIN" : "CANDIDATE";
-        String desc = String.format("%s %s đã cập nhật thông tin người dùng %s",
-                isAdmin ? "Quản trị viên" : "Người dùng", currentUserId, user.getUserId()
-        );
-
         eventPublisher.publish(
                 logExchange,
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole(role)
+                        .actorRole("ADMIN")
                         .action("UPDATE_CANDIDATE_PROFILE")
                         .targetType("CANDIDATE")
                         .targetId(user.getUserId().toString())
-                        .description(desc)
+                        .description(String.format("Quản trị viên %s đã cập nhật thông tin ứng viên %s", currentUserId, user.getUserId()))
                         .build()
         );
         return toCandidateResponse(candidate);
     }
 
     @Transactional
-    public EmployerResponse upsertEmployerByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request, boolean isAdmin) {
-        if (!isAdmin && !userId.equals(currentUserId)) {
-            throw new AccessDeniedException("Bạn không thể cập nhật thông tin của người khác");
-        }
+    public EmployerResponse upsertEmployerForAdminByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request) {
         User user = userRepository.findById(userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Employer employer = employerRepository.findByUser_UserId(userId).orElse(null);
         if (employer == null) {
             employer = new Employer();
@@ -162,31 +233,84 @@ public class UserProfileService {
             throw new BusinessException("ID công ty không được để trống");
         }
         Company company = companyRepository.findById(request.getCompanyId())
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
         employer.setCompany(company);
         employer.setActive(company.isVerified());
         if (request.getPosition() != null) employer.setPosition(request.getPosition());
         employer = employerRepository.save(employer);
-
-        // Gửi log sang AdminService
-        String role = isAdmin ? "ADMIN" : "EMPLOYER";
-        String desc = String.format("%s %s đã cập nhật thông tin nhà tuyển dụng %s",
-                isAdmin ? "Quản trị viên" : "Nhà tuyển dụng", currentUserId, user.getUserId()
-        );
 
         eventPublisher.publish(
                 logExchange,
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole(role)
+                        .actorRole("ADMIN")
                         .action("UPDATE_EMPLOYER_PROFILE")
                         .targetType("EMPLOYER")
                         .targetId(user.getUserId().toString())
-                        .description(desc)
+                        .description(String.format("Quản trị viên %s đã cập nhật thông tin nhà tuyển dụng %s", currentUserId, user.getUserId()))
                         .build()
         );
         return toEmployerResponse(employer);
+    }
+
+    @Transactional
+    public EmployerResponse leaveCompanyByUserId(UUID currentUserId) {
+        User user = userRepository.findById(currentUserId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + currentUserId));
+        Employer employer = employerRepository.findByUser_UserId(currentUserId)
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà tuyển dụng với user ID: " + currentUserId));
+
+        // Prepare response before deleting
+        EmployerResponse response = toEmployerResponse(employer);
+
+        // Delete the employer record completely
+        employerRepository.delete(employer);
+
+        // Publish activity log
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("EMPLOYER")
+                        .action("DELETE_EMPLOYER_RECORD")
+                        .targetType("EMPLOYER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Nhà tuyển dụng %s đã xóa hồ sơ nhà tuyển dụng (rời công ty)", currentUserId))
+                        .build()
+        );
+        return response;
+    }
+
+    @Transactional
+    public EmployerResponse leaveCompanyForAdminByUserId(UUID userId, UUID currentUserId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+        Employer employer = employerRepository.findByUser_UserId(userId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy nhà tuyển dụng với user ID: " + userId)
+        );
+
+        // Prepare response before deleting
+        EmployerResponse response = toEmployerResponse(employer);
+
+        // Delete the employer record completely
+        employerRepository.delete(employer);
+
+        // Publish activity log by admin
+        eventPublisher.publish(
+                logExchange,
+                logActivityRoutingKey,
+                ActivityEvent.builder()
+                        .actorId(currentUserId.toString())
+                        .actorRole("ADMIN")
+                        .action("DELETE_EMPLOYER_RECORD_BY_ADMIN")
+                        .targetType("EMPLOYER")
+                        .targetId(user.getUserId().toString())
+                        .description(String.format("Quản trị viên %s đã xóa hồ sơ nhà tuyển dụng %s khỏi công ty", currentUserId, user.getUserId()))
+                        .build()
+        );
+        return response;
     }
 
     public CandidateResponse toCandidateResponse(Candidate candidate) {

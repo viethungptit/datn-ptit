@@ -86,6 +86,18 @@ public class JobController {
         return jobService.getAllJobs();
     }
 
+    @GetMapping("/filter")
+    public List<JobDto> filterJobs(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) List<String> industry,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Integer minSalary,
+            @RequestParam(required = false) Integer maxSalary
+    ) {
+        return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary);
+    }
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping("/{job_id}/close")
     public JobDto closeJob(@PathVariable("job_id") UUID jobId) {

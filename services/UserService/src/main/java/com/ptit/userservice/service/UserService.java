@@ -190,7 +190,7 @@ public class UserService {
 
     @Transactional
     public ForgotPasswordResponse changePassword(ChangePasswordRequest request, String currentUserId, boolean isAdmin) {
-        Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
+        Optional<User> userOpt = userRepository.findById(UUID.fromString(currentUserId));
         if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         if (!isAdmin && !user.getUserId().equals(UUID.fromString(currentUserId))) {

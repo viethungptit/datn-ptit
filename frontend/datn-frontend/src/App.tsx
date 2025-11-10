@@ -42,6 +42,7 @@ import CVBuilderTemplate from './pages/CVBuilderTemplate';
 import CVEditTemplate from './pages/CVEditTemplate';
 import CVPreviewPage from './pages/CVPreviewPage';
 import JobManagement from './pages/Admin/JobManagement';
+import ChangePassword from './pages/Admin/ChangePassword';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -105,6 +106,7 @@ function App() {
 
           {/* Protected candidate routes */}
           <Route path="/profile" element={<RoleRoute element={<MyProfile />} allowedRoles={['candidate']} />} />
+          <Route path="/change-password" element={<RoleRoute element={<ChangePassword />} allowedRoles={['candidate']} />} />
           <Route path="/manage-cvs" element={<RoleRoute element={<CVManager />} allowedRoles={['candidate']} />} />
           <Route path="/manage-cvs/:cvId" element={<RoleRoute element={<CVEditTemplate />} allowedRoles={['candidate']} />} />
           <Route path="/upload-cv" element={<RoleRoute element={<UploadCV />} allowedRoles={['candidate']} />} />

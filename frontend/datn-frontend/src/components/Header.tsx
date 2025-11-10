@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getCurrentUserProfile, logoutAPI } from '../api/userApi';
 import { logout, selectIsAuthenticated } from '../redux/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
+import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 
 const Header = () => {
     const navigate = useNavigate();
@@ -43,7 +44,9 @@ const Header = () => {
 
     return (
         <header className="flex items-center justify-between gap-10 py-3 pl-[100px] pr-[30px] h-[70px] border fixed top-0 left-0 right-0 z-50 bg-white">
-            <img src="/logo-ptit.png" alt="Logo" className="h-[60px] cursor-pointer" />
+            <NavLink to="/">
+                <img src="/logo-ptit.png" alt="Logo" className="h-[60px] cursor-pointer" />
+            </NavLink>
             <nav className="flex gap-6 text-sm uppercase">
                 <NavLink to="/" className={({ isActive }) => isActive ? 'text-txt-red' : 'hover:text-txt-red'}>
                     Trang chủ
@@ -93,9 +96,9 @@ const Header = () => {
                     <div className="relative group">
                         <button className="flex items-center gap-2 focus:outline-none">
                             <img
-                                src={profile?.avatar || '/avatar-default.svg'}
+                                src={profile?.candidate ? `${MINIO_ENDPOINT}/datn/${profile?.candidate?.avatarUrl}` : '/avatar-default.svg'}
                                 alt="avatar"
-                                className="w-8 h-8 border p-1 rounded-full object-cover"
+                                className="w-8 h-8 border rounded-full object-cover"
                             />
                             <span className="uppercase text-sm">
                                 {profile?.fullName || (loading ? '...' : 'Tài khoản')}
@@ -104,6 +107,7 @@ const Header = () => {
                         <div className="absolute right-0 top-[30px] min-w-[220px] text-sm bg-white shadow-lg rounded-md py-2 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                             <NavLink to="/profile" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Hồ sơ của tôi</NavLink>
                             <NavLink to="/manage-cvs" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Quản lý CV</NavLink>
+                            <NavLink to="/change-password" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Đổi mật khẩu</NavLink>
                             <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">
                                 Đăng xuất
                             </button>

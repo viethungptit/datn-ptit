@@ -197,7 +197,6 @@ const UserManagement = () => {
                             <Label htmlFor="password">Mật khẩu</Label>
                             <Input
                                 id="password"
-                                type="password"
                                 placeholder="Mật khẩu"
                                 value={form.password || ""}
                                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
