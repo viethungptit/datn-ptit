@@ -17,7 +17,7 @@ const Companies: React.FC = () => {
         });
     }, []);
 
-    const handleViewDetailCompany = (id: number) => {
+    const handleViewDetailCompany = (id: string) => {
         navigate(`/companies/${id}`);
     }
 
@@ -39,16 +39,16 @@ const Companies: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 px-[100px]">
                 {companies.map((company, index) => (
-                    <div key={company.companyId}
-                        onClick={() => handleViewDetailCompany(index)}
+                    <div key={index}
+                        onClick={() => handleViewDetailCompany(company.companyId)}
                         className="bg-white rounded shadow p-4 flex flex-col hover:scale-105 transition-transform duration-200 cursor-pointer">
-                        <img 
-                        src={company.coverImgUrl ? `${MINIO_ENDPOINT}/datn/${company.coverImgUrl}` : '/default-cover.png'}
-                        alt="cover" className="h-40 w-full object-cover rounded mb-2" />
+                        <img
+                            src={company.coverImgUrl ? `${MINIO_ENDPOINT}/datn/${company.coverImgUrl}` : '/default-cover.png'}
+                            alt="cover" className="h-40 w-full object-cover rounded mb-2" />
                         <div className="flex items-center mb-2">
-                            <img 
-                            src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'}
-                            alt="logo" className="h-16 w-16 p-1 object-cover rounded-md mr-3 border" />
+                            <img
+                                src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'}
+                                alt="logo" className="h-16 w-16 p-1 object-cover rounded-md mr-3 border" />
                             <div className='text-left'>
                                 <h2 className="text-lg font-semibold">{company.companyName}</h2>
                                 <span className="text-sm text-gray-500">{company.industry}</span>

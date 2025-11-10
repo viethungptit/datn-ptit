@@ -1,36 +1,57 @@
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { getAllJobs } from '@/api/recruitApi';
-import { getAllCompaniesApi } from '@/api/userApi';
+import { getAllJobsByCompany } from '@/api/recruitApi';
+import { getDetailCompanyApi } from '@/api/userApi';
 import type { Job } from './Admin/JobManagement';
-import type { Company } from './Admin/CompanyManagement';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 
 const CompaniesDetail = () => {
-    const [companies, setCompanies] = useState<any[]>([]);
-        
-    useEffect(() => {
-        Promise.all([getAllJobs(), getAllCompaniesApi()])
-            .then(([jobsRes, compRes]) => {
-                const jobList = jobsRes.data;
-                const companyList = compRes.data;
-
-                const merged = companyList.map((c: Company) => {
-                    return {
-                        ...c,
-                        jobs: jobList.filter((j: Job) => j.companyId === c.companyId)
-                    };
-                });
-
-                setCompanies(merged);
-            })
-            .catch(console.error);
-    }, []);
-
     const { companyId } = useParams();
-    const company = companies.find((c, index: number) => index === Number(companyId));
+    const [company, setCompany] = useState<any | null>(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!companyId) return;
+
+        const fetchData = async () => {
+            try {
+                // get company detail
+                const compRes = await getDetailCompanyApi(companyId as string);
+                const companyData = compRes.data;
+
+                // get jobs for this company
+                const jobsRes = await getAllJobsByCompany(companyId as string);
+                const jobList = jobsRes.data || [];
+
+                setCompany({ ...companyData, jobs: jobList });
+            } catch (err) {
+                console.error(err);
+                setCompany(null);
+            }
+        };
+
+        fetchData();
+    }, [companyId]);
+
+    const jobTypeMap: Record<string, string> = {
+        full_time: 'Toàn thời gian',
+        part_time: 'Bán thời gian',
+        internship: 'Thực tập',
+        freelance: 'Freelance',
+    };
+
+    const displayStatus = (status: string) => {
+        if (!status) return '';
+        if (status === 'closed') return 'Đã đóng';
+        if (status === 'pending') return 'Chờ duyệt';
+        return 'Đang mở';
+    };
+
+    const navigateDetailJob = (jobId: string) => {
+        navigate(`/jobs/${jobId}`);
+    }
 
     if (!company) return <div className="p-10 text-center text-xl">Không tìm thấy công ty!</div>;
 
@@ -38,9 +59,9 @@ const CompaniesDetail = () => {
         <div>
             <div className="px-[100px] py-10">
                 <div className="relative rounded-xl overflow-hidden mb-8">
-                    <img 
-                    src={company.coverImgUrl ? `${MINIO_ENDPOINT}/datn/${company.coverImgUrl}` : '/default-logo.png'}
-                    alt="cover" className="w-full h-[400px] object-cover" />
+                    <img
+                        src={company.coverImgUrl ? `${MINIO_ENDPOINT}/datn/${company.coverImgUrl}` : '/default-logo.png'}
+                        alt="cover" className="w-full h-[400px] object-cover" />
                     <div className="absolute left-[20px] bottom-[20px] w-3/4 flex items-center bg-white rounded-xl shadow-lg p-4">
                         <img src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'} alt="logo" className="h-36 w-36 object-cover rounded-lg border-2 mr-6" />
                         <div className='w-full'>
@@ -61,23 +82,38 @@ const CompaniesDetail = () => {
                 <div className='my-10 shadow-lg p-6 rounded-lg border'>
                     <h2 className="text-xl font-semibold mb-4 border-b pb-3">Danh sách công việc</h2>
                     <div className="grid grid-cols-1 gap-6">
-                        {company.jobs.map((job: Job, index: number) => (
-                            <div key={index} className="bg-white rounded shadow p-6 flex flex-col md:flex-row items-center justify-between">
-                                <div className='text-left mb-4 md:mb-0'>
-                                    <h3 className="text-lg font-semibold mb-1">{job.title}</h3>
-                                    <div className="text-gray-600 text-sm mb-2">{job.location} | {job.jobType}</div>
-                                    <div className="text-red-500 font-semibold">{job.salaryRange}</div>
-                                </div>
-                                <div className='flex flex-col md:flex-row items-center gap-4'>
-                                    <div
-                                        className="flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] text-txt-red border-background-red rounded-full hover:border-txt-red hover:text-white hover:bg-background-red transition-colors"
-                                    >
-                                        <i className="fa-regular fa-heart text-lg"></i>
+                        {
+                            company.jobs.length !== 0 ?
+                                company.jobs.map((job: Job, index: number) => (
+                                    <div key={index} className="bg-white rounded shadow p-6 flex flex-col md:flex-row items-center justify-between">
+                                        <div className='text-left mb-4 md:mb-0'>
+                                            <h3 className="text-lg font-semibold mb-1 cursor-pointer" onClick={() => navigateDetailJob(job.jobId)}>{job.title}</h3>
+                                            <div className="text-gray-600 text-sm mb-2">{displayStatus(job.status || '')} | {job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : 'N/A'}</div>
+                                            <div className="text-gray-600 text-sm mb-2">{job.location}</div>
+                                            <div className="text-gray-600 text-sm mb-2">Số lượng: {job.quantity}</div>
+                                            <div className="text-red-500 font-semibold">
+                                                {job.minSalary && job.maxSalary
+                                                    ? `${Number(job.minSalary).toLocaleString("vi-VN")} - ${Number(job.maxSalary).toLocaleString("vi-VN")} triệu VNĐ`
+                                                    : "Thoả thuận"
+                                                }
+                                            </div>
+                                        </div>
+                                        <div className='flex flex-col gap-3'>
+                                            <div className='flex flex-col md:flex-row items-center gap-4'>
+                                                <div
+                                                    className="flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] text-txt-red border-background-red rounded-full hover:border-txt-red hover:text-white hover:bg-background-red transition-colors"
+                                                >
+                                                    <i className="fa-regular fa-heart text-lg"></i>
+                                                </div>
+                                                <Button variant="seek" onClick={() => navigateDetailJob(job.jobId)}>Ứng tuyển</Button>
+                                            </div>
+                                            <div className="text-gray-600 text-sm mb-2">Hạn cuối: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}</div>
+                                        </div>
                                     </div>
-                                    <Button variant="seek">Ứng tuyển</Button>
-                                </div>
-                            </div>
-                        ))}
+                                ))
+                                :
+                                <div>Không có công việc nào</div>
+                        }
                     </div>
                 </div>
             </div>

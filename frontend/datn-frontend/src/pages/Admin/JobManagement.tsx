@@ -44,7 +44,8 @@ export type Job = {
     companyId?: string;
     title: string;
     description?: string;
-    salaryRange?: string;
+    minSalary?: number;
+    maxSalary?: number;
     location?: string;
     city?: string;
     jobType?: string; // expected: full_time, part_time, internship, freelance
@@ -95,7 +96,8 @@ const JobManagement = () => {
                     companyId: j.companyId ?? j.company_id,
                     title: j.title,
                     description: j.description,
-                    salaryRange: j.salaryRange,
+                    minSalary: j.minSalary,
+                    maxSalary: j.maxSalary,
                     location: j.location,
                     city: j.city,
                     jobType: j.jobType,
@@ -197,7 +199,8 @@ const JobManagement = () => {
             const payload: any = {
                 title: form.title,
                 description: form.description,
-                salaryRange: form.salaryRange,
+                minSalary: form.minSalary,
+                maxSalary: form.maxSalary,
                 location: form.location,
                 city: form.city,
                 status: form.status || 'pending',
@@ -225,7 +228,8 @@ const JobManagement = () => {
                         companyId: newJob.companyId ?? newJob.company_id,
                         title: newJob.title,
                         description: newJob.description,
-                        salaryRange: newJob.salaryRange,
+                        minSalary: newJob.minSalary,
+                        maxSalary: newJob.maxSalary,
                         location: newJob.location,
                         city: newJob.city,
                         jobType: newJob.jobType,
@@ -277,7 +281,8 @@ const JobManagement = () => {
                         <TableRow>
                             <TableHead className="text-left">Tiêu đề</TableHead>
                             <TableHead className="text-left">Công ty</TableHead>
-                            <TableHead className="text-center">Lương</TableHead>
+                            <TableHead className="text-center">Lương khởi điểm</TableHead>
+                            <TableHead className="text-center">Lương tối đa</TableHead>
                             <TableHead className="text-center">Địa điểm</TableHead>
                             <TableHead className="text-center">Loại</TableHead>
                             <TableHead className="text-left">Trạng thái</TableHead>
@@ -299,10 +304,12 @@ const JobManagement = () => {
                                 <TableRow key={j.jobId}>
                                     <TableCell className="text-left">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
-                                    <TableCell className="text-center">{j.salaryRange}</TableCell>
+                                    <TableCell className="text-center">{j.minSalary}</TableCell>
+                                    <TableCell className="text-center">{j.maxSalary}</TableCell>
                                     <TableCell className="text-center">{j.location || j.city}</TableCell>
                                     <TableCell className="text-center">{getJobTypeLabel(j.jobType)}</TableCell>
                                     <TableCell className="text-left">{displayStatus(j)}</TableCell>
+                                    <TableCell className="text-left">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-left">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
@@ -348,9 +355,38 @@ const JobManagement = () => {
                             </Select>
                         </div>
 
-                        <div>
-                            <Label htmlFor="salaryRange">Mức lương</Label>
-                            <Input id="salaryRange" placeholder="Mức lương" value={form.salaryRange || ''} onChange={e => setForm(f => ({ ...f, salaryRange: e.target.value }))} />
+                        <div className="flex justify-between">
+                            <div className="mr-3">
+                                <Label htmlFor="minSalary">Mức lương khởi điểm</Label>
+                                <Input
+                                    id="minSalary"
+                                    type="number"
+                                    placeholder="Mức lương khởi điểm"
+                                    value={form.minSalary ?? ''}
+                                    onChange={e =>
+                                        setForm(f => ({
+                                            ...f,
+                                            minSalary: e.target.value ? Number(e.target.value) : undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="maxSalary">Mức lương tối đa</Label>
+                                <Input
+                                    id="maxSalary"
+                                    type="number"
+                                    placeholder="Mức lương tối đa"
+                                    value={form.maxSalary ?? ''}
+                                    onChange={e =>
+                                        setForm(f => ({
+                                            ...f,
+                                            maxSalary: e.target.value ? Number(e.target.value) : undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
                         </div>
                         <div>
                             <Label htmlFor="location">Địa điểm</Label>

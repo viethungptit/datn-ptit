@@ -13,6 +13,9 @@ import com.ptit.recruitservice.repository.JobTagRepository;
 import com.ptit.recruitservice.repository.GroupJobTagRepository;
 import com.ptit.recruitservice.exception.ResourceNotFoundException;
 import com.ptit.recruitservice.exception.BusinessException;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,10 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -91,7 +91,8 @@ public class JobService {
         job.setCompanyId(companyId);
         job.setTitle(request.getTitle());
         job.setDescription(request.getDescription());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setMinSalary(request.getMinSalary());
+        job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
@@ -160,7 +161,8 @@ public class JobService {
         job.setCompanyId(company.getCompanyId());
         job.setTitle(request.getTitle());
         job.setDescription(request.getDescription());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setMinSalary(request.getMinSalary());
+        job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
@@ -243,7 +245,8 @@ public class JobService {
         job.setCompanyId(request.getCompanyId());
         job.setTitle(request.getTitle());
         job.setDescription(request.getDescription());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setMinSalary(request.getMinSalary());
+        job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
@@ -321,7 +324,8 @@ public class JobService {
         job.setCompanyId(request.getCompanyId());
         job.setTitle(request.getTitle());
         job.setDescription(request.getDescription());
-        job.setSalaryRange(request.getSalaryRange());
+        job.setMinSalary(request.getMinSalary());
+        job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
@@ -416,6 +420,82 @@ public class JobService {
     public List<JobDto> getAllJobs() {
         return jobRepository.findByIsDeletedFalse().stream().map(this::toDto).collect(Collectors.toList());
     }
+    public List<JobDto> filterJobs(
+            String keyword,
+            String location,
+            List<String> industry,
+            List<String> tags,
+            String type,
+            Integer minSalary,
+            Integer maxSalary
+    ) {
+        List<Job> jobs = jobRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // chỉ lấy job chưa xóa
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+
+            // 🔹 Từ khóa (tên công việc)
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("title")),
+                        "%" + keyword.toLowerCase() + "%"
+                ));
+            }
+
+            // 🔹 Location (tỉnh/thành hoặc city)
+            if (location != null && !location.trim().isEmpty()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("location")),
+                        "%" + location.toLowerCase() + "%"
+                ));
+            }
+
+            // 🔹 Industry (groupJobName)
+            if (industry != null && !industry.isEmpty()) {
+                Join<Object, Object> groupJoin = root.join("jobGroupTagMappings", JoinType.LEFT)
+                        .join("groupJobTag", JoinType.LEFT);
+                predicates.add(cb.lower(groupJoin.get("groupJobName")).in(
+                        industry.stream().map(String::toLowerCase).toList()
+                ));
+            }
+
+            // 🔹 Tags (jobName)
+            if (tags != null && !tags.isEmpty()) {
+                Join<Object, Object> tagJoin = root.join("jobTagMappings", JoinType.LEFT)
+                        .join("jobTag", JoinType.LEFT);
+                predicates.add(cb.lower(tagJoin.get("jobName")).in(
+                        tags.stream().map(String::toLowerCase).toList()
+                ));
+            }
+
+            // 🔹 Type (full_time, part_time,...)
+            if (type != null && !type.isEmpty()) {
+                predicates.add(cb.equal(root.get("jobType"), type));
+            }
+
+            // 🔹 Salary (min - max triệu)
+            if (minSalary != null && maxSalary != null) {
+                int min = minSalary * 1_000_000;
+                int max = maxSalary * 1_000_000;
+                predicates.add(cb.and(
+                        cb.lessThanOrEqualTo(root.get("minSalary"), max),
+                        cb.greaterThanOrEqualTo(root.get("maxSalary"), min)
+                ));
+            } else if (minSalary != null) {
+                int min = minSalary * 1_000_000;
+                predicates.add(cb.greaterThanOrEqualTo(root.get("maxSalary"), min));
+            } else if (maxSalary != null) {
+                int max = maxSalary * 1_000_000;
+                predicates.add(cb.lessThanOrEqualTo(root.get("minSalary"), max));
+            }
+
+            query.distinct(true);
+            return cb.and(predicates.toArray(new Predicate[0]));
+        });
+
+        return jobs.stream().map(this::toDto).collect(Collectors.toList());
+    }
 
     public List<JobDto> getAllJobsByCompany(UUID companyId) {
         return jobRepository.findByCompanyIdAndIsDeletedFalse(companyId).stream().map(this::toDto).collect(Collectors.toList());
@@ -424,7 +504,32 @@ public class JobService {
     public List<JobDto> getAllJobsByCity(String city) {
         return jobRepository.findByCityAndIsDeletedFalse(city).stream().map(this::toDto).collect(Collectors.toList());
     }
+    public List<JobDto> searchJobs(String keyword, String location) {
+        List<Job> jobs = jobRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("title")),
+                        "%" + keyword.toLowerCase() + "%"
+                ));
+            }
+
+            if (location != null && !location.trim().isEmpty()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("city")),
+                        "%" + location.toLowerCase() + "%"
+                ));
+            }
+
+            query.distinct(true);
+            return cb.and(predicates.toArray(new Predicate[0]));
+        });
+
+        return jobs.stream().map(this::toDto).collect(Collectors.toList());
+    }
     @Transactional
     public JobDto closeJob(UUID jobId, UUID currentUserId) {
         Job job = jobRepository.findById(jobId)
@@ -552,7 +657,8 @@ public class JobService {
         dto.setCompanyId(job.getCompanyId());
         dto.setTitle(job.getTitle());
         dto.setDescription(job.getDescription());
-        dto.setSalaryRange(job.getSalaryRange());
+        dto.setMinSalary(job.getMinSalary());
+        dto.setMaxSalary(job.getMaxSalary());
         dto.setLocation(job.getLocation());
         dto.setCity(job.getCity());
         dto.setQuantity(job.getQuantity());

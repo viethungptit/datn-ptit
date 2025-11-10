@@ -10,7 +10,7 @@ const Home: React.FC = () => {
         <div className="flex flex-col items-center justify-center overflow-y-auto">
             <Banner />
             <Category />
-            <JobsList gridNumber={3} />
+            <JobsList gridNumber={3} filters={{}} />
             <CompaniesList />
             <Footer />
         </div>

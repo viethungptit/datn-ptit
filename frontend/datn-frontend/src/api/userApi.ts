@@ -63,6 +63,9 @@ export const verifyCompanyApi = (companyId: string) =>
 export const getAllCompaniesApi = () =>
     gatewayApi.get('/api/user-service/companies');
 
+export const getDetailCompanyApi = (companyId: string) =>
+    gatewayApi.get(`/api/user-service/companies/${companyId}`);
+
 export const createCompanyApi = (payload: FormData) =>
     gatewayApi.post('/api/user-service/companies', payload, { headers: { 'Content-Type': 'multipart/form-data' } });
 
