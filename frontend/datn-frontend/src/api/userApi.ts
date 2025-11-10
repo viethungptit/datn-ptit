@@ -63,6 +63,9 @@ export const verifyCompanyApi = (companyId: string) =>
 export const getAllCompaniesApi = () =>
     gatewayApi.get('/api/user-service/companies');
 
+export const searchCompaniesApi = (keyword: string) =>
+    gatewayApi.get(`/api/user-service/companies`, { params: { keyword } });
+
 export const getDetailCompanyApi = (companyId: string) =>
     gatewayApi.get(`/api/user-service/companies/${companyId}`);
 

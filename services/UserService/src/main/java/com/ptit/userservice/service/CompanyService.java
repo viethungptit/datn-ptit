@@ -177,8 +177,19 @@ public class CompanyService {
     }
 
     public List<CompanyResponse> getAllCompanies() {
+        System.out.printf("getAllCompanies()");
         return companyRepository.findAll().stream()
                 .filter(c -> !c.isDeleted())
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<CompanyResponse> searchCompanies(String keyword) {
+        System.out.println("searchCompanies");
+        return companyRepository.findAll().stream()
+                .filter(c -> !c.isDeleted())
+                .filter(c -> keyword == null ||
+                        c.getCompanyName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }

@@ -44,8 +44,11 @@ public class CompanyController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CompanyResponse>> getAllCompanies() {
-        return ResponseEntity.ok(companyService.getAllCompanies());
+    public ResponseEntity<List<CompanyResponse>> getAllCompanies(@RequestParam(required = false) String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return ResponseEntity.ok(companyService.getAllCompanies());
+        }
+        return ResponseEntity.ok(companyService.searchCompanies(keyword));
     }
 
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
