@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { getTemplateDetail, createCV } from "@/api/recruitApi";
 import { suggestSectionCV } from "@/api/recommendApi";
-import { getAllFilesByMeApi, uploadFileApi, deleteFileApi } from "@/api/userApi";
 import { toast } from "react-toastify";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+import FilePickerDialog from '@/components/FilePicker/FilePickerDialog';
 import { translateSection } from "@/utils/translateSection";
 import remarkGfm from "remark-gfm";
 
@@ -128,9 +126,7 @@ export default function CVBuilderTemplate() {
     const [title, setTitle] = useState<string>("");
     const navigate = useNavigate();
     const previewRef = useRef<HTMLDivElement | null>(null);
-    const [showFileModal, setShowFileModal] = useState(false);
-    const [files, setFiles] = useState<Array<any>>([]);
-    const [uploading, setUploading] = useState(false);
+
     const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
     const [aiOptions, setAiOptions] = useState<Record<string, { style: string }>>({});
     const [aiSuggestions, setAiSuggestions] = useState<Record<string, { newText: string; originalText: string }>>({});
@@ -139,52 +135,8 @@ export default function CVBuilderTemplate() {
         setDraftData(prev => ({ ...prev, [key]: value }));
     };
 
-    const fetchFiles = async () => {
-        try {
-            const res = await getAllFilesByMeApi();
-            const data = res.data || res.data?.data || [];
-            const list = Array.isArray(data) ? data : (res.data?.data || []);
-            setFiles(list);
-        } catch (err) {
-            console.error('Failed to fetch files', err);
-            toast.error('Không thể lấy danh sách ảnh');
-        }
-    };
-
-    const handleUploadFile = async (file: File | null) => {
-        if (!file) return;
-        try {
-            setUploading(true);
-            const form = new FormData();
-            form.append('file', file);
-            const res = await uploadFileApi(form);
-            toast.success('Tải ảnh lên thành công');
-            await fetchFiles();
-            return res;
-        } catch (err: any) {
-            console.error('Upload failed', err);
-            const msg = err?.response?.data?.message || err?.message || 'Tải lên thất bại';
-            toast.error(msg);
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleDeleteFile = async (fileId: string) => {
-        try {
-            await deleteFileApi(fileId);
-            toast.success('Xóa ảnh thành công');
-            await fetchFiles();
-        } catch (err: any) {
-            console.error('Delete failed', err);
-            const msg = err?.response?.data?.message || err?.message || 'Xóa thất bại';
-            toast.error(msg);
-        }
-    };
-
     const handleSelectFile = (fileUrl: string) => {
         setDraftData(prev => ({ ...prev, avatar: fileUrl }));
-        setShowFileModal(false);
     };
 
     const handleTitleChange = (value: string) => {
@@ -255,7 +207,7 @@ export default function CVBuilderTemplate() {
                                         onChange={e => handleChange(key as SectionId, e.target.value)}
                                         className="w-full"
                                     />
-                                    <Button onClick={() => { setShowFileModal(true); fetchFiles(); }}>Chọn ảnh</Button>
+                                    <FilePickerDialog onSelect={handleSelectFile} trigger={<Button>Chọn ảnh</Button>} contentClassName="max-w-2xl" />
                                 </div>
                                 <div style={{ marginTop: 8 }}>
                                     {draftData[key as SectionId] ? (
@@ -534,87 +486,6 @@ export default function CVBuilderTemplate() {
             >
                 {renderPreview()}
             </div>
-
-            <Dialog open={showFileModal} onOpenChange={setShowFileModal}>
-                <DialogContent className="max-w-4xl">
-                    <DialogHeader>
-                        <DialogTitle>Chọn ảnh từ hệ thống</DialogTitle>
-                        <DialogDescription>
-                            Chọn một ảnh có sẵn hoặc tải ảnh mới lên.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="mb-4">
-                        <label className="block mb-2 font-medium">Tải ảnh lên</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleUploadFile(e.target.files?.[0] || null)}
-                            disabled={uploading}
-                            className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 
-                                        file:rounded-lg file:border-0 file:text-sm file:font-semibold 
-                                        file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 
-                                        cursor-pointer"
-                        />
-                        {uploading && (
-                            <p className="mt-2 text-sm text-blue-600 animate-pulse">Đang tải...</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <h4 className="text-lg font-semibold mb-3">Ảnh của bạn</h4>
-
-                        {files && files.length > 0 ? (
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
-                                {files.map((f: any) => (
-                                    <div
-                                        key={f.fileId || f.id || f.fileName}
-                                        className="border rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200"
-                                    >
-                                        <img
-                                            src={`${MINIO_ENDPOINT}/datn/${f.fileUrl}`}
-                                            alt={f.fileName}
-                                            className="w-full h-[200px] object-cover rounded-md mb-2"
-                                        />
-                                        <h4
-                                            className="text-sm line-clamp-3 break-words leading-snug"
-                                            title={f.fileName}
-                                        >
-                                            {f.fileName}
-                                        </h4>
-                                        <div className="flex gap-2 mt-3">
-                                            <Button
-                                                variant="default"
-                                                className="flex-1"
-                                                onClick={() => handleSelectFile(`${MINIO_ENDPOINT}/datn/${f.fileUrl}`)}
-                                            >
-                                                Chọn
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                className="flex-1"
-                                                onClick={() => handleDeleteFile(f.fileId)}
-                                            >
-                                                Xóa
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-gray-500 text-sm text-center py-6 border rounded-lg">
-                                Chưa có ảnh. Vui lòng tải lên.
-                            </div>
-                        )}
-                    </div>
-
-                    <DialogFooter className="mt-6">
-                        <DialogClose asChild>
-                            <Button variant="outline">Đóng</Button>
-                        </DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

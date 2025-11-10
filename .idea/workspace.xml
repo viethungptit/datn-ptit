@@ -4,15 +4,29 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1c20dc3a-4b0a-4200-a40d-8126ea171424" name="Changes" comment="" />
+    <list default="true" id="1c20dc3a-4b0a-4200-a40d-8126ea171424" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/dto/CandidateUpdate2Request.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/datn-frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/datn-frontend/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/datn-frontend/src/api/userApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/datn-frontend/src/api/userApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/datn-frontend/src/components/Header.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/datn-frontend/src/components/Header.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/datn-frontend/src/pages/MyProfile.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/datn-frontend/src/pages/MyProfile.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/controller/UserProfileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/controller/UserProfileController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/dto/ChangePasswordRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/dto/ChangePasswordRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/service/UserProfileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/service/UserProfileService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/services/UserService/src/main/java/com/ptit/userservice/service/UserService.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 4
-}]]></component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
   <component name="ProjectId" id="32C14hoiDteEJzofoVT7gfxVuuc" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -20,9 +34,12 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "develop",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/DATN/Code/services/RecruitService",
+    "last_opened_file_path": "D:/DATN/Code",
     "project.structure.last.edited": "Problems",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.42007104",
