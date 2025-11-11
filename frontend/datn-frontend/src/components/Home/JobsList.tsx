@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import { filterJobsApi } from "@/api/recruitApi";
+import { addFavorite, filterJobsApi, getFavorites, removeFavorite } from "@/api/recruitApi";
 import { getAllCompaniesApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import { selectIsAuthenticated} from "@/redux/authSlice";
@@ -19,7 +19,6 @@ interface Job {
     jobType: string;
     status: string;
     quantity: number;
-    isFavorite: boolean;
     deadline: string;
     createdAt: string;
 }
@@ -32,13 +31,21 @@ interface Company {
     website?: string;
 }
 
+interface Favorite{
+    favoriteId: string;
+    jobId: string;
+    userId: string;
+}
+
 interface MergedJob extends Job {
     company?: Company;
+    favorite?: Favorite;
 }
 
 interface JobsListProps {
     gridNumber?: number;
     filters?: Record<string, string | string[] | number | undefined>;
+    onlyFavorites?: boolean;
 }
 
 const jobTypeMap: Record<string, string> = {
@@ -48,7 +55,7 @@ const jobTypeMap: Record<string, string> = {
     freelance: 'Freelance',
 };
 
-const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => {
+const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyFavorites = false }) => {
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const navigate = useNavigate();
     const [jobs, setJobs] = useState<MergedJob[]>([]);
@@ -59,15 +66,19 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
         const fetchData = async () => {
             //setLoading(true);
             try {
-                const [jobRes, companyRes] = await Promise.all([
+                
+                const [jobRes, companyRes, favoriteRes] = await Promise.all([
                     filterJobsApi(filters),
                     getAllCompaniesApi(),
+                    getFavorites(),
                 ]);
                 const jobList: Job[] = jobRes.data || [];
                 const companyList: Company[] = companyRes.data || [];
+                const favoriteList: Favorite[] = favoriteRes.data || [];
                 const merged = jobList.map((job) => ({
                     ...job,
                     company: companyList.find((c) => c.companyId === job.companyId),
+                    favorite: favoriteList.find((f) => f.jobId === job.jobId),
                 }));
 
                 setJobs(merged);
@@ -87,6 +98,8 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
     const handleLoginRedirect = () => navigate('/login');
     const handleViewAll = () => navigate("/jobs");
     const handleViewDetailJob = (jobId: string) => navigate(`/jobs/${jobId}`);
+
+    const displayedJobs = onlyFavorites ? jobs.filter(job => job.favorite) : jobs;
 
     if (loading) {
         return (
@@ -114,30 +127,58 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
         );
     }
 
-    if (jobs.length === 0) {
+    if (displayedJobs.length === 0) {
         return (
             <div className="w-full py-14 flex flex-col items-center">
                 <h2 className="text-3xl font-semibold mb-6 text-txt-red">
                     Việc làm có thể bạn quan tâm
                 </h2>
                 <div className="bg-white shadow-lg rounded-lg p-8 w-full text-center max-w-3xl">
-                    <span>Không có công việc phù hợp với bộ lọc hiện tại.</span>
+                    <span>{onlyFavorites ? "Bạn chưa lưu công việc nào." : "Không có công việc phù hợp với bộ lọc hiện tại."}</span>
                 </div>
             </div>
         );
     }
 
-    const toggleFavorite = (jobId: string) => {
+    const toggleFavorite = async (jobId: string) => {
         if (!isAuthenticated) {
             handleLoginRedirect();
             return;
         }
-        setJobs((prevJobs) =>
-            prevJobs.map((job) =>
-                job.jobId === jobId ? { ...job, isFavorite: !job.isFavorite } : job
-            )
-        );
+
+        const job: MergedJob | undefined = jobs.find((j) => j.jobId === jobId);
+        if (!job) return;
+
+        try {
+            if (job.favorite) {
+                await removeFavorite(job.favorite.favoriteId);
+
+                setJobs((prev) =>
+                    prev.map((j) =>
+                        j.jobId === jobId
+                            ? { ...j, favorite: undefined }
+                            : j
+                    )
+                );
+            } else {
+                const res = await addFavorite({ jobId });
+
+                const newFavorite: Favorite = res.data;
+
+                setJobs((prev) =>
+                    prev.map((j) =>
+                        j.jobId === jobId
+                            ? { ...j, favorite: newFavorite }
+                            : j
+                    )
+                );
+            }
+        } catch (err) {
+            console.error("toggleFavorite error:", err);
+        }
     };
+
+        
 
     return (
         <div className={`w-full ${gridNumber === 3 ? "py-14" : "py-0"} flex flex-col items-center px-[100px]`}>
@@ -146,7 +187,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
             </h2>
 
             <div className={`grid grid-cols-${gridNumber} gap-8 w-full`}>
-                {jobs.map((job) => {
+                {displayedJobs.map((job) => {
                     const company = job.company;
                     return (
                         <div
@@ -227,13 +268,13 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
                                     }}
                                     className={`
                                         flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors
-                                        ${job.isFavorite
+                                        ${job.favorite
                                             ? "bg-background-red text-white border-txt-red"
                                             : "text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red"
                                         }
                                     `}
                                 >
-                                    <i className={`fa-heart text-lg ${job.isFavorite ? "fa-solid" : "fa-regular"}`}></i>
+                                    <i className={`fa-heart text-lg ${job.favorite ? "fa-solid" : "fa-regular"}`}></i>
                                 </div>
 
                             </div>
