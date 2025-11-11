@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { filterJobsApi } from "@/api/recruitApi";
 import { getAllCompaniesApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+import { selectIsAuthenticated} from "@/redux/authSlice";
+import { useSelector } from "react-redux";
 
 interface Job {
     jobId: string;
@@ -17,6 +19,7 @@ interface Job {
     jobType: string;
     status: string;
     quantity: number;
+    isFavorite: boolean;
     deadline: string;
     createdAt: string;
 }
@@ -46,6 +49,7 @@ const jobTypeMap: Record<string, string> = {
 };
 
 const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => {
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const navigate = useNavigate();
     const [jobs, setJobs] = useState<MergedJob[]>([]);
     const [loading, setLoading] = useState(true);
@@ -53,13 +57,12 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
 
     useEffect(() => {
         const fetchData = async () => {
-            setLoading(true);
+            //setLoading(true);
             try {
                 const [jobRes, companyRes] = await Promise.all([
                     filterJobsApi(filters),
                     getAllCompaniesApi(),
                 ]);
-                console.log("job", jobRes.data);
                 const jobList: Job[] = jobRes.data || [];
                 const companyList: Company[] = companyRes.data || [];
                 const merged = jobList.map((job) => ({
@@ -81,6 +84,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
         fetchData();
     }, [filters]);
 
+    const handleLoginRedirect = () => navigate('/login');
     const handleViewAll = () => navigate("/jobs");
     const handleViewDetailJob = (jobId: string) => navigate(`/jobs/${jobId}`);
 
@@ -122,6 +126,18 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
             </div>
         );
     }
+
+    const toggleFavorite = (jobId: string) => {
+        if (!isAuthenticated) {
+            handleLoginRedirect();
+            return;
+        }
+        setJobs((prevJobs) =>
+            prevJobs.map((job) =>
+                job.jobId === jobId ? { ...job, isFavorite: !job.isFavorite } : job
+            )
+        );
+    };
 
     return (
         <div className={`w-full ${gridNumber === 3 ? "py-14" : "py-0"} flex flex-col items-center px-[100px]`}>
@@ -204,9 +220,22 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
                                     </span>
                                 </span>
 
-                                <div className="flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] text-txt-red border-background-red rounded-full hover:border-txt-red hover:text-white hover:bg-background-red transition-colors">
-                                    <i className="fa-regular fa-heart text-lg"></i>
+                                <div
+                                    onClick={(e) => {
+                                        e.stopPropagation(); // tránh trigger click vào job card
+                                        toggleFavorite(job.jobId);
+                                    }}
+                                    className={`
+                                        flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors
+                                        ${job.isFavorite
+                                            ? "bg-background-red text-white border-txt-red"
+                                            : "text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red"
+                                        }
+                                    `}
+                                >
+                                    <i className={`fa-heart text-lg ${job.isFavorite ? "fa-solid" : "fa-regular"}`}></i>
                                 </div>
+
                             </div>
                         </div>
                     );
