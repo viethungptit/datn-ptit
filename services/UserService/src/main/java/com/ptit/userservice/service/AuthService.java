@@ -133,11 +133,15 @@ public class AuthService {
         otpTokenRepository.save(otp);
 
         // Send event
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", user.getFullName());
+        data.put("otp", otpCode);
+        data.put("email", user.getEmail());
+
         Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
         event.put("event_type", registerRoutingKey);
+        event.put("to", user.getEmail());
+        event.put("data", data);
         eventPublisher.publish(notificationExchange, registerRoutingKey, event);
 
         // Response

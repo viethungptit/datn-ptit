@@ -33,8 +33,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/api/user-service/users/by-email",
-                                "/api/user-service/users/by-userId",
+                                "/api/user-service/users/by-email/**",
+                                "/api/user-service/users/by-userId/**",
                                 "/api/user-service/health/**"
                         ).permitAll()
                         .anyRequest().authenticated()
