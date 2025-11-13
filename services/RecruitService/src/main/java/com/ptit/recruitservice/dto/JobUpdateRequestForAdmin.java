@@ -13,6 +13,7 @@ public class JobUpdateRequestForAdmin {
     private Integer maxSalary;
     private String location;
     private String city;
+    private String experience;
     private String jobType;
     private List<UUID> groupTagIds;
     private List<UUID> jobTagIds;
@@ -20,6 +21,15 @@ public class JobUpdateRequestForAdmin {
     private java.sql.Timestamp deadline;
 
     // Getters and setters
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
     public UUID getCompanyId() { return companyId; }
     public void setCompanyId(UUID companyId) { this.companyId = companyId; }
     public Job.Status getStatus() {return status;}

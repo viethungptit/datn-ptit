@@ -1,8 +1,8 @@
 package com.ptit.userservice.entity;
 
+import com.ptit.userservice.entity.enums.EmployerStatus;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class Employer {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "employer_id")
@@ -30,11 +31,28 @@ public class Employer {
     @Column(name = "position")
     private String position;
 
-    @Column(name = "is_active")
-    private boolean isActive;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private EmployerStatus status;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "is_admin")
+    private Boolean isAdmin;
+
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null) {
+            status = EmployerStatus.PENDING;
+        }
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
 
     public UUID getEmployerId() {
         return employerId;
@@ -68,12 +86,12 @@ public class Employer {
         this.position = position;
     }
 
-    public boolean isActive() {
-        return isActive;
+    public EmployerStatus getStatus() {
+        return status;
     }
 
-    public void setActive(boolean active) {
-        isActive = active;
+    public void setStatus(EmployerStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -82,5 +100,13 @@ public class Employer {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getAdmin() {
+        return isAdmin;
+    }
+
+    public void setAdmin(Boolean admin) {
+        isAdmin = admin;
     }
 }

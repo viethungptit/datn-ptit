@@ -15,6 +15,7 @@ interface Job {
     location: string;
     city: string;
     jobType: string;
+    experience: string;
     status: string;
     quantity: number;
     deadline: string;
@@ -179,6 +180,23 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {} }) => 
                                     <span className="flex items-center text-left gap-1">
                                         <i className="fa fa-user" /> Số lượng:  {job.quantity}
                                     </span>
+                                    {job.experience && (
+                                        <span className="flex items-center text-left gap-1">
+                                            <i className="fa fa-briefcase" />{" "}
+                                            {(() => {
+                                                const expMap: Record<string, string> = {
+                                                    intern: "Thực tập",
+                                                    fresher: "Fresher",
+                                                    "1-2": "1-2 năm kinh nghiệm",
+                                                    "2-3": "2-3 năm kinh nghiệm",
+                                                    "3-4": "3-4 năm kinh nghiệm",
+                                                    "4-5": "4-5 năm kinh nghiệm",
+                                                    "5+": "Hơn 5 năm kinh nghiệm",
+                                                };
+                                                return expMap[job.experience] ?? job.experience;
+                                            })()}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 

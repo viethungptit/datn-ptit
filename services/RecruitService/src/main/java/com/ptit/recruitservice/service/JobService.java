@@ -2,9 +2,7 @@ package com.ptit.recruitservice.service;
 
 import com.ptit.recruitservice.config.EventPublisher;
 import com.ptit.recruitservice.dto.*;
-import com.ptit.recruitservice.entity.Job;
-import com.ptit.recruitservice.entity.JobTagMapping;
-import com.ptit.recruitservice.entity.JobGroupTagMapping;
+import com.ptit.recruitservice.entity.*;
 import com.ptit.recruitservice.feign.UserServiceFeign;
 import com.ptit.recruitservice.repository.JobRepository;
 import com.ptit.recruitservice.repository.JobTagMappingRepository;
@@ -95,8 +93,10 @@ public class JobService {
         job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
+        job.setExperience(request.getExperience());
         job.setQuantity(request.getQuantity());
         job.setDeadline(request.getDeadline());
+        job.setCreatedBy(currentUserId);
         job.setJobType(Job.JobType.valueOf(request.getJobType().replace("|", "_")));
         job.setStatus(Job.Status.pending);
         job.setStatusEmbedding(Job.StatusEmbedding.pending);
@@ -166,7 +166,9 @@ public class JobService {
         job.setLocation(request.getLocation());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
+        job.setCreatedBy(currentUserId);
         job.setDeadline(request.getDeadline());
+        job.setExperience(request.getExperience());
         job.setJobType(Job.JobType.valueOf(request.getJobType().replace("|", "_")));
         job.setStatus(request.getStatus());
         job.setStatusEmbedding(Job.StatusEmbedding.pending);
@@ -225,8 +227,33 @@ public class JobService {
 
     public JobDto getJob(UUID jobId) {
         Job job = jobRepository.findById(jobId)
-            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
-        return toDto(job);
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
+
+
+        List<JobTag> jobTags = jobTagRepository.findAllByJobId(jobId);
+        List<GroupJobTag> groupJobTags = groupJobTagRepository.findAllByJobId(jobId);
+
+        JobDto dto = toDto(job);
+        dto.setJobTags(
+                jobTags.stream().map(t -> {
+                    JobTagDto tagDto = new JobTagDto();
+                    tagDto.setJobTagId(t.getJobTagId());
+                    tagDto.setJobName(t.getJobName());
+                    tagDto.setIsDeleted(t.getIsDeleted());
+                    return tagDto;
+                }).toList()
+        );
+        dto.setGroupJobTags(
+                groupJobTags.stream().map(t -> {
+                   GroupJobTagDto groupJobTagDto = new GroupJobTagDto();
+                    groupJobTagDto.setGroupTagId(t.getGroupTagId());
+                    groupJobTagDto.setGroupJobName(t.getGroupJobName());
+                    groupJobTagDto.setIsDeleted(t.getIsDeleted());
+                    return groupJobTagDto;
+                }).toList()
+        );
+
+        return dto;
     }
 
     @Transactional
@@ -247,7 +274,9 @@ public class JobService {
         job.setDescription(request.getDescription());
         job.setMinSalary(request.getMinSalary());
         job.setMaxSalary(request.getMaxSalary());
+        job.setUpdatedBy(currentUserId);
         job.setLocation(request.getLocation());
+        job.setExperience(request.getExperience());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
         job.setDeadline(request.getDeadline());
@@ -327,6 +356,8 @@ public class JobService {
         job.setMinSalary(request.getMinSalary());
         job.setMaxSalary(request.getMaxSalary());
         job.setLocation(request.getLocation());
+        job.setUpdatedBy(currentUserId);
+        job.setExperience(request.getExperience());
         job.setCity(request.getCity());
         job.setQuantity(request.getQuantity());
         job.setDeadline(request.getDeadline());
@@ -427,7 +458,8 @@ public class JobService {
             List<String> tags,
             String type,
             Integer minSalary,
-            Integer maxSalary
+            Integer maxSalary,
+            String experience
     ) {
         List<Job> jobs = jobRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -450,7 +482,12 @@ public class JobService {
                         "%" + location.toLowerCase() + "%"
                 ));
             }
-
+            if (experience != null && !experience.trim().isEmpty()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("experience")),
+                        "%" + experience.toLowerCase() + "%"
+                ));
+            }
             // 🔹 Industry (groupJobName)
             if (industry != null && !industry.isEmpty()) {
                 Join<Object, Object> groupJoin = root.join("jobGroupTagMappings", JoinType.LEFT)
@@ -662,12 +699,15 @@ public class JobService {
         dto.setLocation(job.getLocation());
         dto.setCity(job.getCity());
         dto.setQuantity(job.getQuantity());
+        dto.setExperience(job.getExperience());
         dto.setDeadline(job.getDeadline());
         dto.setJobType(job.getJobType().name());
         dto.setStatus(job.getStatus().name());
         dto.setStatusEmbedding(job.getStatusEmbedding().name());
         dto.setDeleted(Boolean.TRUE.equals(job.getIsDeleted()));
         dto.setCreatedAt(job.getCreatedAt());
+        dto.setCreatedBy(job.getCreatedBy());
+        dto.setUpdatedBy(job.getUpdatedBy());
         return dto;
     }
 }

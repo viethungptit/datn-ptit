@@ -219,6 +219,7 @@ const UserManagement = () => {
                             </Select>
                         </div>
                     </div>
+
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button variant="outline">Hủy</Button>

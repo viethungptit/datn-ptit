@@ -1,10 +1,7 @@
 package com.ptit.userservice.service;
 
 import com.ptit.userservice.config.EventPublisher;
-import com.ptit.userservice.dto.ActivityEvent;
-import com.ptit.userservice.dto.CompanyCreateRequest;
-import com.ptit.userservice.dto.CompanyUpdateRequest;
-import com.ptit.userservice.dto.CompanyResponse;
+import com.ptit.userservice.dto.*;
 import com.ptit.userservice.entity.Company;
 import com.ptit.userservice.entity.Employer;
 import com.ptit.userservice.exception.ResourceNotFoundException;
@@ -237,7 +234,6 @@ public class CompanyService {
                 .filter(e -> e.getCompany().getCompanyId().equals(companyId))
                 .toList();
         for (Employer employer : employers) {
-            employer.setActive(true);
             employerRepository.save(employer);
         }
 
@@ -282,7 +278,7 @@ public class CompanyService {
 
     public CompanyResponse getCompanyByUserId(UUID userId) {
         Employer employer = employerRepository.findAll().stream()
-            .filter(e -> e.getUser().getUserId().equals(userId) && e.isActive())
+            .filter(e -> e.getUser().getUserId().equals(userId))
             .findFirst()
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Company company = employer.getCompany();
@@ -293,5 +289,41 @@ public class CompanyService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         return toResponse(company);
+    }
+
+    public List<EmployerResponse> getAllEmployersByCompany(UUID companyId) {
+        // Kiểm tra công ty tồn tại
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + companyId));
+
+        // Lấy danh sách employer
+        List<Employer> employers = employerRepository.findByCompany_CompanyId(companyId);
+
+        // Map sang DTO
+        return employers.stream().map(e -> {
+            EmployerResponse response = new EmployerResponse();
+            response.setEmployerId(e.getEmployerId());
+            response.setPosition(e.getPosition());
+            response.setStatus(e.getStatus());
+            response.setCreatedAt(e.getCreatedAt());
+            response.setAdmin(e.getAdmin());
+
+            EmployerResponse.CompanyInfo companyInfo = new EmployerResponse.CompanyInfo();
+            companyInfo.setCompanyId(company.getCompanyId());
+            companyInfo.setCompanyName(company.getCompanyName());
+            companyInfo.setVerified(company.isVerified());
+            response.setCompany(companyInfo);
+
+            // Map user info
+            EmployerResponse.UserInfo userInfo = new EmployerResponse.UserInfo();
+            userInfo.setUserId(e.getUser().getUserId());
+            userInfo.setUsername(e.getUser().getFullName());
+            userInfo.setFullName(e.getUser().getFullName());
+            userInfo.setEmail(e.getUser().getEmail());
+            userInfo.setPhone(e.getUser().getPhone());
+            response.setUser(userInfo);
+
+            return response;
+        }).collect(Collectors.toList());
     }
 }

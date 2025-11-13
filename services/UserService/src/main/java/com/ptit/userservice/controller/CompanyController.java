@@ -93,4 +93,10 @@ public class CompanyController {
         }
         return ResponseEntity.ok(companyService.getCompanyByCompanyId(companyId));
     }
+
+    @GetMapping("/{companyId}/employers")
+    public ResponseEntity<List<EmployerResponse>> getEmployersByCompany(@PathVariable UUID companyId) {
+        List<EmployerResponse> employers = companyService.getAllEmployersByCompany(companyId);
+        return ResponseEntity.ok(employers);
+    }
 }

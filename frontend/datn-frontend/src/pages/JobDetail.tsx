@@ -162,14 +162,19 @@ const JobDetail = () => {
                     <div>
                         <h2 className="text-base text-left font-semibold mb-2">Kĩ năng cần có</h2>
                         <div className="flex flex-wrap gap-2">
-                            {job.tags.map((tag: string) => (
-                                <span key={tag} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">{tag}</span>
+                            {job.jobTags?.map((tag: any) => (
+                                <span key={tag.jobTagId} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    {tag.jobName}
+                                </span>
                             ))}
                         </div>
-                        <h2 className="text-base text-left font-semibold mb-2 mt-5">Doanh mục nghề</h2>
+
+                        <h2 className="text-base text-left font-semibold mb-2 mt-5">Ngành nghề</h2>
                         <div className="flex flex-wrap gap-2">
-                            {job.categories.map((category: string) => (
-                                <span key={category} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">{category}</span>
+                            {job.groupJobTags?.map((category: any) => (
+                                <span key={category.groupTagId} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    {category.groupJobName}
+                                </span>
                             ))}
                         </div>
                     </div>

@@ -44,6 +44,20 @@ const initialFilters = [
             { label: "Đà Nẵng", value: "Đà Nẵng" },
         ],
     },
+    {
+        key: "experience",
+        label: "Kinh nghiệm làm việc",
+        type: "radio",
+        options: [
+            { label: "Thực tập", value: "intern" },
+            { label: "Fresher", value: "fresher" },
+            { label: "1-2 năm", value: "1-2" },
+            { label: "2-3 năm", value: "2-3" },
+            { label: "3-4 năm", value: "3-4" },
+            { label: "4-5 năm", value: "4-5" },
+            { label: "Hơn 5 năm", value: "5+" },
+        ],
+    },
 ];
 
 const SearchJob: React.FC = () => {
