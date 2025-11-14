@@ -19,7 +19,7 @@ const EmployerProfile: React.FC = () => {
     const [positionInput, setPositionInput] = useState<string>('');
     const [joining, setJoining] = useState(false);
     const [joinError, setJoinError] = useState<string | null>(null);
-
+    const [isHrAdmin, setIsHrAdmin] = useState<boolean>(false);
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
     const [leavingCompany, setLeavingCompany] = useState(false);
     const getValue = (val: any) => (val ? val : 'Chưa cập nhật');
@@ -141,10 +141,12 @@ const EmployerProfile: React.FC = () => {
                                     <DialogTrigger asChild>
                                         <Button variant="seek">Thêm thông tin công ty</Button>
                                     </DialogTrigger>
-                                    <DialogContent className='max-w-xl'>
+                                    <DialogContent className="max-w-xl">
                                         <DialogHeader>
                                             <DialogTitle>Thêm thông tin công ty</DialogTitle>
-                                            <DialogDescription>Chọn công ty bạn muốn tham gia và điền vị trí hiện tại (tuỳ chọn).</DialogDescription>
+                                            <DialogDescription>
+                                                Chọn công ty bạn muốn tham gia và điền vị trí hiện tại (tuỳ chọn).
+                                            </DialogDescription>
                                         </DialogHeader>
 
                                         <div className="mt-4">
@@ -174,6 +176,15 @@ const EmployerProfile: React.FC = () => {
                                                         onChange={(e) => setPositionInput(e.target.value)}
                                                     />
 
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isHrAdmin ?? false}
+                                                            onChange={(e) => setIsHrAdmin(e.target.checked)}
+                                                        />
+                                                        Tôi là HR Admin
+                                                    </label>
+
                                                     {joinError && <div className="text-red-500 text-sm">{joinError}</div>}
                                                 </div>
                                             )}
@@ -192,7 +203,13 @@ const EmployerProfile: React.FC = () => {
                                                         setJoining(true);
                                                         setJoinError(null);
                                                         try {
-                                                            await upsertEmployerApi({ companyId: selectedCompanyId, position: positionInput || undefined });
+                                                            await upsertEmployerApi({
+                                                                companyId: selectedCompanyId,
+                                                                position: positionInput || undefined,
+                                                                status: 'PENDING',
+                                                                isHrAdmin: isHrAdmin ?? false
+                                                            });
+
                                                             // refresh profile
                                                             const res = await getCurrentUserProfile();
                                                             setProfile(res.data);
@@ -213,6 +230,7 @@ const EmployerProfile: React.FC = () => {
                                         </DialogFooter>
                                     </DialogContent>
                                 </Dialog>
+
                                 <div className="mt-2">
                                     <Button
                                         variant="outline"
@@ -229,70 +247,100 @@ const EmployerProfile: React.FC = () => {
                             </div>
                         )
                             :
-                            <div className="w-full">
-                                <img
-                                    src={
-                                        company?.logoUrl
-                                            ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}`
-                                            : '/default-logo.png'
-                                    }
-                                    alt="Company Logo"
-                                    className="mx-auto mb-2 h-32 object-cover"
-                                />
+                            (
+                                <>
+                                    {profile.employer?.status === 'VERIFIED' ? (
+                                        <div className="w-full">
+                                            {/* Logo công ty */}
+                                            <img
+                                                src={
+                                                    profile.company?.logoUrl
+                                                        ? `${MINIO_ENDPOINT}/datn/${profile.company.logoUrl}`
+                                                        : '/default-logo.png'
+                                                }
+                                                alt="Company Logo"
+                                                className="mx-auto mb-2 h-32 object-cover"
+                                            />
 
-                                <div className="grid grid-cols-[1fr_2fr] gap-4 mb-2 text-left text-sm">
-                                    <div className="font-medium text-gray-700">Tên công ty:</div>
-                                    <div className="text-gray-900">{company?.companyName || 'Chưa cập nhật'}</div>
+                                            {/* Thông tin công ty */}
+                                            <div className="grid grid-cols-[1fr_2fr] gap-4 mb-2 text-left text-sm">
+                                                <div className="font-medium text-gray-700">Tên công ty:</div>
+                                                <div className="text-gray-900">{profile.company?.companyName || 'Chưa cập nhật'}</div>
 
-                                    <div className="font-medium text-gray-700">Ngành nghề:</div>
-                                    <div className="text-gray-900">{company?.industry || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Ngành nghề:</div>
+                                                <div className="text-gray-900">{profile.company?.industry || 'Chưa cập nhật'}</div>
 
-                                    <div className="font-medium text-gray-700">Quy mô:</div>
-                                    <div className="text-gray-900">{company?.companySize ? `${company.companySize} nhân viên` : 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Quy mô:</div>
+                                                <div className="text-gray-900">
+                                                    {profile.company?.companySize
+                                                        ? `${profile.company.companySize} nhân viên`
+                                                        : 'Chưa cập nhật'}
+                                                </div>
 
-                                    <div className="font-medium text-gray-700">Website:</div>
-                                    <div className="text-gray-900">{company?.website || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Website:</div>
+                                                <div className="text-gray-900">{profile.company?.website || 'Chưa cập nhật'}</div>
 
-                                    <div className="font-medium text-gray-700">Địa điểm:</div>
-                                    <div className="text-gray-900">{company?.location || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Địa điểm:</div>
+                                                <div className="text-gray-900">{profile.company?.location || 'Chưa cập nhật'}</div>
 
-                                    <div className="font-medium text-gray-700">Ngày tạo:</div>
-                                    <div className="text-gray-900">
-                                        {company?.createdAt
-                                            ? new Date(company.createdAt).toLocaleDateString('vi-VN')
-                                            : 'Chưa cập nhật'}
-                                    </div>
+                                                <div className="font-medium text-gray-700">Ngày tạo:</div>
+                                                <div className="text-gray-900">
+                                                    {profile.company?.createdAt
+                                                        ? new Date(profile.company.createdAt).toLocaleDateString('vi-VN')
+                                                        : 'Chưa cập nhật'}
+                                                </div>
 
-                                    <div className="font-medium text-gray-700">Trạng thái:</div>
-                                    <div className="text-gray-900">
-                                        {company?.verified ? 'Đã xác minh' : 'Chưa xác minh'}
-                                    </div>
-                                </div>
-                                <div className="mt-4 flex justify-between w-full">
-                                    <Button variant="outline" onClick={() => setCompanyDialogOpen(true)}>Sửa thông tin công ty</Button>
-                                    <Button
-                                        variant="login"
-                                        onClick={async () => {
-                                            if (!window.confirm('Bạn có chắc muốn rời công ty này?')) return;
-                                            setLeavingCompany(true);
-                                            try {
-                                                await leaveCompanyApi();
-                                                const res = await getCurrentUserProfile();
-                                                setProfile(res.data);
-                                                toast.success('Bạn đã rời công ty');
-                                            } catch (err: any) {
-                                                const msg = err?.response?.data?.message || err?.message || 'Rời công ty thất bại';
-                                                toast.error(msg);
-                                            } finally {
-                                                setLeavingCompany(false);
-                                            }
-                                        }}
-                                        disabled={leavingCompany}
-                                    >
-                                        {leavingCompany ? 'Đang xử lý...' : 'Rời công ty'}
-                                    </Button>
-                                </div>
-                            </div>
+                                                <div className="font-medium text-gray-700">Trạng thái:</div>
+                                                <div className="text-gray-900">
+                                                    {profile.company?.verified ? 'Đã xác minh' : 'Chưa xác minh'}
+                                                </div>
+                                            </div>
+
+                                            {/* Nút sửa và rời công ty */}
+                                            <div className="mt-4 flex justify-between w-full">
+                                                <Button variant="outline" onClick={() => setCompanyDialogOpen(true)}>
+                                                    Sửa thông tin công ty
+                                                </Button>
+
+                                                <Button
+                                                    variant="login"
+                                                    onClick={async () => {
+                                                        if (!window.confirm('Bạn có chắc muốn rời công ty này?')) return;
+                                                        setLeavingCompany(true);
+                                                        try {
+                                                            await leaveCompanyApi();
+                                                            const res = await getCurrentUserProfile();
+                                                            setProfile(res.data);
+                                                            toast.success('Bạn đã rời công ty');
+                                                        } catch (err: any) {
+                                                            const msg = err?.response?.data?.message || err?.message || 'Rời công ty thất bại';
+                                                            toast.error(msg);
+                                                        } finally {
+                                                            setLeavingCompany(false);
+                                                        }
+                                                    }}
+                                                    disabled={leavingCompany}
+                                                >
+                                                    {leavingCompany ? 'Đang xử lý...' : 'Rời công ty'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : profile.employer.status === 'PENDING' ? (
+                                        <div className="mt-20 flex flex-col items-center gap-3">
+                                            <span className="font-semibold text-yellow-600">
+                                                Yêu cầu gia nhập công ty đang được xét duyệt
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-20 flex flex-col items-center gap-3">
+                                            <span className="font-semibold text-red-600">
+                                                Yêu cầu gia nhập công ty bị từ chối
+                                            </span>
+                                            {/* Bạn có thể để nút "Thêm công ty / Thử lại" ở đây nếu muốn */}
+                                        </div>
+                                    )}
+                                </>
+                            )
                     }
                 </div>
 

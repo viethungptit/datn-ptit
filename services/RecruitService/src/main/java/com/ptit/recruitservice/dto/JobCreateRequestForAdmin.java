@@ -8,8 +8,10 @@ public class JobCreateRequestForAdmin {
     private UUID companyId;
     private String title;
     private String description;
-    private String salaryRange;
+    private Integer minSalary;
+    private Integer maxSalary;
     private String location;
+    private String experience;
     private String city;
     private String jobType;
     private Job.Status status;
@@ -27,8 +29,31 @@ public class JobCreateRequestForAdmin {
     public void setDescription(String description) { this.description = description; }
     public Job.Status getStatus() {return status;}
     public void setStatus(Job.Status status) {this.status = status;}
-    public String getSalaryRange() { return salaryRange; }
-    public void setSalaryRange(String salaryRange) { this.salaryRange = salaryRange; }
+
+    public Integer getMinSalary() {
+        return minSalary;
+    }
+
+    public void setMinSalary(Integer minSalary) {
+        this.minSalary = minSalary;
+    }
+
+    public Integer getMaxSalary() {
+        return maxSalary;
+    }
+
+    public void setMaxSalary(Integer maxSalary) {
+        this.maxSalary = maxSalary;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getCity() { return city; }

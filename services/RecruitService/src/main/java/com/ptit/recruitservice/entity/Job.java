@@ -3,12 +3,14 @@ package com.ptit.recruitservice.entity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.util.List;
 import java.util.UUID;
 import java.sql.Timestamp;
 
 @Entity
 @Table(name = "jobs")
 public class Job {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
@@ -30,14 +32,32 @@ public class Job {
     @Column(name = "deadline")
     private Timestamp deadline;
 
-    @Column(name = "salary_range", length = 100)
-    private String salaryRange;
+    @Column(name = "created_by")
+    private UUID createdBy;
+
+    @Column(name = "updated_by")
+    private UUID updatedBy;
+
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<JobGroupTagMapping> jobGroupTagMappings;
+
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<JobTagMapping> jobTagMappings;
+
+    @Column(name = "min_salary")
+    private Integer minSalary;
+
+    @Column(name = "max_salary")
+    private Integer maxSalary;
 
     @Column(name = "location", columnDefinition = "TEXT")
     private String location;
 
     @Column(name = "city", columnDefinition = "TEXT")
     private String city;
+
+    @Column(name = "experience", columnDefinition = "TEXT")
+    private String experience;
 
     public enum JobType { full_time, part_time, internship, freelance }
     @Enumerated(EnumType.STRING)
@@ -66,52 +86,86 @@ public class Job {
     public void setJobId(UUID jobId) {
         this.jobId = jobId;
     }
+
     public UUID getCompanyId() {
         return companyId;
     }
+
     public void setCompanyId(UUID companyId) {
         this.companyId = companyId;
     }
+
     public String getTitle() {
         return title;
     }
     public void setTitle(String title) {
         this.title = title;
     }
+
     public String getDescription() {
         return description;
     }
     public void setDescription(String description) {
         this.description = description;
     }
-    public Integer getQuantity() {return quantity;}
-    public void setQuantity(Integer quantity) {this.quantity = quantity;}
-    public Timestamp getDeadline() {return deadline;}
-    public void setDeadline(Timestamp deadline) {this.deadline = deadline;}
-    public String getSalaryRange() {
-        return salaryRange;
+
+    public Integer getQuantity() {
+        return quantity;
     }
-    public void setSalaryRange(String salaryRange) {
-        this.salaryRange = salaryRange;
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
+
+    public Timestamp getDeadline() {
+        return deadline;
+    }
+    public void setDeadline(Timestamp deadline) {
+        this.deadline = deadline;
+    }
+
+    public Integer getMinSalary() {
+        return minSalary;
+    }
+    public void setMinSalary(Integer minSalary) {
+        this.minSalary = minSalary;
+    }
+
+    public Boolean getDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        isDeleted = deleted;
+    }
+
+    public Integer getMaxSalary() {
+        return maxSalary;
+    }
+    public void setMaxSalary(Integer maxSalary) {
+        this.maxSalary = maxSalary;
+    }
+
     public String getLocation() {
         return location;
     }
     public void setLocation(String location) {
         this.location = location;
     }
+
     public String getCity() {
         return city;
     }
     public void setCity(String city) {
         this.city = city;
     }
+
     public JobType getJobType() {
         return jobType;
     }
     public void setJobType(JobType jobType) {
         this.jobType = jobType;
     }
+
     public Status getStatus() {
         return status;
     }
@@ -122,7 +176,6 @@ public class Job {
     public StatusEmbedding getStatusEmbedding() {
         return statusEmbedding;
     }
-
     public void setStatusEmbedding(StatusEmbedding statusEmbedding) {
         this.statusEmbedding = statusEmbedding;
     }
@@ -133,10 +186,51 @@ public class Job {
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted;
     }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<JobGroupTagMapping> getJobGroupTagMappings() {
+        return jobGroupTagMappings;
+    }
+
+    public void setJobGroupTagMappings(List<JobGroupTagMapping> jobGroupTagMappings) {
+        this.jobGroupTagMappings = jobGroupTagMappings;
+    }
+
+    public List<JobTagMapping> getJobTagMappings() {
+        return jobTagMappings;
+    }
+
+    public void setJobTagMappings(List<JobTagMapping> jobTagMappings) {
+        this.jobTagMappings = jobTagMappings;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

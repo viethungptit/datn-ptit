@@ -44,7 +44,8 @@ export type Job = {
     companyId?: string;
     title: string;
     description?: string;
-    salaryRange?: string;
+    minSalary?: number;
+    maxSalary?: number;
     location?: string;
     city?: string;
     jobType?: string; // expected: full_time, part_time, internship, freelance
@@ -55,6 +56,7 @@ export type Job = {
     groupTagIds?: string[];
     jobTagIds?: string[];
     createdAt?: string;
+    experience?: string;
 };
 
 const JobManagement = () => {
@@ -95,7 +97,8 @@ const JobManagement = () => {
                     companyId: j.companyId ?? j.company_id,
                     title: j.title,
                     description: j.description,
-                    salaryRange: j.salaryRange,
+                    minSalary: j.minSalary,
+                    maxSalary: j.maxSalary,
                     location: j.location,
                     city: j.city,
                     jobType: j.jobType,
@@ -197,7 +200,8 @@ const JobManagement = () => {
             const payload: any = {
                 title: form.title,
                 description: form.description,
-                salaryRange: form.salaryRange,
+                minSalary: form.minSalary,
+                maxSalary: form.maxSalary,
                 location: form.location,
                 city: form.city,
                 status: form.status || 'pending',
@@ -225,7 +229,8 @@ const JobManagement = () => {
                         companyId: newJob.companyId ?? newJob.company_id,
                         title: newJob.title,
                         description: newJob.description,
-                        salaryRange: newJob.salaryRange,
+                        minSalary: newJob.minSalary,
+                        maxSalary: newJob.maxSalary,
                         location: newJob.location,
                         city: newJob.city,
                         jobType: newJob.jobType,
@@ -277,7 +282,8 @@ const JobManagement = () => {
                         <TableRow>
                             <TableHead className="text-left">Tiêu đề</TableHead>
                             <TableHead className="text-left">Công ty</TableHead>
-                            <TableHead className="text-center">Lương</TableHead>
+                            <TableHead className="text-center">Lương khởi điểm</TableHead>
+                            <TableHead className="text-center">Lương tối đa</TableHead>
                             <TableHead className="text-center">Địa điểm</TableHead>
                             <TableHead className="text-center">Loại</TableHead>
                             <TableHead className="text-left">Trạng thái</TableHead>
@@ -299,10 +305,12 @@ const JobManagement = () => {
                                 <TableRow key={j.jobId}>
                                     <TableCell className="text-left">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
-                                    <TableCell className="text-center">{j.salaryRange}</TableCell>
+                                    <TableCell className="text-center">{j.minSalary}</TableCell>
+                                    <TableCell className="text-center">{j.maxSalary}</TableCell>
                                     <TableCell className="text-center">{j.location || j.city}</TableCell>
                                     <TableCell className="text-center">{getJobTypeLabel(j.jobType)}</TableCell>
                                     <TableCell className="text-left">{displayStatus(j)}</TableCell>
+                                    <TableCell className="text-left">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-left">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
@@ -348,9 +356,38 @@ const JobManagement = () => {
                             </Select>
                         </div>
 
-                        <div>
-                            <Label htmlFor="salaryRange">Mức lương</Label>
-                            <Input id="salaryRange" placeholder="Mức lương" value={form.salaryRange || ''} onChange={e => setForm(f => ({ ...f, salaryRange: e.target.value }))} />
+                        <div className="flex justify-between">
+                            <div className="mr-3">
+                                <Label htmlFor="minSalary">Mức lương khởi điểm</Label>
+                                <Input
+                                    id="minSalary"
+                                    type="number"
+                                    placeholder="Mức lương khởi điểm"
+                                    value={form.minSalary ?? ''}
+                                    onChange={e =>
+                                        setForm(f => ({
+                                            ...f,
+                                            minSalary: e.target.value ? Number(e.target.value) : undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="maxSalary">Mức lương tối đa</Label>
+                                <Input
+                                    id="maxSalary"
+                                    type="number"
+                                    placeholder="Mức lương tối đa"
+                                    value={form.maxSalary ?? ''}
+                                    onChange={e =>
+                                        setForm(f => ({
+                                            ...f,
+                                            maxSalary: e.target.value ? Number(e.target.value) : undefined,
+                                        }))
+                                    }
+                                />
+                            </div>
                         </div>
                         <div>
                             <Label htmlFor="location">Địa điểm</Label>
@@ -359,7 +396,19 @@ const JobManagement = () => {
 
                         <div>
                             <Label htmlFor="city">Thành phố</Label>
-                            <Input id="city" placeholder="Thành phố" value={form.city || ''} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+                            <Select
+                                value={form.city || ""}
+                                onValueChange={(value) => setForm(f => ({ ...f, city: value }))}
+                            >
+                                <SelectTrigger id="city">
+                                    <SelectValue placeholder="Chọn thành phố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Hà Nội">Hà Nội</SelectItem>
+                                    <SelectItem value="Hồ Chí Minh">Hồ Chí Minh</SelectItem>
+                                    <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <Label htmlFor="jobType">Loại công việc</Label>
@@ -437,7 +486,26 @@ const JobManagement = () => {
                             <Label htmlFor="deadline">Hạn nộp</Label>
                             <Input id="deadline" type="date" value={form.deadline ? new Date(form.deadline).toISOString().slice(0, 10) : ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
                         </div>
-
+                        <div>
+                            <Label htmlFor="experience">Kinh nghiệm làm việc</Label>
+                            <Select
+                                value={form.experience || ""}
+                                onValueChange={(value) => setForm(f => ({ ...f, experience: value }))}
+                            >
+                                <SelectTrigger id="experience">
+                                    <SelectValue placeholder="Chọn kinh nghiệm" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="intern">Thực tập</SelectItem>
+                                    <SelectItem value="fresher">Fresher</SelectItem>
+                                    <SelectItem value="1-2">1-2 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="2-3">2-3 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="3-4">3-4 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="4-5">4-5 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="5+">Hơn 5 năm kinh nghiệm</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="col-span-3">
                             <Label htmlFor="description">Mô tả</Label>
                             <Textarea id="description" placeholder="Mô tả" value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={6} />

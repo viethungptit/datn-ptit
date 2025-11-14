@@ -6,22 +6,46 @@ import java.util.UUID;
 public class JobCreateRequest {
     private String title;
     private String description;
-    private String salaryRange;
+    private Integer minSalary;
+    private Integer maxSalary;
     private String location;
     private String city;
     private String jobType;
+    private String experience;
     private List<UUID> groupTagIds;
     private List<UUID> jobTagIds;
     private Integer quantity;
     private java.sql.Timestamp deadline;
-
     // Getters and setters
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public String getSalaryRange() { return salaryRange; }
-    public void setSalaryRange(String salaryRange) { this.salaryRange = salaryRange; }
+
+    public Integer getMinSalary() {
+        return minSalary;
+    }
+
+    public void setMinSalary(Integer minSalary) {
+        this.minSalary = minSalary;
+    }
+
+    public Integer getMaxSalary() {
+        return maxSalary;
+    }
+
+    public void setMaxSalary(Integer maxSalary) {
+        this.maxSalary = maxSalary;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getCity() { return city; }

@@ -2,46 +2,68 @@ import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { getAllJobs } from '@/api/recruitApi';
-import { getAllCompaniesApi } from '@/api/userApi';
-import type { Job } from './Admin/JobManagement';
-import type { Company } from './Admin/CompanyManagement';
+import { getJob } from '@/api/recruitApi';
+import { getDetailCompanyApi } from '@/api/userApi';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { formatTime } from '@/lib/utils';
 
+const jobTypeMap: Record<string, string> = {
+    full_time: 'Toàn thời gian',
+    part_time: 'Bán thời gian',
+    internship: 'Thực tập',
+    freelance: 'Freelance',
+};
 
 const JobDetail = () => {
-    const [jobs, setJobs] = useState<any[]>([]);
-    
-    useEffect(() => {
-        Promise.all([getAllJobs(), getAllCompaniesApi()])
-            .then(([jobsRes, compRes]) => {
-                const jobList = jobsRes.data;
-                const companyList = compRes.data;
-
-                const merged = jobList.map((job: Job) => {
-                    const company = companyList.find((c: Company) => c.companyId === job.companyId);
-
-                    return {
-                        ...job,
-                        companyLogo: company?.logoUrl ?? "",
-                        companySize: company?.companySize ?? "",
-                        companyName: company?.companyName ?? "",
-                        companyLocation: company?.companyLocation ?? "",
-                        companyWebsite: company?.website ?? "",
-                        industry: 'Technology',
-                        tags: ['React', 'JavaScript', 'CSS', 'UI/UX'],
-                        categories: ['IT', 'Developer', 'Ngôn ngữ', 'Kế toán'],
-                    };
-                });
-
-                setJobs(merged);
-            })
-            .catch(console.error);
-    }, []);
-
     const { jobId } = useParams();
-    const job = jobs.find((j: Job, index: number) => index === Number(jobId));
+    const [job, setJob] = useState<any | null>(null);
+
+    useEffect(() => {
+        if (!jobId) return;
+
+        const fetchData = async () => {
+            try {
+                // Get job detail
+                const jobRes = await getJob(jobId);
+                const jobData = jobRes.data;
+
+                // Get company detail using companyId from job
+                let companyData: any = {};
+                if (jobData?.companyId) {
+                    try {
+                        const compRes = await getDetailCompanyApi(jobData.companyId);
+                        companyData = compRes.data;
+                    } catch (err) {
+                        console.error('Failed to fetch company detail', err);
+                    }
+                }
+
+                const merged = {
+                    // job fields
+                    ...jobData,
+                    // fill or rename fields expected by the UI
+                    salaryRange: jobData.salaryRange ?? (jobData.minSalary || jobData.maxSalary ? `${jobData.minSalary ?? ''}${jobData.minSalary && jobData.maxSalary ? ' - ' : ''}${jobData.maxSalary ?? ''}` : ''),
+                    tags: jobData.jobTagIds ?? [],
+                    categories: jobData.groupTagIds ?? [],
+                    // company fields
+                    companyLogo: companyData?.logoUrl ?? '',
+                    companySize: companyData?.companySize ?? '',
+                    companyName: companyData?.companyName ?? '',
+                    companyLocation: companyData?.location ?? '',
+                    companyWebsite: companyData?.website ?? '',
+                    industry: companyData?.industry ?? '',
+                };
+
+                setJob(merged);
+            } catch (err) {
+                console.error(err);
+                setJob(null);
+            } finally {
+            }
+        };
+
+        fetchData();
+    }, [jobId]);
 
     if (!job) return <div className="p-10 text-center text-xl">Không tìm thấy công việc!</div>;
 
@@ -59,7 +81,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Mức lương</span>
-                                <span className="text-left font-semibold">{job.salaryRange}</span>
+                                <span className="text-left font-semibold">{job.salaryRange} triệu VNĐ</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
@@ -97,9 +119,9 @@ const JobDetail = () => {
                 </div>
                 <div className="md:w-1/4 w-full bg-white rounded-xl shadow p-6 flex flex-col border gap-6">
                     <div className="flex flex-col items-center gap-4 mb-4">
-                        <img 
-                        src={job.companyLogo ? `${MINIO_ENDPOINT}/datn/${job.companyLogo}` : '/default-logo.png'}
-                        alt="logo" className="h-40 w-40 object-cover rounded-md border" />
+                        <img
+                            src={job.companyLogo ? `${MINIO_ENDPOINT}/datn/${job.companyLogo}` : '/default-logo.png'}
+                            alt="logo" className="h-40 w-40 object-cover rounded-md border" />
                         <div>
                             <h2 className="text-lg font-semibold">{job.companyName}</h2>
                             <div className="text-base mb-1">{job.industry}</div>
@@ -124,7 +146,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Hình thức</span>
-                                <span className="text-left font-semibold">{job.jobType}</span>
+                                <span className="text-left font-semibold">{job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : 'N/A'}</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700">
@@ -140,14 +162,19 @@ const JobDetail = () => {
                     <div>
                         <h2 className="text-base text-left font-semibold mb-2">Kĩ năng cần có</h2>
                         <div className="flex flex-wrap gap-2">
-                            {job.tags.map((tag: string) => (
-                                <span key={tag} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">{tag}</span>
+                            {job.jobTags?.map((tag: any) => (
+                                <span key={tag.jobTagId} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    {tag.jobName}
+                                </span>
                             ))}
                         </div>
-                        <h2 className="text-base text-left font-semibold mb-2 mt-5">Doanh mục nghề</h2>
+
+                        <h2 className="text-base text-left font-semibold mb-2 mt-5">Ngành nghề</h2>
                         <div className="flex flex-wrap gap-2">
-                            {job.categories.map((category: string) => (
-                                <span key={category} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">{category}</span>
+                            {job.groupJobTags?.map((category: any) => (
+                                <span key={category.groupTagId} className="bg-[#d90429] text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    {category.groupJobName}
+                                </span>
                             ))}
                         </div>
                     </div>
