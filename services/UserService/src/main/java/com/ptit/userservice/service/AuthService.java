@@ -56,7 +56,6 @@ public class AuthService {
     @Value("${log.activity.routing-key}")
     private String logActivityRoutingKey;
 
-
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         Optional<User> existingUserOpt = userRepository.findByEmail(request.email);
@@ -75,7 +74,7 @@ public class AuthService {
                 userRepository.save(existingUser);
 
                 // Generate OTP
-                String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
+                String otpCode = String.format("%06d", (int) (Math.random() * 1000000));
                 OtpToken otp = new OtpToken();
                 otp.setUser(existingUser);
                 otp.setOtpCode(otpCode);
@@ -123,7 +122,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Generate OTP
-        String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
+        String otpCode = String.format("%06d", (int) (Math.random() * 1000000));
         OtpToken otp = new OtpToken();
         otp.setUser(user);
         otp.setOtpCode(otpCode);
@@ -133,11 +132,15 @@ public class AuthService {
         otpTokenRepository.save(otp);
 
         // Send event
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", user.getFullName());
+        data.put("otp", otpCode);
+        data.put("email", user.getEmail());
+
         Map<String, Object> event = new HashMap<>();
-        event.put("email", user.getEmail());
-        event.put("name", user.getFullName());
-        event.put("otp", otpCode);
         event.put("event_type", registerRoutingKey);
+        event.put("to", user.getEmail());
+        event.put("data", data);
         eventPublisher.publish(notificationExchange, registerRoutingKey, event);
 
         // Response
@@ -202,8 +205,7 @@ public class AuthService {
                         .targetType("USER")
                         .targetId(user.getUserId().toString())
                         .description(String.format("Người dùng %s đăng nhập hệ thống", user.getUserId()))
-                        .build()
-        );
+                        .build());
         LoginResponse result = new LoginResponse();
         result.accessToken = accessToken;
         return result;
@@ -232,18 +234,22 @@ public class AuthService {
         return response;
     }
 
-
     @Transactional
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
+        if (userOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy OTP");
+        if (otpOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy OTP");
         OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new RuntimeException("OTP đã được sử dụng");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new RuntimeException("OTP hết hạn");
-        if (!otp.getOtpCode().equals(request.otp)) throw new RuntimeException("Sai OTP");
+        if (otp.isUsed())
+            throw new RuntimeException("OTP đã được sử dụng");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
+            throw new RuntimeException("OTP hết hạn");
+        if (!otp.getOtpCode().equals(request.otp))
+            throw new RuntimeException("Sai OTP");
         otp.setUsed(true);
         otpTokenRepository.save(otp);
         user.setActive(true);
@@ -257,9 +263,10 @@ public class AuthService {
     @Transactional
     public ResetOtpResponse resetOtp(ResetOtpRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
+        if (userOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
-        String otpCode = String.format("%06d", (int)(Math.random()*1000000));
+        String otpCode = String.format("%06d", (int) (Math.random() * 1000000));
         OtpToken otp = new OtpToken();
         otp.setUser(user);
         otp.setOtpCode(otpCode);
@@ -288,9 +295,10 @@ public class AuthService {
     @Transactional
     public void requestResetPassword(RequestResetPasswordRequest request) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
+        if (userOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
-        String otpCode = String.format("%06d", (int)(Math.random() * 1000000));
+        String otpCode = String.format("%06d", (int) (Math.random() * 1000000));
         OtpToken otp = new OtpToken();
         otp.setUser(user);
         otp.setOtpCode(otpCode);
@@ -315,14 +323,19 @@ public class AuthService {
     @Transactional
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         Optional<User> userOpt = userRepository.findByEmailAndIsDeletedFalse(request.email);
-        if (userOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy người dùng");
+        if (userOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy người dùng");
         User user = userOpt.get();
         Optional<OtpToken> otpOpt = otpTokenRepository.findTopByUser_EmailOrderByCreatedAtDesc(request.email);
-        if (otpOpt.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy OTP");
+        if (otpOpt.isEmpty())
+            throw new ResourceNotFoundException("Không tìm thấy OTP");
         OtpToken otp = otpOpt.get();
-        if (otp.isUsed()) throw new BusinessException("OTP đã được sử dụng");
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) throw new BusinessException("OTP đã hết hạn");
-        if (!otp.getOtpCode().equals(request.otp)) throw new BusinessException("Sai OTP");
+        if (otp.isUsed())
+            throw new BusinessException("OTP đã được sử dụng");
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now()))
+            throw new BusinessException("OTP đã hết hạn");
+        if (!otp.getOtpCode().equals(request.otp))
+            throw new BusinessException("Sai OTP");
         otp.setUsed(true);
         otpTokenRepository.save(otp);
         user.setPassword(passwordEncoder.encode(request.newPassword));
@@ -339,8 +352,7 @@ public class AuthService {
                         .targetType("USER")
                         .targetId(user.getUserId().toString())
                         .description(String.format("Người dùng %s đặt lại mật khẩu thành công", user.getUserId()))
-                        .build()
-        );
+                        .build());
         return new ForgotPasswordResponse("Đặt lại mật khẩu thành công");
     }
 }

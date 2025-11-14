@@ -1,0 +1,20 @@
+# Keep Docker context small
+target
+.git
+.gitignore
+Dockerfile
+.dockerignore
+.idea
+.vscode
+*.iml
+*.log
+*.tmp
+*.swp
+node_modules
+**/node_modules
+/.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+.env
+.DS_Store
+Thumbs.db
