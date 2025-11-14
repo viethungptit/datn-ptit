@@ -8,7 +8,7 @@ const FavoriteJobs: React.FC = () => {
                 <h1 className="text-2xl font-semibold text-txt-red">Việc làm đã lưu</h1>
             </div>
             <main className="w-full">
-                <JobsList gridNumber={1} />
+                <JobsList gridNumber={1} onlyFavorites/>
             </main>
         </div>
     );

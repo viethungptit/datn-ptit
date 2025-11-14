@@ -14,31 +14,33 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/user-service/companies/**").permitAll()
-                        .requestMatchers(
-                                "/api/user-service/auth/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/webjars/**",
-                                "/api/user-service/users/by-email/**",
-                                "/api/user-service/users/by-userId/**",
-                                "/api/user-service/health/**")
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .addFilterBefore(new HeaderAuthFilter(), UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(HttpMethod.GET, "/api/user-service/companies/**")
+                                                .permitAll()
+                                                .requestMatchers(
+                                                                "/api/user-service/auth/**",
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-resources/**",
+                                                                "/webjars/**",
+                                                                "/api/user-service/users/by-email/**",
+                                                                "/api/user-service/users/by-userId/**",
+                                                                "/api/user-service/health/**")
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(new HeaderAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                return http.build();
+        }
 }
