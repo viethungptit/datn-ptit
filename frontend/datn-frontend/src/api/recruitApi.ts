@@ -24,18 +24,25 @@ export const updateJob = (
 export const updateJobForAdmin = (
   jobId: string,
   payload: {
+    jobId?: string;
     companyId?: string;
     title?: string;
-    status?: string;
     description?: string;
-    salaryRange?: string;
+    minSalary?: number;
+    maxSalary?: number;
     location?: string;
     city?: string;
     jobType?: string;
-    groupTagIds?: string[];
-    jobTagIds?: string[];
     quantity?: number;
     deadline?: string;
+    status?: string;
+    deleted?: boolean;
+    groupTagIds?: string[];
+    jobTagIds?: string[];
+    createdAt?: string;
+    experience?: string;
+    createdBy?: string;
+    updatedBy?: string;
   }
 ) => gatewayApi.put(`/api/recruit-service/jobs/admin/${jobId}`, payload);
 
@@ -225,6 +232,9 @@ export const getAllJobsByCompany = (companyId: string) =>
 
 export const getAllJobsByCity = (city: string) =>
   gatewayApi.get(`/api/recruit-service/jobs/all-by-city/${city}`);
+
+export const updateJobApi = (jobId: string, payload: any) =>
+  gatewayApi.put(`/api/recruit-service/jobs/${jobId}`, payload);
 
 export const postRecruitJob = (data: {
   title: string;

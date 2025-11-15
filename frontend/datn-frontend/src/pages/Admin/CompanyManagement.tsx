@@ -5,6 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { deleteCompanyApi, getAllCompaniesApi, verifyCompanyApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import CompanyDialog from "@/components/Company/CompanyDialog";
+import { useNavigate } from "react-router-dom";
 
 export type Company = {
     companyId: string;
@@ -21,11 +22,12 @@ export type Company = {
 };
 
 const CompanyManagement = () => {
+
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const [dialogCompany, setDialogCompany] = useState<Company | null>(null);
-
+    const navigate = useNavigate();
     useEffect(() => {
         (async () => {
             setLoading(true);
@@ -41,7 +43,9 @@ const CompanyManagement = () => {
             }
         })();
     }, []);
-
+    const handleManageEmployees = (companyId: string) => {
+        navigate(`/admin/companies/${companyId}/employers`);
+    };
     const openDialogCompany = (company?: Company) => {
         setDialogCompany(company ?? null);
         setOpenDialog(true);
@@ -131,6 +135,9 @@ const CompanyManagement = () => {
                                     <TableCell className="text-left">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-left">
                                         <div className="flex gap-2">
+                                            <Button size="sm" onClick={() => handleManageEmployees(c.companyId)}>
+                                                Quản lý nhân viên
+                                            </Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogCompany(c)}>Sửa</Button>
                                             {!c.verified && <Button size="sm" variant="secondary" onClick={() => handleVerify(c.companyId)}>Xác thực</Button>}
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(c.companyId)}>Xóa</Button>

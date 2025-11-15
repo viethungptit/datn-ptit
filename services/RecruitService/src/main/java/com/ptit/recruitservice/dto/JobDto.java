@@ -1,6 +1,7 @@
 package com.ptit.recruitservice.dto;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.UUID;
 
 public class JobDto {
@@ -13,14 +14,26 @@ public class JobDto {
     private String location;
     private String city;
     private String jobType;
+    private String experience;
     private String status;
     private String statusEmbedding;
     private boolean isDeleted;
     private Integer quantity;
     private java.sql.Timestamp deadline;
     private Timestamp createdAt;
-
+    private List<JobTagDto> jobTags;
+    private List<GroupJobTagDto> groupJobTags;
+    private UUID createdBy;
+    private UUID updatedBy;
     // Getters and setters
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
 
     public UUID getJobId() {
         return jobId;
@@ -140,5 +153,37 @@ public class JobDto {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<JobTagDto> getJobTags() {
+        return jobTags;
+    }
+
+    public void setJobTags(List<JobTagDto> jobTags) {
+        this.jobTags = jobTags;
+    }
+
+    public List<GroupJobTagDto> getGroupJobTags() {
+        return groupJobTags;
+    }
+
+    public void setGroupJobTags(List<GroupJobTagDto> groupJobTags) {
+        this.groupJobTags = groupJobTags;
+    }
+
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

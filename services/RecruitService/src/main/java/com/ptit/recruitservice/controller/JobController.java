@@ -32,7 +32,7 @@ public class JobController {
         return jobService.createJob(request, UUID.fromString(currentUserId));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     @PostMapping("/admin")
     public JobDto createJobForAdmin(@RequestBody JobCreateRequestForAdmin request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -53,7 +53,7 @@ public class JobController {
         return jobService.updateJob(jobId, request, UUID.fromString(currentUserId));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYER')")
     @PutMapping("/admin/{job_id}")
     public JobDto updateJobForAdmin(@PathVariable("job_id") UUID jobId, @RequestBody JobUpdateRequestForAdmin request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -94,9 +94,10 @@ public class JobController {
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer minSalary,
-            @RequestParam(required = false) Integer maxSalary
+            @RequestParam(required = false) Integer maxSalary,
+            @RequestParam(required = false) String experience
     ) {
-        return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary);
+        return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary,experience);
     }
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping("/{job_id}/close")

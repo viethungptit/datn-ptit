@@ -1,15 +1,120 @@
 version: "3.9"
 
 services:
+  frontend:
+    build:
+      context: ./frontend/datn-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GATEWAY_SERVICE_URL: ${VITE_GATEWAY_SERVICE_URL}
+        VITE_MINIO_ENDPOINT: ${VITE_MINIO_ENDPOINT}
+    container_name: frontend
+    env_file:
+      - frontend.env
+    ports:
+      - "5173:5173"
+    networks:
+      - micro_net
+
+  gateway:
+    build:
+      context: ./gateway/SpringGateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    env_file:
+      - gateway.env
+    ports:
+      - "${GATEWAY_PORT}:8080"
+    networks:
+      - micro_net
+
+  user-service:
+    build:
+      context: ./services/UserService
+      dockerfile: Dockerfile
+    container_name: user-service
+    env_file:
+      - user-service.env
+    ports:
+      - "${USER_SERVICE_PORT}:5000"
+    depends_on:
+      - user-db
+      - rabbitmq
+      - minio
+    networks:
+      - micro_net
+
+  admin-service:
+    build:
+      context: ./services/AdminService
+      dockerfile: Dockerfile
+    container_name: admin-service
+    env_file:
+      - admin-service.env
+    ports:
+      - "${ADMIN_SERVICE_PORT}:5001"
+    depends_on:
+      - admin-db
+      - rabbitmq
+    networks:
+      - micro_net
+  
+  recommend-service:
+    build:
+      context: ./services/RecommendService
+      dockerfile: Dockerfile
+    container_name: recommend-service
+    env_file:
+      - recommend-service.env
+    ports:
+      - "${RECOMMEND_SERVICE_PORT}:5002"
+    depends_on:
+      - recommend-db
+      - rabbitmq
+      - minio
+    networks:
+      - micro_net
+
+  notification-service:
+    build:
+      context: ./services/NotificationService
+      dockerfile: Dockerfile
+    container_name: notification-service
+    env_file:
+      - notification-service.env
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:5003"
+    depends_on:
+      - notification-db
+      - rabbitmq
+    networks:
+      - micro_net
+
+  recruit-service:
+    build:
+      context: ./services/RecruitService
+      dockerfile: Dockerfile
+    container_name: recruit-service
+    env_file:
+      - recruit-service.env
+    ports:
+      - "${RECRUIT_SERVICE_PORT}:5004"
+    depends_on:
+      - recruit-db
+      - rabbitmq
+      - minio
+    networks:
+      - micro_net
+      
   user-db:
     image: postgres:15-alpine
     container_name: user-db
     environment:
-      POSTGRES_USER: user_service
-      POSTGRES_PASSWORD: user_pass
-      POSTGRES_DB: user_db
+      POSTGRES_USER: ${USER_DB_USER}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+      POSTGRES_DB: ${USER_DB_NAME}
     ports:
-      - "5433:5432"
+      - "${USER_DB_PORT}:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
     networks:
@@ -19,11 +124,11 @@ services:
     image: postgres:15-alpine
     container_name: admin-db
     environment:
-      POSTGRES_USER: admin_service
-      POSTGRES_PASSWORD: admin_pass
-      POSTGRES_DB: admin_db
+      POSTGRES_USER: ${ADMIN_DB_USER}
+      POSTGRES_PASSWORD: ${ADMIN_DB_PASSWORD}
+      POSTGRES_DB: ${ADMIN_DB_NAME}
     ports:
-      - "5434:5432"
+      - "${ADMIN_DB_PORT}:5432"
     volumes:
       - admin_db_data:/var/lib/postgresql/data
     networks:
@@ -33,11 +138,11 @@ services:
     image: ankane/pgvector
     container_name: recommend-db
     environment:
-      POSTGRES_USER: recommend_service
-      POSTGRES_PASSWORD: recommend_pass
-      POSTGRES_DB: recommend_db
+      POSTGRES_USER: ${RECOMMEND_DB_USER}
+      POSTGRES_PASSWORD: ${RECOMMEND_DB_PASSWORD}
+      POSTGRES_DB: ${RECOMMEND_DB_NAME}
     ports:
-      - "5435:5432"
+      - "${RECOMMEND_DB_PORT}:5432"
     volumes:
       - recommend_db_data:/var/lib/postgresql/data
     networks:
@@ -47,11 +152,11 @@ services:
     image: postgres:15-alpine
     container_name: notification-db
     environment:
-      POSTGRES_USER: notify_service
-      POSTGRES_PASSWORD: notify_pass
-      POSTGRES_DB: notification_db
+      POSTGRES_USER: ${NOTIFY_DB_USER}
+      POSTGRES_PASSWORD: ${NOTIFY_DB_PASSWORD}
+      POSTGRES_DB: ${NOTIFY_DB_NAME}
     ports:
-      - "5436:5432"
+      - "${NOTIFY_DB_PORT}:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
     networks:
@@ -61,37 +166,35 @@ services:
     image: postgres:15-alpine
     container_name: recruit-db
     environment:
-      POSTGRES_USER: recruit_service
-      POSTGRES_PASSWORD: recruit_pass
-      POSTGRES_DB: recruit_db
+      POSTGRES_USER: ${RECRUIT_DB_USER}
+      POSTGRES_PASSWORD: ${RECRUIT_DB_PASSWORD}
+      POSTGRES_DB: ${RECRUIT_DB_NAME}
     ports:
-      - "5437:5432"
+      - "${RECRUIT_DB_PORT}:5432"
     volumes:
       - recruit_db_data:/var/lib/postgresql/data
     networks:
       - micro_net
 
-  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"   # broker
-      - "15672:15672" # management UI
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_UI_PORT}:15672"
     networks:
       - micro_net
 
-  # MinIO
   minio:
     image: minio/minio:RELEASE.2025-02-03T21-03-04Z-cpuv1
     container_name: minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
-      - "9000:9000" # API
-      - "9001:9001" # Console
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
     volumes:
       - minio_data:/data
     networks:

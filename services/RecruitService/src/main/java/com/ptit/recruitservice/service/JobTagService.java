@@ -32,7 +32,7 @@ public class JobTagService {
             throw new BusinessException("Tên thẻ công việc không được bỏ trống");
         }
         if (jobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getJobName().equalsIgnoreCase(dto.getJobName()))) {
-            throw new BusinessException("Thẻ công việc đã tồn tại" + dto.getJobName());
+            throw new BusinessException("Thẻ công việc đã tồn tại: " + dto.getJobName());
         }
         JobTag entity = new JobTag();
         entity.setJobName(dto.getJobName());
@@ -56,7 +56,7 @@ public class JobTagService {
             throw new BusinessException("Tên thẻ công việc không được bỏ trống");
         }
         if (jobTagRepository.findByIsDeletedFalse().stream().anyMatch(tag -> tag.getJobName().equalsIgnoreCase(dto.getJobName()) && !tag.getJobTagId().equals(jobTagId))) {
-            throw new BusinessException("Thẻ công việc đã tồn tại" + dto.getJobName());
+            throw new BusinessException("Thẻ công việc đã tồn tại: " + dto.getJobName());
         }
         entity.setJobName(dto.getJobName());
         jobTagRepository.save(entity);

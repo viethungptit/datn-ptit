@@ -11,6 +11,7 @@ public class JobCreateRequestForAdmin {
     private Integer minSalary;
     private Integer maxSalary;
     private String location;
+    private String experience;
     private String city;
     private String jobType;
     private Job.Status status;
@@ -43,6 +44,14 @@ public class JobCreateRequestForAdmin {
 
     public void setMaxSalary(Integer maxSalary) {
         this.maxSalary = maxSalary;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
     }
 
     public String getLocation() { return location; }

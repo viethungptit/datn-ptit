@@ -149,7 +149,8 @@ public class UserProfileService {
         Company company = companyRepository.findById(request.getCompanyId())
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
         employer.setCompany(company);
-        employer.setActive(company.isVerified());
+        employer.setStatus(request.getStatus());
+        employer.setAdmin(request.getAdmin());
         if (request.getPosition() != null) employer.setPosition(request.getPosition());
         employer = employerRepository.save(employer);
 
@@ -235,7 +236,8 @@ public class UserProfileService {
         Company company = companyRepository.findById(request.getCompanyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
         employer.setCompany(company);
-        employer.setActive(company.isVerified());
+        employer.setStatus(request.getStatus());
+        employer.setAdmin(request.getAdmin());
         if (request.getPosition() != null) employer.setPosition(request.getPosition());
         employer = employerRepository.save(employer);
 
@@ -337,7 +339,8 @@ public class UserProfileService {
         response.setEmployerId(employer.getEmployerId());
         response.setPosition(employer.getPosition());
         response.setCreatedAt(employer.getCreatedAt());
-        response.setActive(employer.isActive());
+        response.setStatus(employer.getStatus());
+        response.setAdmin(employer.getAdmin());
         EmployerResponse.CompanyInfo companyInfo = null;
         if (employer.getCompany() != null) {
             companyInfo = new EmployerResponse.CompanyInfo();

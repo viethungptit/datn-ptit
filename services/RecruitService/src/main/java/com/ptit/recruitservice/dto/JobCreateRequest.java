@@ -11,11 +11,11 @@ public class JobCreateRequest {
     private String location;
     private String city;
     private String jobType;
+    private String experience;
     private List<UUID> groupTagIds;
     private List<UUID> jobTagIds;
     private Integer quantity;
     private java.sql.Timestamp deadline;
-
     // Getters and setters
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -36,6 +36,14 @@ public class JobCreateRequest {
 
     public void setMaxSalary(Integer maxSalary) {
         this.maxSalary = maxSalary;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
     }
 
     public String getLocation() { return location; }

@@ -32,6 +32,12 @@ public class Job {
     @Column(name = "deadline")
     private Timestamp deadline;
 
+    @Column(name = "created_by")
+    private UUID createdBy;
+
+    @Column(name = "updated_by")
+    private UUID updatedBy;
+
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<JobGroupTagMapping> jobGroupTagMappings;
 
@@ -49,6 +55,9 @@ public class Job {
 
     @Column(name = "city", columnDefinition = "TEXT")
     private String city;
+
+    @Column(name = "experience", columnDefinition = "TEXT")
+    private String experience;
 
     public enum JobType { full_time, part_time, internship, freelance }
     @Enumerated(EnumType.STRING)
@@ -183,5 +192,45 @@ public class Job {
     }
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<JobGroupTagMapping> getJobGroupTagMappings() {
+        return jobGroupTagMappings;
+    }
+
+    public void setJobGroupTagMappings(List<JobGroupTagMapping> jobGroupTagMappings) {
+        this.jobGroupTagMappings = jobGroupTagMappings;
+    }
+
+    public List<JobTagMapping> getJobTagMappings() {
+        return jobTagMappings;
+    }
+
+    public void setJobTagMappings(List<JobTagMapping> jobTagMappings) {
+        this.jobTagMappings = jobTagMappings;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
+    public UUID getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public UUID getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(UUID updatedBy) {
+        this.updatedBy = updatedBy;
     }
 }

@@ -1,0 +1,136 @@
+server:
+  port: 8080
+jwt:
+  secret: ${JWT_SECRET}
+  public-endpoints:
+    - path: /api/user-service/auth/**
+      methods: [ GET, POST ]
+    - path: /api/user-service/companies/**
+      methods: [ GET ]
+    - path: /api/recruit-service/jobs/**
+      methods: [ GET ]
+    - path: /api/recruit-service/job-tag/mapping
+      methods: [ GET ]
+    - path: /api/recruit-service/job-tag/all
+      methods: [ GET ]
+    - path: /api/recruit-service/group-tag/mapping
+      methods: [ GET ]
+    - path: /api/recruit-service/group-tag/all
+      methods: [ GET ]
+    - path: /api/recruit-service/cv-templates/all
+      methods: [ GET ]
+    - path: /swagger-ui/**
+      methods: [ GET ]
+    - path: /v3/api-docs/**
+      methods: [ GET ]
+    - path: /api/user-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/admin-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/recommend-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/notification-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /api/recruit-swagger/v3/api-docs
+      methods: [ GET ]
+    - path: /swagger/**
+      methods: [ GET ]
+    - path: /webjars/**
+      methods: [ GET ]
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - ${FRONTEND_URL}
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        - TokenRelay
+      routes:
+        - id: userservice
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/api/user-service/**
+
+        - id: adminservice
+          uri: ${ADMIN_SERVICE_URL}
+          predicates:
+            - Path=/api/admin-service/**
+
+        - id: recommendservice
+          uri: ${RECOMMEND_SERVICE_URL}
+          predicates:
+            - Path=/api/recommend-service/**
+
+        - id: notificationservice
+          uri: ${NOTIFICATION_SERVICE_URL}
+          predicates:
+            - Path=/api/notification-service/**
+
+        - id: recruitservice
+          uri: ${RECRUIT_SERVICE_URL}
+          predicates:
+            - Path=/api/recruit-service/**
+
+
+        - id: userservice-swagger
+          uri: ${USER_SERVICE_URL}
+          predicates:
+            - Path=/api/user-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/user-swagger/v3/api-docs,/v3/api-docs
+        - id: adminservice-swagger
+          uri: ${ADMIN_SERVICE_URL}
+          predicates:
+            - Path=/api/admin-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/admin-swagger/v3/api-docs,/v3/api-docs
+        - id: recommendservice-swagger
+          uri: ${RECOMMEND_SERVICE_URL}
+          predicates:
+            - Path=/api/recommend-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/recommend-swagger/v3/api-docs,/v3/api-docs
+        - id: notificationservice-swagger
+          uri: ${NOTIFICATION_SERVICE_URL}
+          predicates:
+            - Path=/api/notification-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/notification-swagger/v3/api-docs,/v3/api-docs
+        - id: recruitservice-swagger
+          uri: ${RECRUIT_SERVICE_URL}
+          predicates:
+            - Path=/api/recruit-swagger/v3/api-docs
+          filters:
+            - RewritePath=/api/recruit-swagger/v3/api-docs,/v3/api-docs
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: User Service
+        url: /api/user-swagger/v3/api-docs
+      - name: Admin Service
+        url: /api/admin-swagger/v3/api-docs
+      - name: Recommend Service
+        url: /api/recommend-swagger/v3/api-docs
+      - name: Notification Service
+        url: /api/notification-swagger/v3/api-docs
+      - name: Recruit Service
+        url: /api/recruit-swagger/v3/api-docs
+
+
+

@@ -1,0 +1,29 @@
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VS Code ###
+.vscode/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# Logs & temp
+*.log
+*.tmp
+*.bak
+*.swp
+
+
+# Env configs
+*.env
+

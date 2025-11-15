@@ -133,9 +133,8 @@ const TagManagement: React.FC = () => {
             }
             setIsDialogOpen(false);
             fetchAll();
-        } catch (err) {
-            console.error(err);
-            toast.error("Lưu thất bại");
+        } catch (err: any) {
+            toast.error(err?.message || "Lưu thất bại");
         }
     };
 

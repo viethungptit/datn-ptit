@@ -33,7 +33,7 @@ build/
 .vscode/
 
 # Env configs
-application-*.yml
-application-*.properties
+application-dev.yml
+application-dev.properties
 .env
 

@@ -5,6 +5,7 @@ import { getCurrentUserProfile, logoutAPI } from '../api/userApi';
 import { logout, selectIsAuthenticated } from '../redux/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
+import NotificationUI from './Home/NotificationUI';
 
 const Header = () => {
     const navigate = useNavigate();
@@ -93,26 +94,30 @@ const Header = () => {
                     </>
                 )}
                 {isAuthenticated && (
-                    <div className="relative group">
-                        <button className="flex items-center gap-2 focus:outline-none">
-                            <img
-                                src={profile?.candidate ? `${MINIO_ENDPOINT}/datn/${profile?.candidate?.avatarUrl}` : '/avatar-default.svg'}
-                                alt="avatar"
-                                className="w-8 h-8 border rounded-full object-cover"
-                            />
-                            <span className="uppercase text-sm">
-                                {profile?.fullName || (loading ? '...' : 'Tài khoản')}
-                            </span>
-                        </button>
-                        <div className="absolute right-0 top-[30px] min-w-[220px] text-sm bg-white shadow-lg rounded-md py-2 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
-                            <NavLink to="/profile" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Hồ sơ của tôi</NavLink>
-                            <NavLink to="/manage-cvs" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Quản lý CV</NavLink>
-                            <NavLink to="/change-password" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Đổi mật khẩu</NavLink>
-                            <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">
-                                Đăng xuất
+                    <>
+                        <NotificationUI />
+                        <div className="relative group">
+                            <button className="flex items-center gap-2 focus:outline-none">
+                                <img
+                                    src={profile?.candidate ? `${MINIO_ENDPOINT}/datn/${profile?.candidate?.avatarUrl}` : '/avatar-default.svg'}
+                                    alt="avatar"
+                                    className="w-8 h-8 border rounded-full object-cover"
+                                />
+                                <span className="uppercase text-sm">
+                                    {profile?.fullName || (loading ? '...' : 'Tài khoản')}
+                                </span>
                             </button>
+                            <div className="absolute right-0 top-[30px] min-w-[220px] text-sm bg-white shadow-lg rounded-md py-2 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
+                                <NavLink to="/profile" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Hồ sơ của tôi</NavLink>
+                                <NavLink to="/manage-cvs" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Quản lý CV</NavLink>
+                                <NavLink to="/favorite" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Công việc yêu thích</NavLink>
+                                <NavLink to="/change-password" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Đổi mật khẩu</NavLink>
+                                <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">
+                                    Đăng xuất
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </header>

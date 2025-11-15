@@ -56,6 +56,7 @@ export type Job = {
     groupTagIds?: string[];
     jobTagIds?: string[];
     createdAt?: string;
+    experience?: string;
 };
 
 const JobManagement = () => {
@@ -395,7 +396,19 @@ const JobManagement = () => {
 
                         <div>
                             <Label htmlFor="city">Thành phố</Label>
-                            <Input id="city" placeholder="Thành phố" value={form.city || ''} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+                            <Select
+                                value={form.city || ""}
+                                onValueChange={(value) => setForm(f => ({ ...f, city: value }))}
+                            >
+                                <SelectTrigger id="city">
+                                    <SelectValue placeholder="Chọn thành phố" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Hà Nội">Hà Nội</SelectItem>
+                                    <SelectItem value="Hồ Chí Minh">Hồ Chí Minh</SelectItem>
+                                    <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div>
                             <Label htmlFor="jobType">Loại công việc</Label>
@@ -473,7 +486,26 @@ const JobManagement = () => {
                             <Label htmlFor="deadline">Hạn nộp</Label>
                             <Input id="deadline" type="date" value={form.deadline ? new Date(form.deadline).toISOString().slice(0, 10) : ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
                         </div>
-
+                        <div>
+                            <Label htmlFor="experience">Kinh nghiệm làm việc</Label>
+                            <Select
+                                value={form.experience || ""}
+                                onValueChange={(value) => setForm(f => ({ ...f, experience: value }))}
+                            >
+                                <SelectTrigger id="experience">
+                                    <SelectValue placeholder="Chọn kinh nghiệm" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="intern">Thực tập</SelectItem>
+                                    <SelectItem value="fresher">Fresher</SelectItem>
+                                    <SelectItem value="1-2">1-2 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="2-3">2-3 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="3-4">3-4 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="4-5">4-5 năm kinh nghiệm</SelectItem>
+                                    <SelectItem value="5+">Hơn 5 năm kinh nghiệm</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="col-span-3">
                             <Label htmlFor="description">Mô tả</Label>
                             <Textarea id="description" placeholder="Mô tả" value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={6} />
