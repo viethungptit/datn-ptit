@@ -83,12 +83,12 @@ const EmployerJobs: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [jobsLoading, setJobsLoading] = useState(false);
     const [jobs, setJobs] = useState<Job[]>([]);
-    const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
+    // const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
     const [updating, setUpdating] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
     const [form, setForm] = useState<Partial<Job>>({});
-    const [companies, setCompanies] = useState<Company[]>([]);
+    // const [companies, setCompanies] = useState<Company[]>([]);
     const company: Company | null = profile?.company ?? null;
     const isAdmin = profile?.employer?.admin === true;
 
@@ -117,7 +117,7 @@ const EmployerJobs: React.FC = () => {
                 const res = await getAllJobsByCompany(company.companyId);
                 const allJobs: Job[] = res.data || [];
                 setJobs(allJobs);
-                setPendingJobs(allJobs.filter((j) => j.status === "pending"));
+                // setPendingJobs(allJobs.filter((j) => j.status === "pending"));
             } catch (err) {
                 toast.error("Không thể tải danh sách công việc");
             } finally {
@@ -136,7 +136,7 @@ const EmployerJobs: React.FC = () => {
                     getAllGroupJobTags(),
                 ]);
                 if (!companiesRes || !companiesRes.data) throw new Error("Failed to fetch companies");
-                setCompanies(companiesRes.data || []);
+                // setCompanies(companiesRes.data || []);
                 // map job tags and group tags
                 const jobTagsData = (jobTagsRes as any)?.data ?? jobTagsRes ?? [];
                 const groupTagsData = (groupTagsRes as any)?.data ?? groupTagsRes ?? [];
@@ -323,7 +323,7 @@ const EmployerJobs: React.FC = () => {
                 newStatus === "open" ? "Đã duyệt công việc" : "Đã từ chối công việc"
             );
 
-            setPendingJobs((prev) => prev.filter((j) => j.jobId !== jobId));
+            // setPendingJobs((prev) => prev.filter((j) => j.jobId !== jobId));
             setJobs((prev) =>
                 prev.map((j) =>
                     j.jobId === jobId ? { ...j, status: newStatus } : j
@@ -452,7 +452,7 @@ const EmployerJobs: React.FC = () => {
                                                 </Button>
                                             </div>
                                             <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {new Date(job.deadline).toLocaleDateString("vi-VN")}
+                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
                                             </p>
                                         </div>
                                     )}
@@ -520,7 +520,7 @@ const EmployerJobs: React.FC = () => {
                                                 {updating === job.jobId ? "Đang xử lý..." : "Từ chối"}
                                             </Button>
                                             <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {new Date(job.deadline).toLocaleDateString("vi-VN")}
+                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
                                             </p>
                                         </div>
                                     ) : (
@@ -531,7 +531,7 @@ const EmployerJobs: React.FC = () => {
                                                     ? "Đã đóng"
                                                     : "Chờ duyệt"}
                                             <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {new Date(job.deadline).toLocaleDateString("vi-VN")}
+                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
                                             </p>
                                         </span>
                                     )}
