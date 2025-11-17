@@ -23,20 +23,17 @@ const Companies: React.FC = () => {
     }
 
     const searchCompany = () => {
-        console.log("Searching for:", keyword);
-        if(keyword.trim() === "") {
+        if (keyword.trim() === "") {
             getAllCompaniesApi().then((response) => {
                 setCompanies(response.data);
-                console.log(response.data);
             });
         } else {
             searchCompaniesApi(keyword).then((response) => {
                 setCompanies(response.data);
-                console.log(response.data);
             });
         }
     };
-    
+
     return (
         <div>
             <div className='flex flex-row px-[100px] py-28' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>

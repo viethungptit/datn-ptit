@@ -2,22 +2,28 @@
 import { useEffect, useState } from 'react';
 import { getAllInappDeliveries, markAllInappAsRead, markInappAsRead } from '@/api/notificationApi';
 import { getTimeAgo } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { selectIsAuthenticated } from '@/redux/authSlice';
 
 const NotificationUI = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
 
   // Lấy danh sách thông báo từ backend
+  const fetchNotifications = async () => {
+    try {
+      const response = await getAllInappDeliveries();
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Lấy thông báo thất bại:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await getAllInappDeliveries();
-        setNotifications(response.data);
-      } catch (error) {
-        console.error('Lấy thông báo thất bại:', error);
-      }
-    };
-    fetchNotifications();
-  }, []);
+    if (isAuthenticated) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated]);
 
   const unreadCount = notifications.filter(n => n.is_read === false).length;
 
@@ -73,7 +79,7 @@ const NotificationUI = () => {
         pointer-events-none group-hover:pointer-events-auto 
         transition-opacity
         max-h-[400px] overflow-y-auto"
-        >
+      >
         {notifications.length === 0 ? (
           <div className="px-4 py-3 text-gray-500 text-center">
             Không có thông báo mới
@@ -91,7 +97,7 @@ const NotificationUI = () => {
             {/* Danh sách notifications */}
             {notifications.map(item => (
               <div
-                key={item.inapp_deli_id} 
+                key={item.inapp_deli_id}
                 className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-0 flex items-start text-left"
                 onClick={() => handleNotificationClick(item.inapp_deli_id)}
               >

@@ -467,6 +467,9 @@ public class JobService {
             // chỉ lấy job chưa xóa
             predicates.add(cb.isFalse(root.get("isDeleted")));
 
+            // 🔹 Chỉ lấy job mở (open)
+            predicates.add(cb.equal(root.get("status"), Job.Status.open));
+
             // 🔹 Từ khóa (tên công việc)
             if (keyword != null && !keyword.trim().isEmpty()) {
                 predicates.add(cb.like(
@@ -568,7 +571,7 @@ public class JobService {
         return jobs.stream().map(this::toDto).collect(Collectors.toList());
     }
     @Transactional
-    public JobDto closeJob(UUID jobId, UUID currentUserId) {
+    public JobDto changeJobStatus(UUID jobId, UUID currentUserId, Job.Status status) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         CompanyResponse company = getCompanyByCompanyId(job.getCompanyId());
@@ -577,10 +580,7 @@ public class JobService {
         if (!isEmployer && !isAdmin) {
             throw new AccessDeniedException("Bạn không có quyền đóng công việc này");
         }
-        if (job.getStatus() == Job.Status.closed) {
-            throw new BusinessException("Công việc đã được đóng trước đó");
-        }
-        job.setStatus(Job.Status.closed);
+        job.setStatus(status);
         job = jobRepository.save(job);
 
         // Gửi log sang AdminService
@@ -589,39 +589,11 @@ public class JobService {
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole("ADMIN")
-                        .action("CLOSE_JOB")
+                        .actorRole("EMPLOYER")
+                        .action("CHANGE_STATUS_JOB")
                         .targetType("JOB")
                         .targetId(job.getJobId().toString())
-                        .description(String.format("Nhà tuyển dụng %s đã đóng công việc %s tại công ty %s",
-                                currentUserId, job.getTitle(), company.getCompanyName()))
-                        .build()
-        );
-        return toDto(job);
-    }
-
-    @Transactional
-    public JobDto approveJob(UUID jobId, UUID currentUserId) {
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
-        CompanyResponse company = getCompanyByCompanyId(job.getCompanyId());
-        if (job.getStatus() == Job.Status.open) {
-            throw new BusinessException("Công việc đã được mở trước đó");
-        }
-        job.setStatus(Job.Status.open);
-        job = jobRepository.save(job);
-
-        // Gửi log sang AdminService
-        eventPublisher.publish(
-                logExchange,
-                logActivityRoutingKey,
-                ActivityEvent.builder()
-                        .actorId(currentUserId.toString())
-                        .actorRole("ADMIN")
-                        .action("APPROVE_JOB")
-                        .targetType("JOB")
-                        .targetId(jobId.toString())
-                        .description(String.format("Quản trị viên %s đã duyệt công việc %s tại công ty %s",
+                        .description(String.format("Nhà tuyển dụng %s đã thay đổi trạng thái công việc %s tại công ty %s",
                                 currentUserId, job.getTitle(), company.getCompanyName()))
                         .build()
         );
@@ -657,7 +629,7 @@ public class JobService {
     }
 
     @Transactional
-    public JobDto retryEmbedding(UUID jobId, UUID currentUserId) {
+    public JobDto retryEmbedding(UUID jobId, UUID currentUserId, boolean isAdmin) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc: " + jobId));
         job.setStatusEmbedding(Job.StatusEmbedding.pending);
@@ -671,18 +643,22 @@ public class JobService {
         eventPublisher.publish(embeddingExchange, embeddingJDRoutingKey, event);
 
         // Gửi log sang AdminService
-        CompanyResponse company = getCompanyByUserId(currentUserId);
+        String description = isAdmin
+                ? String.format("Quản trị viên %s đã phân tích lại công việc %s",
+                currentUserId, job.getTitle())
+                : String.format("Nhà tuyển dụng %s đã phân tích lại công việc %s tại công ty %s",
+                currentUserId, job.getTitle(), getCompanyByUserId(currentUserId).getCompanyName());
+
         eventPublisher.publish(
                 logExchange,
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole("EMPLOYER")
+                        .actorRole(isAdmin ? "ADMIN" : "EMPLOYER")
                         .action("RETRY_EMBEDDING")
                         .targetType("JOB")
                         .targetId(job.getJobId().toString())
-                        .description(String.format("Người dùng %s đã thử lại embedding cho công việc %s tại công ty %s",
-                                currentUserId, job.getTitle(), company.getCompanyName()))
+                        .description(description)
                         .build()
         );
         return toDto(job);

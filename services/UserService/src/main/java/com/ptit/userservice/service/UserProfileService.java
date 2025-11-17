@@ -6,6 +6,7 @@ import com.ptit.userservice.entity.Candidate;
 import com.ptit.userservice.entity.Employer;
 import com.ptit.userservice.entity.User;
 import com.ptit.userservice.entity.Candidate.Gender;
+import com.ptit.userservice.entity.enums.EmployerStatus;
 import com.ptit.userservice.exception.BusinessException;
 import com.ptit.userservice.exception.ResourceNotFoundException;
 import com.ptit.userservice.repository.CandidateRepository;
@@ -221,10 +222,23 @@ public class UserProfileService {
     }
 
     @Transactional
-    public EmployerResponse upsertEmployerForAdminByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
+    public EmployerResponse upsertEmployerForAdminByUserId(UUID userId, UUID currentUserId, EmployerUpdateRequest request, boolean isEmployer) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên với ID: " + userId));
         Employer employer = employerRepository.findByUser_UserId(userId).orElse(null);
+        if (isEmployer) {
+            Employer currentEmployer = employerRepository.findByUser_UserId(currentUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà tuyển dụng với user ID: " + currentUserId));
+            if (!currentEmployer.getAdmin()) {
+                throw new BusinessException("Chỉ quản trị viên công ty mới được cập nhật thông tin nhân viên");
+            }
+            if(!currentEmployer.getStatus().equals(EmployerStatus.VERIFIED)) {
+                throw new BusinessException("Chỉ quản trị viên công ty đang hoạt động mới được cập nhật thông tin nhân viên");
+            }
+            if (employer != null &&
+                    !currentEmployer.getCompany().getCompanyId().equals(employer.getCompany().getCompanyId())) {
+                throw new BusinessException("Chỉ có thể cập nhật thông tin cho nhân viên trong công ty của bạn");
+            }
+        }
         if (employer == null) {
             employer = new Employer();
             employer.setUser(user);
@@ -233,24 +247,30 @@ public class UserProfileService {
         if (request.getCompanyId() == null) {
             throw new BusinessException("ID công ty không được để trống");
         }
-        Company company = companyRepository.findById(request.getCompanyId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
+        Company company = companyRepository.findById(request.getCompanyId()).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công ty với ID: " + request.getCompanyId()));
+
         employer.setCompany(company);
         employer.setStatus(request.getStatus());
         employer.setAdmin(request.getAdmin());
-        if (request.getPosition() != null) employer.setPosition(request.getPosition());
+
+        if (request.getPosition() != null)
+            employer.setPosition(request.getPosition());
         employer = employerRepository.save(employer);
 
+        // Gửi log sang AdminService
+        String actorRole = isEmployer ? "COMPANY_ADMIN" : "SYSTEM_ADMIN";
+        String description = isEmployer ? String.format("Quản trị viên công ty %s đã cập nhật thông tin của nhân viên %s", currentUserId, user.getUserId())
+                : String.format("Quản trị viên hệ thống %s đã cập nhật thông tin nhà tuyển dụng %s", currentUserId, user.getUserId());
         eventPublisher.publish(
                 logExchange,
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole("ADMIN")
+                        .actorRole(actorRole)
                         .action("UPDATE_EMPLOYER_PROFILE")
                         .targetType("EMPLOYER")
                         .targetId(user.getUserId().toString())
-                        .description(String.format("Quản trị viên %s đã cập nhật thông tin nhà tuyển dụng %s", currentUserId, user.getUserId()))
+                        .description(description)
                         .build()
         );
         return toEmployerResponse(employer);

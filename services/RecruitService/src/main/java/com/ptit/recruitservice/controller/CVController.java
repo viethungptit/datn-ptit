@@ -109,7 +109,9 @@ public class CVController {
     public CVDto retryEmbedding(@PathVariable("cv_id") UUID cvId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        return cvService.retryEmbedding(cvId, UUID.fromString(currentUserId));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return cvService.retryEmbedding(cvId, UUID.fromString(currentUserId), isAdmin);
     }
 
     @PutMapping("/{cv_id}/status-embedding")
