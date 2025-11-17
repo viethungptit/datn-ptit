@@ -5,7 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { deleteCompanyApi, getAllCompaniesApi, verifyCompanyApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import CompanyDialog from "@/components/Company/CompanyDialog";
-import { useNavigate } from "react-router-dom";
+import EmployerDialog from "@/components/Company/EmployerDialog";
 
 export type Company = {
     companyId: string;
@@ -21,13 +21,17 @@ export type Company = {
     verified?: boolean;
 };
 
+
 const CompanyManagement = () => {
 
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(false);
     const [openDialog, setOpenDialog] = useState(false);
     const [dialogCompany, setDialogCompany] = useState<Company | null>(null);
-    const navigate = useNavigate();
+    const [employerDialogOpen, setEmployerDialogOpen] = useState(false);
+    const [employerDialogCompanyId, setEmployerDialogCompanyId] = useState<string | null>(null);
+    const [employerDialogCompanyName, setEmployerDialogCompanyName] = useState<string | null>(null);
+    // no route navigation needed for employee dialog
     useEffect(() => {
         (async () => {
             setLoading(true);
@@ -43,8 +47,10 @@ const CompanyManagement = () => {
             }
         })();
     }, []);
-    const handleManageEmployees = (companyId: string) => {
-        navigate(`/admin/companies/${companyId}/employers`);
+    const handleManageEmployees = (companyId: string, companyName: string) => {
+        setEmployerDialogCompanyId(companyId);
+        setEmployerDialogCompanyName(companyName);
+        setEmployerDialogOpen(true);
     };
     const openDialogCompany = (company?: Company) => {
         setDialogCompany(company ?? null);
@@ -88,6 +94,8 @@ const CompanyManagement = () => {
 
     // previews and file cleanup are handled inside CompanyDialog now
 
+
+
     return (
         <div className="px-4 py-2">
             <div className="flex justify-between items-center mb-3">
@@ -103,9 +111,9 @@ const CompanyManagement = () => {
                             <TableHead className="text-center">Ngành nghề</TableHead>
                             <TableHead className="text-center">Quy mô</TableHead>
                             <TableHead className="text-center">Địa chỉ</TableHead>
-                            <TableHead className="text-left">Tình trạng</TableHead>
+                            <TableHead className="text-left">Xác thực</TableHead>
                             <TableHead className="text-left">Ngày tạo</TableHead>
-                            <TableHead className="text-left">Hành động</TableHead>
+                            <TableHead className="text-center">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -131,12 +139,12 @@ const CompanyManagement = () => {
                                     <TableCell className="text-center">{c.industry}</TableCell>
                                     <TableCell className="text-center">{c.companySize ?? ''}</TableCell>
                                     <TableCell className="text-center">{c.location}</TableCell>
-                                    <TableCell className="text-left">{c.verified ? 'Đã xác thực' : 'Chưa'}</TableCell>
+                                    <TableCell className="text-left">{c.verified ? 'Đã xác thực' : 'Chưa xác thực'}</TableCell>
                                     <TableCell className="text-left">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-left">
                                         <div className="flex gap-2">
-                                            <Button size="sm" onClick={() => handleManageEmployees(c.companyId)}>
-                                                Quản lý nhân viên
+                                            <Button size="sm" onClick={() => handleManageEmployees(c.companyId, c.companyName)}>
+                                                Quản lý
                                             </Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogCompany(c)}>Sửa</Button>
                                             {!c.verified && <Button size="sm" variant="secondary" onClick={() => handleVerify(c.companyId)}>Xác thực</Button>}
@@ -151,6 +159,15 @@ const CompanyManagement = () => {
             </div>
 
             <CompanyDialog open={openDialog} onOpenChange={setOpenDialog} company={dialogCompany ?? undefined} onSaved={handleDialogSaved} />
+            <EmployerDialog
+                open={employerDialogOpen}
+                onOpenChange={(v) => {
+                    setEmployerDialogOpen(v);
+                    if (!v) setEmployerDialogCompanyId(null);
+                }}
+                companyId={employerDialogCompanyId ?? undefined}
+                companyName={employerDialogCompanyName ?? undefined}
+            />
         </div>
     );
 };

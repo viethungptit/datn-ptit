@@ -2,15 +2,57 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { getAllJobsByCompany } from '@/api/recruitApi';
+import { getAllJobsByCompany, addFavorite, getFavorites, removeFavorite } from '@/api/recruitApi';
 import { getDetailCompanyApi } from '@/api/userApi';
 import type { Job } from './Admin/JobManagement';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
+import { useSelector } from 'react-redux';
+import { selectIsAuthenticated } from '@/redux/authSlice';
+import { toast } from 'react-toastify';
+
+const JOB_TYPE_OPTIONS = [
+    { value: 'full_time', label: 'Toàn thời gian' },
+    { value: 'part_time', label: 'Bán thời gian' },
+    { value: 'internship', label: 'Thực tập' },
+    { value: 'freelance', label: 'Freelance' },
+];
+
+const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Chờ duyệt' },
+    { value: 'open', label: 'Đang mở' },
+    { value: 'closed', label: 'Đã đóng' },
+    { value: 'rejected', label: 'Đã từ chối' },
+];
+
+const EXPERIENCE_OPTIONS = [
+    { value: "intern", label: "Thực tập" },
+    { value: "fresher", label: "Fresher" },
+    { value: "1-2", label: "1-2 năm" },
+    { value: "2-3", label: "2-3 năm" },
+    { value: "3-4", label: "3-4 năm" },
+    { value: "4-5", label: "4-5 năm" },
+    { value: "5+", label: "Trên 5 năm" },
+];
+
+
+const JOB_TYPE_MAP = Object.fromEntries(
+    JOB_TYPE_OPTIONS.map(item => [item.value, item.label])
+);
+
+const EXPERIENCE_MAP = Object.fromEntries(
+    EXPERIENCE_OPTIONS.map(item => [item.value, item.label])
+);
+
+const STATUS_MAP = Object.fromEntries(
+    STATUS_OPTIONS.map(item => [item.value, item.label])
+);
 
 const CompaniesDetail = () => {
     const { companyId } = useParams();
     const [company, setCompany] = useState<any | null>(null);
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
+    const [favoritesMap, setFavoritesMap] = useState<Record<string, any>>({});
 
     useEffect(() => {
         if (!companyId) return;
@@ -35,18 +77,45 @@ const CompaniesDetail = () => {
         fetchData();
     }, [companyId]);
 
-    const jobTypeMap: Record<string, string> = {
-        full_time: 'Toàn thời gian',
-        part_time: 'Bán thời gian',
-        internship: 'Thực tập',
-        freelance: 'Freelance',
-    };
+    useEffect(() => {
+        if (!companyId || !isAuthenticated) return;
+        (async () => {
+            try {
+                const res = await getFavorites();
+                const favList = res?.data || [];
+                const map: Record<string, any> = {};
+                favList.forEach((f: any) => { map[f.jobId] = f; });
+                setFavoritesMap(map);
+            } catch (err) {
+                console.error('Failed to load favorites', err);
+            }
+        })();
+    }, [companyId, isAuthenticated]);
 
-    const displayStatus = (status: string) => {
-        if (!status) return '';
-        if (status === 'closed') return 'Đã đóng';
-        if (status === 'pending') return 'Chờ duyệt';
-        return 'Đang mở';
+    const toggleFavorite = async (jobId: string) => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        const fav = favoritesMap[jobId];
+        try {
+            if (fav) {
+                await removeFavorite(fav.favoriteId);
+                setFavoritesMap(prev => {
+                    const copy = { ...prev };
+                    delete copy[jobId];
+                    return copy;
+                });
+            } else {
+                const res = await addFavorite({ jobId });
+                const newFav = res?.data;
+                setFavoritesMap(prev => ({ ...prev, [jobId]: newFav }));
+            }
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || 'Thao tác thất bại';
+            toast.error(msg);
+        }
     };
 
     const navigateDetailJob = (jobId: string) => {
@@ -68,7 +137,7 @@ const CompaniesDetail = () => {
                             <h1 className="text-2xl text-left font-semibold mb-2 line-clamp-2">{company.companyName}</h1>
                             <div className="flex flex-row justify-between text-gray-600">
                                 <span className='w-1/3 text-left truncate'><i className="fa-solid fa-industry"></i>Technology</span>
-                                <span className='w-1/3 text-left truncate'><i className="fa-regular fa-building"></i> {company.companySize} nhân viên</span>
+                                <span className='w-1/3 text-left truncate'><i className="fa-solid fa-building"></i> {company.companySize} nhân viên</span>
                                 <span className='w-1/3 text-left truncate'><i className="fa-solid fa-link"></i> {company.website}</span>
                             </div>
                             <span className="text-left mt-2 block">{company.location}</span>
@@ -81,44 +150,85 @@ const CompaniesDetail = () => {
                 </div>
                 <div className='my-10 shadow-lg p-6 rounded-lg border'>
                     <h2 className="text-xl font-semibold mb-4 border-b pb-3">Danh sách công việc</h2>
-                    <div className="grid grid-cols-1 gap-6">
+                    <div>
                         {
-                            company.jobs.length !== 0 ?
-                                company.jobs.map((job: Job, index: number) => (
-                                    <div key={index} className="bg-white rounded shadow p-6 flex flex-col md:flex-row items-center justify-between">
-                                        <div className='text-left mb-4 md:mb-0'>
-                                            <h3 className="text-lg font-semibold mb-1 cursor-pointer" onClick={() => navigateDetailJob(job.jobId)}>{job.title}</h3>
-                                            <div className="text-gray-600 text-sm mb-2">{displayStatus(job.status || '')} | {job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : 'N/A'}</div>
-                                            <div className="text-gray-600 text-sm mb-2">{job.location}</div>
-                                            <div className="text-gray-600 text-sm mb-2">Số lượng: {job.quantity}</div>
-                                            <div className="text-red-500 font-semibold">
-                                                {job.minSalary && job.maxSalary
-                                                    ? `${Number(job.minSalary).toLocaleString("vi-VN")} - ${Number(job.maxSalary).toLocaleString("vi-VN")} triệu VNĐ`
-                                                    : "Thoả thuận"
-                                                }
-                                            </div>
-                                        </div>
-                                        <div className='flex flex-col gap-3'>
-                                            <div className='flex flex-col md:flex-row items-center gap-4'>
-                                                <div
-                                                    className="flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] text-txt-red border-background-red rounded-full hover:border-txt-red hover:text-white hover:bg-background-red transition-colors"
-                                                >
-                                                    <i className="fa-regular fa-heart text-lg"></i>
+                            company.jobs.filter((job: Job) => job.status === "open").length !== 0
+                                ?
+                                company.jobs
+                                    .filter((job: Job) => job.status === "open")
+                                    .map((job: Job, index: number) => (
+                                        <div className='flex flex-row p-3' key={index + job.jobId + job.title + job.companyId}>
+                                            <div className="grid grid-cols-2 w-5/6 gap-y-2 text-sm text-gray-700">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">Vị trí:</span>
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        {job.title}
+                                                    </h3>
                                                 </div>
-                                                <Button variant="seek" onClick={() => navigateDetailJob(job.jobId)}>Ứng tuyển</Button>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-layer-group text-gray-500"></i>
+                                                    <span className="font-medium">Loại hình:</span> {JOB_TYPE_MAP[job.jobType ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium"><i className="fa-solid fa-sack-dollar text-gray-500"></i> Mức lương:</span>
+                                                    <p className="text-background-red font-semibold text-lg">
+                                                        {job.minSalary && job.maxSalary
+                                                            ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} VNĐ`
+                                                            : "Thoả thuận"}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-clock text-gray-500"></i>
+                                                    <span className="font-medium">Trạng thái:</span> {STATUS_MAP[job.status ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-briefcase-medical text-gray-500"></i>
+                                                    <span className="font-medium">Kinh nghiệm:</span> {EXPERIENCE_MAP[job.experience ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-users text-gray-500"></i>
+                                                    <span className="font-medium">Số lượng:</span> {job.quantity} người
+                                                </div>
                                             </div>
-                                            <div className="text-gray-600 text-sm mb-2">Hạn cuối: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}</div>
+
+                                            <div className='w-1/6 flex flex-col gap-3 justify-center items-center'>
+                                                <div className="flex flex-row items-center gap-2">
+                                                    <div
+                                                        onClick={(e) => { e.stopPropagation(); toggleFavorite(job.jobId); }}
+                                                        className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favoritesMap[job.jobId]
+                                                            ? 'bg-background-red text-white border-txt-red'
+                                                            : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'
+                                                            }`}
+                                                    >
+                                                        <i className={`${favoritesMap[job.jobId] ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
+                                                    </div>
+                                                    <Button variant="seek" onClick={() => navigateDetailJob(job.jobId)}>Ứng tuyển</Button>
+                                                </div>
+
+                                                <div className="flex text-sm items-center gap-2 text-gray-500">
+                                                    <i className="fa-solid fa-calendar-days text-gray-500"></i>
+                                                    <span className="font-medium">Hạn:</span>
+                                                    {job.deadline
+                                                        ? new Date(job.deadline).toLocaleDateString("vi-VN")
+                                                        : "--"}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))
                                 :
                                 <div>Không có công việc nào</div>
                         }
                     </div>
+
                 </div>
             </div>
             <Footer />
-        </div>
+        </div >
     );
 };
 

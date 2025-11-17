@@ -44,7 +44,8 @@ import CVPreviewPage from './pages/CVPreviewPage';
 import JobManagement from './pages/Admin/JobManagement';
 import ChangePassword from './pages/Admin/ChangePassword';
 import EmployerJobs from './pages/Employer/EmployerJobs';
-import EmployerManagement from './pages/Admin/EmployerManagement';
+import EmployerManagement from './pages/Employer/EmployerManagement';
+import CVManagement from './pages/Admin/CVManagement';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -69,11 +70,10 @@ function App() {
     '/preview-cvs/:cvId',
   ];
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const hideHeaderForPath = noHeaderPaths.some((path) => matchPath({ path, end: true }, location.pathname));
   const showHeader = (!isAuthenticated || userRole === 'candidate') && !hideHeaderForPath;
-
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const isEmployerOrAdmin = userRole === 'employer' || userRole === 'admin';
+  const isEmployerOrAdmin = (userRole === 'employer' || userRole === 'admin') && !hideHeaderForPath;
   const headerHeight = showHeader ? 70 : 0;
 
   return (
@@ -119,22 +119,15 @@ function App() {
 
           <Route path="/employer/profile" element={<RoleRoute element={<EmployerProfile />} allowedRoles={['employer']} />} />
           <Route path="/employer/jobs" element={<RoleRoute element={<EmployerJobs />} allowedRoles={['employer']} />} />
+          <Route path="/employer/employers" element={<RoleRoute element={<EmployerManagement />} allowedRoles={['employer']} />} />
 
           {/* Admin user management route */}
           <Route path="/admin/users" element={<RoleRoute element={<UserManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
-          <Route
-            path="/admin/companies/:companyId/employers"
-            element={
-              <RoleRoute
-                element={<EmployerManagement />}
-                allowedRoles={['admin']}
-              />
-            }
-          />
           <Route path="/admin/jobs" element={<RoleRoute element={<JobManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/tags" element={<RoleRoute element={<TagManagement />} allowedRoles={['admin']} />} />
+          <Route path="/admin/cvs" element={<RoleRoute element={<CVManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates" element={<RoleRoute element={<CVTemplateManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates/new" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />
           <Route path="/admin/templates/:templateId" element={<RoleRoute element={<CVTemplateEditor />} allowedRoles={['admin']} />} />

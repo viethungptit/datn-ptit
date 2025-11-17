@@ -7,13 +7,14 @@ import {
     getAllJobsByCompany,
     createJob,
     createJobForAdmin,
-    deleteJob,
-    closeJob,
     getAllJobTags,
     getAllGroupJobTags,
     updateJobForAdmin,
+    changeStatusJob,
+    retryEmbeddingJob,
 } from "@/api/recruitApi";
-import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+
+import JobDetailDialog from '@/components/JobDetailDialog';
 import { toast } from "react-toastify";
 import {
     Dialog,
@@ -48,7 +49,8 @@ export type Job = {
     jobType?: string; // expected: full_time, part_time, internship, freelance
     quantity?: number;
     deadline?: string;
-    status?: string; // pending | closed | open
+    status?: string; // pending | closed | open | rejected
+    statusEmbedding?: string; // pending | embedded | failed
     deleted?: boolean;
     groupTagIds?: string[];
     jobTagIds?: string[];
@@ -74,21 +76,62 @@ const JOB_TYPE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Chờ duyệt' },
     { value: 'open', label: 'Đang mở' },
     { value: 'closed', label: 'Đã đóng' },
+    { value: 'rejected', label: 'Đã từ chối' },
 ];
+
+const STATUS_EMBEDDING_OPTIONS = [
+    { value: "pending", label: "Đang chờ" },
+    { value: "embedded", label: "Hoàn tất" },
+    { value: "failed", label: "Thất bại" },
+];
+
+const EXPERIENCE_OPTIONS = [
+    { value: "intern", label: "Thực tập" },
+    { value: "fresher", label: "Fresher" },
+    { value: "1-2", label: "1-2 năm" },
+    { value: "2-3", label: "2-3 năm" },
+    { value: "3-4", label: "3-4 năm" },
+    { value: "4-5", label: "4-5 năm" },
+    { value: "5+", label: "Trên 5 năm" },
+];
+
+
+const JOB_TYPE_MAP = Object.fromEntries(
+    JOB_TYPE_OPTIONS.map(item => [item.value, item.label])
+);
+
+const EXPERIENCE_MAP = Object.fromEntries(
+    EXPERIENCE_OPTIONS.map(item => [item.value, item.label])
+);
+
+const STATUS_MAP = Object.fromEntries(
+    STATUS_OPTIONS.map(item => [item.value, item.label])
+);
+
+const STATUS_EMBEDDING_MAP = Object.fromEntries(
+    STATUS_EMBEDDING_OPTIONS.map(item => [item.value, item.label])
+);
+
+
 const EmployerJobs: React.FC = () => {
     const navigate = useNavigate();
     const [profile, setProfile] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [jobsLoading, setJobsLoading] = useState(false);
     const [jobs, setJobs] = useState<Job[]>([]);
-    // const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
     const [updating, setUpdating] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
+    const [detailJobId, setDetailJobId] = useState<string | null>(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const handleDetailOpenChange = (open: boolean) => {
+        setDetailOpen(open);
+        if (!open) setDetailJobId(null);
+    };
     const [isEdit, setIsEdit] = useState(false);
     const [form, setForm] = useState<Partial<Job>>({});
-    // const [companies, setCompanies] = useState<Company[]>([]);
     const company: Company | null = profile?.company ?? null;
     const isAdmin = profile?.employer?.admin === true;
 
@@ -117,7 +160,6 @@ const EmployerJobs: React.FC = () => {
                 const res = await getAllJobsByCompany(company.companyId);
                 const allJobs: Job[] = res.data || [];
                 setJobs(allJobs);
-                // setPendingJobs(allJobs.filter((j) => j.status === "pending"));
             } catch (err) {
                 toast.error("Không thể tải danh sách công việc");
             } finally {
@@ -136,7 +178,6 @@ const EmployerJobs: React.FC = () => {
                     getAllGroupJobTags(),
                 ]);
                 if (!companiesRes || !companiesRes.data) throw new Error("Failed to fetch companies");
-                // setCompanies(companiesRes.data || []);
                 // map job tags and group tags
                 const jobTagsData = (jobTagsRes as any)?.data ?? jobTagsRes ?? [];
                 const groupTagsData = (groupTagsRes as any)?.data ?? groupTagsRes ?? [];
@@ -153,6 +194,7 @@ const EmployerJobs: React.FC = () => {
 
     const [jobTags, setJobTags] = useState<JobTag[]>([]);
     const [groupTags, setGroupTags] = useState<GroupTag[]>([]);
+    const [retryingEmbeddings, setRetryingEmbeddings] = useState<string[]>([]);
     const openDialogJob = (job?: Job) => {
         if (job) {
             setForm({ ...job });
@@ -178,20 +220,27 @@ const EmployerJobs: React.FC = () => {
             return { ...f, jobTagIds: next };
         });
     };
-    const handleDelete = async (jobId: string) => {
-        if (!window.confirm("Xác nhận xóa công việc này?")) return;
+
+    const handleRetryEmbedding = async (jobId: string) => {
         try {
-            await deleteJob(jobId);
-            setJobs((prev) => prev.filter((j) => j.jobId !== jobId));
-            toast.success("Đã xóa công việc");
-        } catch (err) {
-            toast.error("Xóa thất bại");
+            setRetryingEmbeddings(prev => Array.from(new Set([...prev, jobId])));
+            const res = await retryEmbeddingJob(jobId);
+            const updated = res?.data;
+            if (updated) {
+                setJobs(prev => prev.map(j => (j.jobId === jobId ? { ...j, ...(updated || {}) } : j)));
+            }
+            toast.success('Khởi chạy lại embedding thành công');
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || 'Khởi chạy lại embedding thất bại';
+            toast.error(msg);
+        } finally {
+            setRetryingEmbeddings(prev => prev.filter(id => id !== jobId));
         }
     };
 
     const handleCloseJob = async (jobId: string) => {
         try {
-            await closeJob(jobId);
+            await changeStatusJob(jobId, "closed");
             setJobs((prev) =>
                 prev.map((j) => (j.jobId === jobId ? { ...j, status: "closed" } : j))
             );
@@ -202,9 +251,16 @@ const EmployerJobs: React.FC = () => {
     };
 
     const handleSubmit = async () => {
-        console.log("form ", form)
-        if (!form.title) {
-            toast.error("Vui lòng nhập tiêu đề công việc");
+        if (!form.title || !form.jobType || form.minSalary === undefined || form.maxSalary === undefined || !form.location || !form.city || !form.quantity || !form.deadline || !form.experience || !form.description) {
+            toast.error("Vui lòng nhập đầy đủ các trường bắt buộc");
+            return;
+        }
+        if (form.quantity! <= 0) {
+            toast.error("Vui lòng nhập số lượng hợp lệ");
+            return;
+        }
+        if (form.minSalary! < 0 || form.maxSalary! < 0 || form.minSalary! > form.maxSalary!) {
+            toast.error("Vui lòng nhập mức lương hợp lệ, mức lương tối thiểu phải nhỏ hơn hoặc bằng mức lương tối đa");
             return;
         }
 
@@ -222,8 +278,9 @@ const EmployerJobs: React.FC = () => {
                 jobTagIds: form.jobTagIds,
                 quantity: form.quantity,
                 deadline: form.deadline,
+                companyId: company?.companyId,
+                experience: form.experience,
             };
-            payload.companyId = company?.companyId;
 
             let res;
             if (isEdit && form.jobId) {
@@ -231,13 +288,13 @@ const EmployerJobs: React.FC = () => {
                 const updated = res?.data;
                 setJobs(jobs.map(j => (j.jobId === form.jobId ? { ...j, ...updated } : j)));
                 toast.success('Cập nhật công việc thành công');
-            } else {
+            }
+            else {
                 if (isAdmin) {
                     res = await createJobForAdmin(payload as any);
                 } else {
                     res = await createJob(payload as any);
                 }
-
                 const newJob = res?.data;
                 if (newJob) {
                     const mapped: Job = {
@@ -253,6 +310,7 @@ const EmployerJobs: React.FC = () => {
                         quantity: newJob.quantity,
                         deadline: newJob.deadline,
                         status: newJob.status,
+                        statusEmbedding: newJob.statusEmbedding,
                         deleted: newJob.deleted,
                         createdBy: newJob.createdBy,
                         updatedBy: newJob.updatedBy,
@@ -260,10 +318,8 @@ const EmployerJobs: React.FC = () => {
                     };
                     setJobs(prev => [...prev, mapped]);
                 }
-
                 toast.success('Thêm công việc thành công');
             }
-
             const updatedJob = res?.data;
             if (updatedJob) {
                 setJobs((prev) => {
@@ -282,48 +338,13 @@ const EmployerJobs: React.FC = () => {
         }
     };
 
-    const handleApproveOrReject = async (jobId: string, newStatus: "open" | "closed") => {
+    const handleApproveOrReject = async (jobId: string, newStatus: "open" | "rejected") => {
         try {
             setUpdating(jobId);
-
-
-            const job = jobs.find((j) => j.jobId === jobId);
-            if (!job) {
-                toast.error("Không tìm thấy công việc!");
-                return;
-            }
-
-
-            const payload: Partial<Job> = {
-                jobId: job.jobId,
-                companyId: job.companyId,
-                title: job.title,
-                description: job.description,
-                minSalary: job.minSalary,
-                maxSalary: job.maxSalary,
-                location: job.location,
-                city: job.city,
-                jobType: job.jobType,
-                quantity: job.quantity,
-                deadline: job.deadline,
-                status: newStatus,
-                deleted: job.deleted,
-                groupTagIds: job.groupTagIds,
-                jobTagIds: job.jobTagIds,
-                experience: job.experience,
-                createdBy: job.createdBy,
-                updatedBy: job.updatedBy,
-            };
-
-
-            await updateJobForAdmin(jobId, payload);
-
-
+            await changeStatusJob(jobId, newStatus);
             toast.success(
                 newStatus === "open" ? "Đã duyệt công việc" : "Đã từ chối công việc"
             );
-
-            // setPendingJobs((prev) => prev.filter((j) => j.jobId !== jobId));
             setJobs((prev) =>
                 prev.map((j) =>
                     j.jobId === jobId ? { ...j, status: newStatus } : j
@@ -344,7 +365,7 @@ const EmployerJobs: React.FC = () => {
     if (!company)
         return (
             <div className="text-center py-10">
-                <h1>Bạn chưa đăng ký công ty</h1>
+                <h1 className="mb-4">Bạn chưa đăng ký công ty</h1>
                 <Button onClick={() => navigate("/employer/profile")}>Đăng ký công ty</Button>
             </div>
         );
@@ -352,32 +373,32 @@ const EmployerJobs: React.FC = () => {
     if (!company.verified)
         return (
             <div className="text-center py-10">
-                <h1>Công ty của bạn chưa được duyệt</h1>
+                <h1 className="mb-4">Công ty của bạn chưa được xác minh</h1>
                 <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
             </div>
         );
     if (profile.employer.status !== 'VERIFIED')
         return (
             <div className="text-center py-10">
-                <h1>Hồ sơ của bạn chưa được xác thực</h1>
+                <h1 className="mb-4">Hồ sơ của bạn chưa được xác thực</h1>
                 <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
             </div>
         );
     return (
-        <div className="w-full py-10 flex flex-col items-center px-6">
-            <div className="flex justify-between w-full max-w-6xl mb-6">
-                <h1 className="text-2xl font-semibold text-txt-red">
-                    Quản lý công việc của công ty
-                </h1>
-                <Button variant="login" onClick={() => openDialogJob()}>
-                    + Tạo công việc
+        <div className="px-4 py-2">
+            <div className="flex justify-between w-full">
+                <h2 className="font-semibold">Quản lý công việc của công ty</h2>
+                <Button size="sm" variant="login" onClick={() => openDialogJob()}>
+                    Tạo công việc
                 </Button>
             </div>
 
-            <Tabs defaultValue="company-jobs" className="w-full max-w-6xl">
+            <Tabs defaultValue="company-jobs">
                 <TabsList className="flex justify-center mb-8">
                     <TabsTrigger value="company-jobs">Công việc của công ty</TabsTrigger>
                     <TabsTrigger value="pending-jobs">Công việc chờ duyệt</TabsTrigger>
+                    <TabsTrigger value="closed-jobs">Công việc đã đóng</TabsTrigger>
+                    <TabsTrigger value="rejected-jobs">Công việc đã từ chối</TabsTrigger>
                 </TabsList>
 
                 {/* TAB 1 */}
@@ -391,71 +412,106 @@ const EmployerJobs: React.FC = () => {
                             {jobs.filter((j) => j.status === "open" && profile.employer.status === 'VERIFIED').map((job) => (
                                 <div
                                     key={job.jobId}
-                                    onClick={() => navigate(`/jobs/${job.jobId}`)}
-                                    className="flex justify-between items-center bg-white rounded-xl shadow-md p-5 border hover:bg-gray-50 cursor-pointer transition"
+                                    className="flex items-start justify-between bg-white border rounded-xl p-5 shadow-sm hover:shadow-md hover:bg-gray-50 transition "
                                 >
-                                    <div className="flex items-center gap-5">
-                                        <img
-                                            src={
-                                                company.logoUrl
-                                                    ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}`
-                                                    : "/company-default.svg"
-                                            }
-                                            alt="Logo công ty"
-                                            className="w-16 h-16 rounded-md object-cover border"
-                                            onError={(e) => (e.currentTarget.src = "/company-default.svg")}
-                                        />
-                                        <div>
-                                            <h3 className="font-semibold text-lg">{job.title}</h3>
-                                            <p className="text-sm text-gray-600">{company.companyName}</p>
-                                            <p className="text-txt-red font-medium">
-                                                {job.minSalary && job.maxSalary
-                                                    ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} triệu VNĐ`
-                                                    : "Thoả thuận"}
-                                            </p>
-                                            <p className="text-gray-500 text-sm">
-                                                Trạng thái: <b>{job.status}</b>
-                                            </p>
+                                    <div className="flex flex-col gap-3 flex-1">
+                                        <div className="grid grid-cols-3 gap-y-2 text-sm text-gray-700">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Vị trí:</span>
+                                                <h3 className="text-lg font-semibold text-gray-900">
+                                                    {job.title}
+                                                </h3>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-layer-group text-gray-500"></i>
+                                                <span className="font-medium">Loại hình:</span> {JOB_TYPE_MAP[job.jobType ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-clock text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái:</span> {STATUS_MAP[job.status ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Mức lương:</span>
+                                                <p className="text-background-red font-semibold text-lg">
+                                                    {job.minSalary && job.maxSalary
+                                                        ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} VNĐ`
+                                                        : "Thoả thuận"}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-briefcase-medical text-gray-500"></i>
+                                                <span className="font-medium">Kinh nghiệm:</span> {EXPERIENCE_MAP[job.experience ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-users text-gray-500"></i>
+                                                <span className="font-medium">Số lượng:</span> {job.quantity}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-calendar-days text-gray-500"></i>
+                                                <span className="font-medium">Hạn:</span>
+                                                {job.deadline
+                                                    ? new Date(job.deadline).toLocaleDateString("vi-VN")
+                                                    : "--"}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-magnifying-glass-chart text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái phân tích:</span>
+                                                <span>
+                                                    {STATUS_EMBEDDING_MAP[job.statusEmbedding ?? ""] || "--"}
+                                                    {job.statusEmbedding === 'failed' && (
+                                                        <i
+                                                            role="button"
+                                                            aria-label="Retry embedding"
+                                                            title="Khởi chạy lại embedding"
+                                                            onClick={(e) => { e.stopPropagation(); handleRetryEmbedding(job.jobId); }}
+                                                            className={`ml-1 fa-lg fa-solid fa-arrows-rotate cursor-pointer hover:animate-spin ${retryingEmbeddings.includes(job.jobId) ? 'animate-spin' : ''}`}
+                                                        />
+                                                    )}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {isAdmin && (
-                                        <div
-                                            className="flex flex-col gap-2 text-right"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => openDialogJob(job)}
-                                                >
-                                                    Sửa
-                                                </Button>
-
-                                                {job.status !== "closed" && (
+                                    <div
+                                        className="flex flex-col items-end gap-3 min-w-[170px]"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setDetailJobId(job.jobId); setDetailOpen(true); }}
+                                            >
+                                                Xem
+                                            </Button>
+                                            {isAdmin && (
+                                                <>
                                                     <Button
                                                         size="sm"
-                                                        variant="secondary"
-                                                        onClick={() => handleCloseJob(job.jobId)}
+                                                        variant="outline"
+                                                        onClick={() => openDialogJob(job)}
                                                     >
-                                                        Đóng
+                                                        Sửa
                                                     </Button>
-                                                )}
 
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={() => handleDelete(job.jobId)}
-                                                >
-                                                    Xóa
-                                                </Button>
-                                            </div>
-                                            <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
-                                            </p>
+                                                    {job.status !== "closed" && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => handleCloseJob(job.jobId)}
+                                                        >
+                                                            Đóng
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -467,6 +523,8 @@ const EmployerJobs: React.FC = () => {
                 <TabsContent value="pending-jobs">
                     {jobsLoading ? (
                         <div className="text-center py-10">Đang tải công việc...</div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-10">Chưa có công việc nào được tạo.</div>
                     ) : (
                         <div className="flex flex-col gap-4">
 
@@ -476,71 +534,247 @@ const EmployerJobs: React.FC = () => {
                             ).map((job) => (
                                 <div
                                     key={job.jobId}
-                                    onClick={() => navigate(`/jobs/${job.jobId}`)}
-                                    className="flex justify-between items-center bg-white rounded-xl shadow-md p-5 border hover:bg-gray-50 cursor-pointer transition"
+                                    onClick={() => { setDetailJobId(job.jobId); setDetailOpen(true); }}
+                                    className="flex items-start justify-between bg-white border rounded-xl p-5 shadow-sm hover:shadow-md hover:bg-gray-50 transition "
                                 >
-                                    <div className="flex items-center gap-5">
-                                        <img
-                                            src={
-                                                company.logoUrl
-                                                    ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}`
-                                                    : "/company-default.svg"
-                                            }
-                                            alt="Logo công ty"
-                                            className="w-16 h-16 rounded-md object-cover border"
-                                            onError={(e) => (e.currentTarget.src = "/company-default.svg")}
-                                        />
-                                        <div>
-                                            <h3 className="font-semibold text-lg">{job.title}</h3>
-                                            <p className="text-sm text-gray-600">{company.companyName}</p>
-                                            <p className="text-txt-red font-medium">
-                                                {job.minSalary && job.maxSalary
-                                                    ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} triệu VNĐ`
-                                                    : "Thoả thuận"}
-                                            </p>
-                                            <p className="text-gray-500 text-sm">
-                                                Trạng thái: <b>{job.status}</b>
-                                            </p>
+                                    <div className="flex flex-col gap-3 flex-1">
+                                        <div className="grid grid-cols-3 gap-y-2 text-sm text-gray-700">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Vị trí:</span>
+                                                <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-layer-group text-gray-500"></i>
+                                                <span className="font-medium">Loại hình:</span> {JOB_TYPE_MAP[job.jobType ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-clock text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái:</span> {STATUS_MAP[job.status ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Mức lương:</span>
+                                                <p className="text-background-red font-semibold text-lg">{job.minSalary && job.maxSalary ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} VNĐ` : "Thoả thuận"}</p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-briefcase-medical text-gray-500"></i>
+                                                <span className="font-medium">Kinh nghiệm:</span> {EXPERIENCE_MAP[job.experience ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-users text-gray-500"></i>
+                                                <span className="font-medium">Số lượng:</span> {job.quantity}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-calendar-days text-gray-500"></i>
+                                                <span className="font-medium">Hạn:</span>
+                                                {job.deadline ? new Date(job.deadline).toLocaleDateString("vi-VN") : "--"}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-magnifying-glass-chart text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái phân tích:</span>
+                                                <span>
+                                                    {STATUS_EMBEDDING_MAP[job.statusEmbedding ?? ""] || "--"}
+                                                    {job.statusEmbedding === 'failed' && (
+                                                        <i
+                                                            role="button"
+                                                            aria-label="Retry embedding"
+                                                            title="Khởi chạy lại embedding"
+                                                            onClick={(e) => { e.stopPropagation(); handleRetryEmbedding(job.jobId); }}
+                                                            className={`ml-1 fa-lg fa-solid fa-arrows-rotate cursor-pointer hover:animate-spin ${retryingEmbeddings.includes(job.jobId) ? 'animate-spin' : ''}`}
+                                                        />
+                                                    )}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    {isAdmin ? (
+                                    <div className="flex flex-col items-end gap-3 min-w-[170px]" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex gap-2">
-                                            <Button
-                                                variant="default"
-                                                disabled={updating === job.jobId}
-                                                onClick={() => handleApproveOrReject(job.jobId, "open")}
-                                            >
-                                                {updating === job.jobId ? "Đang duyệt..." : "Duyệt"}
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                disabled={updating === job.jobId}
-                                                onClick={() => handleApproveOrReject(job.jobId, "closed")}
-                                            >
-                                                {updating === job.jobId ? "Đang xử lý..." : "Từ chối"}
-                                            </Button>
-                                            <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
-                                            </p>
+                                            <Button size="sm" variant="outline" onClick={() => { setDetailJobId(job.jobId); setDetailOpen(true); }}>Xem</Button>
+                                            {isAdmin &&
+                                                <>
+                                                    <Button size="sm" variant="default" disabled={updating === job.jobId} onClick={() => handleApproveOrReject(job.jobId, "open")}>{updating === job.jobId ? "Đang duyệt..." : "Duyệt"}</Button>
+                                                    <Button size="sm" variant="destructive" disabled={updating === job.jobId} onClick={() => handleApproveOrReject(job.jobId, "rejected")}>{updating === job.jobId ? "Đang xử lý..." : "Từ chối"}</Button>
+                                                </>
+                                            }
                                         </div>
-                                    ) : (
-                                        <span className="font-medium capitalize">
-                                            {job.status === "open"
-                                                ? "Đã duyệt"
-                                                : job.status === "closed"
-                                                    ? "Đã đóng"
-                                                    : "Chờ duyệt"}
-                                            <p className="text-gray-400 text-xs mt-1">
-                                                Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : ''}
-                                            </p>
-                                        </span>
-                                    )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="closed-jobs">
+                    {jobsLoading ? (
+                        <div className="text-center py-10">Đang tải công việc...</div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-10">Chưa có công việc nào được tạo.</div>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+
+                            {jobs.filter((j) => j.status === "closed")
+                                .map((job) => (
+                                    <div
+                                        key={job.jobId}
+                                        className="flex items-start justify-between bg-white border rounded-xl p-5 shadow-sm hover:shadow-md hover:bg-gray-50 transition "
+                                    >
+                                        <div className="flex flex-col gap-3 flex-1">
+                                            <div className="grid grid-cols-3 gap-y-2 text-sm text-gray-700">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">Vị trí:</span>
+                                                    <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-layer-group text-gray-500"></i>
+                                                    <span className="font-medium">Loại hình:</span> {JOB_TYPE_MAP[job.jobType ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-clock text-gray-500"></i>
+                                                    <span className="font-medium">Trạng thái:</span> {STATUS_MAP[job.status ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">Mức lương:</span>
+                                                    <p className="text-background-red font-semibold text-lg">{job.minSalary && job.maxSalary ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} VNĐ` : "Thoả thuận"}</p>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-briefcase-medical text-gray-500"></i>
+                                                    <span className="font-medium">Kinh nghiệm:</span> {EXPERIENCE_MAP[job.experience ?? ""] || "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-users text-gray-500"></i>
+                                                    <span className="font-medium">Số lượng:</span> {job.quantity}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-calendar-days text-gray-500"></i>
+                                                    <span className="font-medium">Hạn:</span>
+                                                    {job.deadline ? new Date(job.deadline).toLocaleDateString("vi-VN") : "--"}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <i className="fa-solid fa-magnifying-glass-chart text-gray-500"></i>
+                                                    <span className="font-medium">Trạng thái phân tích:</span>
+                                                    <span>
+                                                        {STATUS_EMBEDDING_MAP[job.statusEmbedding ?? ""] || "--"}
+                                                        {job.statusEmbedding === 'failed' && (
+                                                            <i
+                                                                role="button"
+                                                                aria-label="Retry embedding"
+                                                                title="Khởi chạy lại embedding"
+                                                                onClick={(e) => { e.stopPropagation(); handleRetryEmbedding(job.jobId); }}
+                                                                className={`ml-1 fa-lg fa-solid fa-arrows-rotate cursor-pointer hover:animate-spin ${retryingEmbeddings.includes(job.jobId) ? 'animate-spin' : ''}`}
+                                                            />
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-3 min-w-[170px]" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" onClick={() => { setDetailJobId(job.jobId); setDetailOpen(true); }}>Xem</Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="rejected-jobs">
+                    {jobsLoading ? (
+                        <div className="text-center py-10">Đang tải công việc...</div>
+                    ) : jobs.length === 0 ? (
+                        <div className="text-center py-10">Chưa có công việc nào được tạo.</div>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+
+                            {(isAdmin
+                                ? jobs.filter((j) => j.status === "rejected")
+                                : jobs.filter((j) => j.createdBy === profile?.userId && j.status === 'rejected')
+                            ).map((job) => (
+                                <div
+                                    key={job.jobId}
+                                    className="flex items-start justify-between bg-white border rounded-xl p-5 shadow-sm hover:shadow-md hover:bg-gray-50 transition "
+                                >
+                                    <div className="flex flex-col gap-3 flex-1">
+                                        <div className="grid grid-cols-3 gap-y-2 text-sm text-gray-700">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Vị trí:</span>
+                                                <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-layer-group text-gray-500"></i>
+                                                <span className="font-medium">Loại hình:</span> {JOB_TYPE_MAP[job.jobType ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-clock text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái:</span> {STATUS_MAP[job.status ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">Mức lương:</span>
+                                                <p className="text-background-red font-semibold text-lg">{job.minSalary && job.maxSalary ? `${job.minSalary.toLocaleString("vi-VN")} - ${job.maxSalary.toLocaleString("vi-VN")} VNĐ` : "Thoả thuận"}</p>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-briefcase-medical text-gray-500"></i>
+                                                <span className="font-medium">Kinh nghiệm:</span> {EXPERIENCE_MAP[job.experience ?? ""] || "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-users text-gray-500"></i>
+                                                <span className="font-medium">Số lượng:</span> {job.quantity}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-calendar-days text-gray-500"></i>
+                                                <span className="font-medium">Hạn:</span>
+                                                {job.deadline ? new Date(job.deadline).toLocaleDateString("vi-VN") : "--"}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <i className="fa-solid fa-magnifying-glass-chart text-gray-500"></i>
+                                                <span className="font-medium">Trạng thái phân tích:</span>
+                                                <span>
+                                                    {STATUS_EMBEDDING_MAP[job.statusEmbedding ?? ""] || "--"}
+                                                    {job.statusEmbedding === 'failed' && (
+                                                        <i
+                                                            role="button"
+                                                            aria-label="Retry embedding"
+                                                            title="Khởi chạy lại embedding"
+                                                            onClick={(e) => { e.stopPropagation(); handleRetryEmbedding(job.jobId); }}
+                                                            className={`ml-1 fa-lg fa-solid fa-arrows-rotate cursor-pointer hover:animate-spin ${retryingEmbeddings.includes(job.jobId) ? 'animate-spin' : ''}`}
+                                                        />
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-3 min-w-[170px]" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => { setDetailJobId(job.jobId); setDetailOpen(true); }}>Xem</Button>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </TabsContent>
             </Tabs>
+
+            <JobDetailDialog open={detailOpen} onOpenChange={handleDetailOpenChange} jobId={detailJobId} />
 
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogContent className="max-w-7xl">
@@ -558,10 +792,10 @@ const EmployerJobs: React.FC = () => {
 
                         <div>
                             <Label htmlFor="company">Công ty</Label>
-                            <input
+                            <Input
                                 id="company"
                                 type="text"
-                                className="w-full mt-1 px-3 py-2 border rounded-md bg-gray-100 text-gray-700 cursor-not-allowed"
+                                className="cursor-not-allowed"
                                 value={company?.companyName ?? "Chưa có công ty"}
                                 disabled
                             />
@@ -569,7 +803,7 @@ const EmployerJobs: React.FC = () => {
 
                         <div className="flex justify-between">
                             <div className="mr-3">
-                                <Label htmlFor="minSalary">Mức lương khởi điểm</Label>
+                                <Label htmlFor="minSalary">Mức lương khởi điểm (VNĐ)</Label>
                                 <Input
                                     id="minSalary"
                                     type="number"
@@ -585,7 +819,7 @@ const EmployerJobs: React.FC = () => {
                             </div>
 
                             <div>
-                                <Label htmlFor="maxSalary">Mức lương tối đa</Label>
+                                <Label htmlFor="maxSalary">Mức lương tối đa (VNĐ)</Label>
                                 <Input
                                     id="maxSalary"
                                     type="number"

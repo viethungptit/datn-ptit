@@ -1,22 +1,47 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { getJob } from '@/api/recruitApi';
+import { getJob, addFavorite, getFavorites, removeFavorite } from '@/api/recruitApi';
 import { getDetailCompanyApi } from '@/api/userApi';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { formatTime } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { selectIsAuthenticated } from '@/redux/authSlice';
+import { toast } from 'react-toastify';
 
-const jobTypeMap: Record<string, string> = {
-    full_time: 'Toàn thời gian',
-    part_time: 'Bán thời gian',
-    internship: 'Thực tập',
-    freelance: 'Freelance',
-};
+const JOB_TYPE_OPTIONS = [
+    { value: 'full_time', label: 'Toàn thời gian' },
+    { value: 'part_time', label: 'Bán thời gian' },
+    { value: 'internship', label: 'Thực tập' },
+    { value: 'freelance', label: 'Freelance' },
+];
+
+const EXPERIENCE_OPTIONS = [
+    { value: "intern", label: "Thực tập" },
+    { value: "fresher", label: "Fresher" },
+    { value: "1-2", label: "1-2 năm" },
+    { value: "2-3", label: "2-3 năm" },
+    { value: "3-4", label: "3-4 năm" },
+    { value: "4-5", label: "4-5 năm" },
+    { value: "5+", label: "Trên 5 năm" },
+];
+
+
+const JOB_TYPE_MAP = Object.fromEntries(
+    JOB_TYPE_OPTIONS.map(item => [item.value, item.label])
+);
+
+const EXPERIENCE_MAP = Object.fromEntries(
+    EXPERIENCE_OPTIONS.map(item => [item.value, item.label])
+);
 
 const JobDetail = () => {
     const { jobId } = useParams();
+    const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
     const [job, setJob] = useState<any | null>(null);
+    const [favorite, setFavorite] = useState<any | null>(null);
 
     useEffect(() => {
         if (!jobId) return;
@@ -65,6 +90,41 @@ const JobDetail = () => {
         fetchData();
     }, [jobId]);
 
+    useEffect(() => {
+        if (!jobId || !isAuthenticated) return;
+        (async () => {
+            try {
+                const res = await getFavorites();
+                const favList = res?.data || [];
+                const found = favList.find((f: any) => f.jobId === jobId);
+                setFavorite(found || null);
+            } catch (err) {
+                console.error('Failed to fetch favorites', err);
+            }
+        })();
+    }, [jobId, isAuthenticated]);
+
+    const toggleFavorite = async () => {
+        if (!jobId) return;
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
+
+        try {
+            if (favorite) {
+                await removeFavorite(favorite.favoriteId);
+                setFavorite(null);
+            } else {
+                const res = await addFavorite({ jobId });
+                setFavorite(res?.data || null);
+            }
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || err?.message || 'Thao tác thất bại';
+            toast.error(msg);
+        }
+    };
+
     if (!job) return <div className="p-10 text-center text-xl">Không tìm thấy công việc!</div>;
 
     return (
@@ -81,7 +141,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Mức lương</span>
-                                <span className="text-left font-semibold">{job.salaryRange} triệu VNĐ</span>
+                                <span className="text-left font-semibold">{job.salaryRange} VNĐ</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
@@ -90,7 +150,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Kinh nghiệm</span>
-                                <span className="text-left font-semibold">1 - 2 năm</span>
+                                <span className="text-left font-semibold">{job.experience ? (EXPERIENCE_MAP[job.experience] ?? job.experience) : 'N/A'}</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
@@ -107,9 +167,10 @@ const JobDetail = () => {
                     <div className="flex items-center justify-between">
                         <Button variant="seek" className='w-1/3'>Ứng tuyển ngay</Button>
                         <div
-                            className="flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] text-txt-red border-background-red rounded-full hover:border-txt-red hover:text-white hover:bg-background-red transition-colors"
+                            onClick={() => toggleFavorite()}
+                            className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
                         >
-                            <i className="fa-regular fa-heart text-lg"></i>
+                            <i className={`${favorite ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
                         </div>
                     </div>
                     <div className='text-left border-t-2 pt-5'>
@@ -146,7 +207,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Hình thức</span>
-                                <span className="text-left font-semibold">{job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : 'N/A'}</span>
+                                <span className="text-left font-semibold">{job.jobType ? (JOB_TYPE_MAP[job.jobType] ?? job.jobType) : 'N/A'}</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700">

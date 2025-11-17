@@ -20,10 +20,8 @@ const CompaniesList: React.FC = () => {
         navigate("/companies");
     }
 
-    const handleViewDetailCompany = (id: number) => {
+    const handleViewDetailCompany = (id: string) => {
         navigate(`/companies/${id}`);
-        console.log(id);
-
     }
 
     return (
@@ -32,11 +30,11 @@ const CompaniesList: React.FC = () => {
             <div className="grid grid-cols-5 gap-5 w-full">
                 {companies.map((company, idx) => (
                     <div key={idx}
-                        onClick={() => handleViewDetailCompany(idx)}
+                        onClick={() => handleViewDetailCompany(company.companyId)}
                         className="flex flex-col items-center bg-white rounded-xl shadow-lg p-4 border border-gray-100 hover:scale-105 transition-transform cursor-pointer">
-                        <img 
-                        src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'}
-                        alt={company.companyName} className="w-28 h-28 rounded-md object-cover mb-4 mr-4" />
+                        <img
+                            src={company.logoUrl ? `${MINIO_ENDPOINT}/datn/${company.logoUrl}` : '/default-logo.png'}
+                            alt={company.companyName} className="w-28 h-28 rounded-md object-cover mb-4 mr-4" />
                         <div className="flex flex-col gap-2">
                             <span className="font-semibold text-base text-txt-red w-[220px] text-center line-clamp-2">{company.companyName}</span>
                             <p className="text-sm text-gray-700 line-clamp-2 w-[220px] text-center truncate">{company.industry}</p>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import JobsList from "@/components/Home/JobsList";
 import SearchBar from "@/components/Home/SearchBar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getAllGroupJobTags, getAllJobTags } from "@/api/recruitApi";
+import { Button } from "@/components/ui/button";
 
 
 const initialFilters = [
@@ -64,6 +65,7 @@ const SearchJob: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [filterValues, setFilterValues] = useState<Record<string, string[]>>({});
     const [dynamicFilters, setDynamicFilters] = useState(initialFilters);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchFilters = async () => {
@@ -129,6 +131,8 @@ const SearchJob: React.FC = () => {
 
         setSearchParams(newParams, { replace: true });
     };
+
+    const handleViewAll = () => navigate("/jobs");
 
     return (
         <div className="flex flex-col gap-8 px-[100px] py-10 overflow-y-auto">
@@ -264,9 +268,11 @@ const SearchJob: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
-
                             </div>
                         ))}
+                        <Button onClick={handleViewAll} variant="seek" size="lg" className="mt-10">
+                            Xóa bộ lọc
+                        </Button>
                     </form>
                 </div>
 
