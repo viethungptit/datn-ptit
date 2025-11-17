@@ -43,6 +43,7 @@ import CVEditTemplate from './pages/CVEditTemplate';
 import CVPreviewPage from './pages/CVPreviewPage';
 import JobManagement from './pages/Admin/JobManagement';
 import ChangePassword from './pages/Admin/ChangePassword';
+import LogsUI from './pages/Admin/LogsUI';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -128,7 +129,7 @@ function App() {
           <Route path="/admin/notification-templates" element={<RoleRoute element={<NotificationTemplates />} allowedRoles={['admin']} />} />
           <Route path="/admin/notifications" element={<RoleRoute element={<Notifications />} allowedRoles={['admin']} />} />
           <Route path="/admin/notification-emails" element={<RoleRoute element={<NotificationEmails />} allowedRoles={['admin']} />} />
-
+          <Route path="/admin/logs" element={<RoleRoute element={<LogsUI />} allowedRoles={['admin']} />} />
 
 
         </Routes>
