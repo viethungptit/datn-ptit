@@ -4,6 +4,9 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { getTemplateDetail, getCV } from "@/api/recruitApi";
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+import { selectRole } from "@/redux/authSlice";
+import { useSelector } from "react-redux";
 
 type SectionId =
     | "avatar"
@@ -57,6 +60,7 @@ type DataJson = Record<SectionId, string>;
 
 export default function CVPreviewPage() {
     const { cvId } = useParams();
+    const userRole = useSelector(selectRole);
     const navigate = useNavigate();
     const previewRef = useRef<HTMLDivElement | null>(null);
     const [data, setData] = useState<DataJson>({} as DataJson);
@@ -127,7 +131,7 @@ export default function CVPreviewPage() {
             return (
                 <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
                     <img
-                        src={imgSrc}
+                        src={imgSrc === "/avatar-init.jpg" ? "/avatar-init.jpg" : `${MINIO_ENDPOINT}/datn/${imgSrc}`}
                         alt="avatar"
                         style={{ width: themeJson?.sizeAvatar, height: themeJson?.sizeAvatar, objectFit: 'cover', borderRadius: themeJson?.borderRadiusAvatar, boxShadow: '0 2px 8px #ccc' }}
                     />
@@ -238,8 +242,12 @@ export default function CVPreviewPage() {
                 <div className="flex justify-between items-center py-2 px-20">
                     <h3>{title}</h3>
                     <div className="flex gap-3">
-                        <Button className="bg-white" onClick={handleBack}>Hủy</Button>
-                        <Button variant="login" onClick={() => handleEditCV(cvId || '')}>Sửa CV</Button>
+                        {userRole === 'candidate' &&
+                            <>
+                                <Button className="bg-white" onClick={handleBack}>Hủy</Button>
+                                <Button variant="login" onClick={() => handleEditCV(cvId || '')}>Sửa CV</Button>
+                            </>
+                        }
                         <Button variant="login" onClick={handleDownloadCV}>Tải CV PDF</Button>
                     </div>
                 </div>

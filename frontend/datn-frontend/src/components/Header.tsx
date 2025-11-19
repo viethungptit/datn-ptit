@@ -71,7 +71,7 @@ const Header = () => {
                 <div className="relative group">
                     <button className="hover:text-txt-red uppercase focus:outline-none">Việc làm</button>
                     <div className="absolute left-0 top-[20px] min-w-[250px] bg-white shadow-lg rounded-md py-2 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
-                        <NavLink to="/favorite" className="text-left block px-4 py-2 hover:bg-gray-100 text-gray-700">Việc làm đã lưu</NavLink>
+                        <NavLink to="/favorite" className="text-left block px-4 py-2 hover:bg-gray-100 text-gray-700">Việc làm yêu thích</NavLink>
                         <NavLink to="/applied" className="text-left block px-4 py-2 hover:bg-gray-100 text-gray-700">Việc làm đã ứng tuyển</NavLink>
                     </div>
                 </div>
@@ -99,7 +99,7 @@ const Header = () => {
                         <div className="relative group">
                             <button className="flex items-center gap-2 focus:outline-none">
                                 <img
-                                    src={profile?.candidate ? `${MINIO_ENDPOINT}/datn/${profile?.candidate?.avatarUrl}` : '/avatar-default.svg'}
+                                    src={!profile?.candidate?.avatarUrl || profile?.candidate?.avatarUrl === '/avatar-default.svg' ? '/avatar-default.svg' : `${MINIO_ENDPOINT}/datn/${profile?.candidate?.avatarUrl}`}
                                     alt="avatar"
                                     className="w-8 h-8 border rounded-full object-cover"
                                 />
@@ -110,7 +110,7 @@ const Header = () => {
                             <div className="absolute right-0 top-[30px] min-w-[220px] text-sm bg-white shadow-lg rounded-md py-2 z-50 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
                                 <NavLink to="/profile" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Hồ sơ của tôi</NavLink>
                                 <NavLink to="/manage-cvs" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Quản lý CV</NavLink>
-                                <NavLink to="/favorite" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Công việc yêu thích</NavLink>
+                                <NavLink to="/favorite" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Việc làm yêu thích</NavLink>
                                 <NavLink to="/change-password" className="text-left block px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">Đổi mật khẩu</NavLink>
                                 <button onClick={handleLogout} className="w-full text-left px-4 py-2 hover:bg-gray-100 uppercase text-gray-700">
                                     Đăng xuất

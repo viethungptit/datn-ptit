@@ -364,7 +364,7 @@ public class CVService {
     }
 
     @Transactional
-    public CVDto retryEmbedding(UUID cvId, UUID currentUserId) {
+    public CVDto retryEmbedding(UUID cvId, UUID currentUserId, boolean isAdmin) {
         CV cv = cvRepository.findById(cvId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy CV: " + cvId));
         cv.setStatusEmbedding(CV.StatusEmbedding.pending);
@@ -383,17 +383,22 @@ public class CVService {
         eventPublisher.publish(embeddingExchange, embeddingCVRoutingKey, event);
 
         // Gửi log sang AdminService
+        String description = isAdmin
+                ? String.format("Quản trị viên %s đã phân tích lại CV %s",
+                currentUserId, cv.getTitle())
+                : String.format("Ứng viên %s đã phân tích lại CV %s",
+                currentUserId, cv.getTitle());
+        
         eventPublisher.publish(
                 logExchange,
                 logActivityRoutingKey,
                 ActivityEvent.builder()
                         .actorId(currentUserId.toString())
-                        .actorRole("CANDIDATE")
+                        .actorRole(isAdmin ? "ADMIN" : "CANDIDATE")
                         .action("RETRY_EMBEDDING")
                         .targetType("CV")
                         .targetId(cv.getCvId().toString())
-                        .description(String.format("Người dùng %s đã thử lại việc embedding cho CV %s",
-                                currentUserId, cv.getTitle()))
+                        .description(description)
                         .build()
         );
         return toDto(cv);

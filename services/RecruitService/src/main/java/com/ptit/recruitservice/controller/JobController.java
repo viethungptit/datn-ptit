@@ -100,28 +100,22 @@ public class JobController {
         return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary,experience);
     }
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
-    @PutMapping("/{job_id}/close")
-    public JobDto closeJob(@PathVariable("job_id") UUID jobId) {
+    @PutMapping("/{job_id}/change-status/{status}")
+    public JobDto changeJobStatus(@PathVariable("job_id") UUID jobId,
+                                  @PathVariable("status") Job.Status status) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        return jobService.closeJob(jobId, UUID.fromString(currentUserId));
+        return jobService.changeJobStatus(jobId, UUID.fromString(currentUserId), status);
     }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{job_id}/approve")
-    public JobDto approveJob(@PathVariable("job_id") UUID jobId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String currentUserId = (String) auth.getPrincipal();
-        return jobService.approveJob(jobId, UUID.fromString(currentUserId));
-    }
-
 
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PostMapping("/{job_id}/retry-embedding")
     public JobDto retryEmbedding(@PathVariable("job_id") UUID jobId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        return jobService.retryEmbedding(jobId, UUID.fromString(currentUserId));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return jobService.retryEmbedding(jobId, UUID.fromString(currentUserId), isAdmin);
     }
 
     @PutMapping("/{job_id}/status-embedding")

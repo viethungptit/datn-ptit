@@ -44,12 +44,14 @@ public class UserProfileController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping(value = "/employer/for-admin/{userId}")
     public ResponseEntity<EmployerResponse> upsertEmployerForAdmin(@PathVariable UUID userId, @RequestBody EmployerUpdateRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
-        EmployerResponse response = userProfileService.upsertEmployerForAdminByUserId(userId, UUID.fromString(currentUserId), request);
+        boolean isEmployer = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_EMPLOYER"));
+        EmployerResponse response = userProfileService.upsertEmployerForAdminByUserId(userId, UUID.fromString(currentUserId), request, isEmployer);
         return ResponseEntity.ok(response);
     }
 

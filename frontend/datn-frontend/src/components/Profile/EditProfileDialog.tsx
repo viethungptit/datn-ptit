@@ -38,6 +38,12 @@ const EditProfileDialog: React.FC<{ profile: Profile | null; onSaved?: () => voi
         if (!profile) return;
         setSaving(true);
 
+        if (!fullName || !fullName.trim() || !phone || !phone.trim() || !dob || !dob.trim() || !gender || !gender.trim() || !address || !address.trim()) {
+            toast.error('Vui lòng nhập đầy đủ Họ và tên, Số điện thoại, Ngày sinh, Giới tính và Địa chỉ');
+            setSaving(false);
+            return;
+        }
+
         const userPayload: { fullName?: string; phone?: string } = {};
         if ((fullName || '') !== (profile.fullName || '')) userPayload.fullName = fullName || undefined;
         if ((phone || '') !== (profile.phone || '')) userPayload.phone = phone || undefined;
@@ -52,28 +58,33 @@ const EditProfileDialog: React.FC<{ profile: Profile | null; onSaved?: () => voi
         try {
             const promises: Promise<any>[] = [];
             if (Object.keys(userPayload).length > 0) {
-                const payload = Object.fromEntries(Object.entries(userPayload).filter(([_, v]) => v !== undefined));
-                promises.push(updateCurrentUserApi(payload));
+                const mergedUserPayload = { ...profile, ...userPayload } as any;
+                if (mergedUserPayload.phone === undefined || mergedUserPayload.phone === null) {
+                    mergedUserPayload.phone = profile.phone ?? '';
+                }
+                if (mergedUserPayload.candidate) delete mergedUserPayload.candidate;
+                promises.push(updateCurrentUserApi(mergedUserPayload));
             }
             if (Object.keys(candidatePayload).length > 0) {
                 const payload = Object.fromEntries(Object.entries(candidatePayload).filter(([_, v]) => v !== undefined));
                 promises.push(upsertCandidateApi(payload as any));
             }
-
             if (promises.length === 0) {
+                setSaving(false);
                 setOpen(false);
                 return;
             }
-
             const results = await Promise.allSettled(promises);
-            const anyRejected = results.some(r => r.status === 'rejected');
-            if (anyRejected) {
-                toast.error('Có lỗi xảy ra khi lưu. Vui lòng thử lại.');
+            const rejected = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+            if (rejected.length > 0) {
+                const reason = rejected[0].reason;
+                const msg = reason?.response?.data?.message || reason?.message || 'Có lỗi xảy ra khi lưu. Vui lòng thử lại.';
+                toast.error(msg);
                 return;
             }
-
             setOpen(false);
             onSaved && onSaved();
+            toast.success('Cập nhật hồ sơ thành công.');
         } catch (err) {
             console.error(err);
             toast.error('Có lỗi xảy ra khi lưu.');
@@ -128,11 +139,11 @@ const EditProfileDialog: React.FC<{ profile: Profile | null; onSaved?: () => voi
                     <div>
                         <Label>Avatar (URL)</Label>
                         <div className="flex items-center gap-2">
-                            <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." />
+                            <Input value={avatarUrl ? avatarUrl : '/avatar-default.svg'} onChange={e => setAvatarUrl(e.target.value)} placeholder="https://..." />
                             <FilePickerDialog onSelect={(url) => setAvatarUrl(url)} trigger={<Button variant="outline" size="sm">Chọn ảnh</Button>} contentClassName="max-w-2xl" />
                         </div>
                         <div style={{ marginTop: 8 }}>
-                            <img src={avatarUrl ? `${MINIO_ENDPOINT}/datn/${avatarUrl}` : '/avatar-default.svg'} alt="preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
+                            <img src={!avatarUrl || avatarUrl === '/avatar-default.svg' ? '/avatar-default.svg' : `${MINIO_ENDPOINT}/datn/${avatarUrl}`} alt="preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
                         </div>
                     </div>
                 </div>

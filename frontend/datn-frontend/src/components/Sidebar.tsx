@@ -104,6 +104,21 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, headerOffset }) => {
                                             {!collapsed && <span>Quản lý tin tuyển dụng</span>}
                                         </NavLink>
                                     </SidebarMenuItem>
+
+                                    {/* Tính năng chỉ dành cho admin của công ty */}
+                                    {profile?.employer?.admin && profile?.employer?.status === "VERIFIED" && (
+                                        <SidebarMenuItem>
+                                            <NavLink
+                                                to={`/employer/employers`}
+                                                className={({ isActive }) =>
+                                                    `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                                                }
+                                            >
+                                                <i className="fa-solid fa-users"></i>
+                                                {!collapsed && <span>Quản lý nhân viên</span>}
+                                            </NavLink>
+                                        </SidebarMenuItem>
+                                    )}
                                 </SidebarMenu>
                             </nav>
                         )}
@@ -164,6 +179,17 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, headerOffset }) => {
                                         >
                                             <i className="fa-solid fa-tag"></i>
                                             {!collapsed && <span>Quản lý thẻ</span>}
+                                        </NavLink>
+                                    </SidebarMenuItem>
+                                    <SidebarMenuItem>
+                                        <NavLink
+                                            to="/admin/cvs"
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                                            }
+                                        >
+                                            <i className="fa-solid fa-file-import"></i>
+                                            {!collapsed && <span>Quản lý CV</span>}
                                         </NavLink>
                                     </SidebarMenuItem>
                                     <SidebarMenuItem>

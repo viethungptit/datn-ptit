@@ -112,7 +112,7 @@ export const getAllCompaniesApi = () =>
   gatewayApi.get("/api/user-service/companies");
 
 export const searchCompaniesApi = (keyword: string) =>
-    gatewayApi.get(`/api/user-service/companies`, { params: { keyword } });
+  gatewayApi.get(`/api/user-service/companies`, { params: { keyword } });
 
 export const getDetailCompanyApi = (companyId: string) =>
   gatewayApi.get(`/api/user-service/companies/${companyId}`);
@@ -137,7 +137,7 @@ export const upsertEmployerApi = (payload: {
   position?: string;
   companyId?: string;
   status?: string;
-  isHrAdmin?: boolean;
+  isAdmin?: boolean;
 }) => gatewayApi.put(`/api/user-service/user-profile/employer/me`, payload);
 
 export const upsertCandidateApi = (payload: {

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import FilePickerDialog from '@/components/FilePicker/FilePickerDialog';
 import { translateSection } from "@/utils/translateSection";
 import remarkGfm from "remark-gfm";
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 
 type SectionId =
     | "avatar"
@@ -211,7 +212,7 @@ export default function CVBuilderTemplate() {
                                 </div>
                                 <div style={{ marginTop: 8 }}>
                                     {draftData[key as SectionId] ? (
-                                        <img src={draftData[key as SectionId]} alt="preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
+                                        <img src={draftData[key as SectionId] === "/avatar-init.jpg" ? "/avatar-init.jpg" : `${MINIO_ENDPOINT}/datn/${draftData[key as SectionId]}`} alt="preview" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8 }} />
                                     ) : (
                                         <div style={{ width: 120, height: 120, border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Chưa có ảnh</div>
                                     )}
@@ -344,7 +345,7 @@ export default function CVBuilderTemplate() {
             return (
                 <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
                     <img
-                        src={imgSrc}
+                        src={imgSrc === "/avatar-init.jpg" ? "/avatar-init.jpg" : `${MINIO_ENDPOINT}/datn/${imgSrc}`}
                         alt="avatar"
                         style={{ width: themeJson?.sizeAvatar, height: themeJson?.sizeAvatar, objectFit: 'cover', borderRadius: themeJson?.borderRadiusAvatar, boxShadow: '0 2px 8px #ccc' }}
                     />

@@ -53,14 +53,14 @@ const MyProfile: React.FC = () => {
     const candidate = profile?.candidate || {};
 
     return (
-        <div className="p-2 flex flex-col items-center">
+        <div className="h-[90vh] flex flex-col items-center justify-center">
             <div className="bg-white shadow-lg rounded-lg p-4 w-full max-w-xl flex flex-col items-center">
                 <div className="w-full flex justify-between items-start">
                     <h1 className="text-xl font-semibold mb-3">Hồ sơ của tôi</h1>
                     <EditProfileDialog profile={profile} onSaved={fetchProfile} />
                 </div>
                 <img
-                    src={getValue(`${MINIO_ENDPOINT}/datn/${candidate.avatarUrl}`) !== 'Chưa cập nhật' ? `${MINIO_ENDPOINT}/datn/${candidate.avatarUrl}` : '/avatar-default.svg'}
+                    src={getValue(`${MINIO_ENDPOINT}/datn/${candidate.avatarUrl}`) !== '/avatar-default.svg' ? `${MINIO_ENDPOINT}/datn/${candidate.avatarUrl}` : '/avatar-default.svg'}
                     alt="Avatar"
                     className="w-32 h-32 p-1 rounded-full object-cover mb-4 border"
                     onError={e => (e.currentTarget.src = '/avatar-default.svg')}

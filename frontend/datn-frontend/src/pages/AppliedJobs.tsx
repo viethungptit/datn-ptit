@@ -53,8 +53,8 @@ const appliedJobs = [
 const AppliedJobs: React.FC = () => {
     return (
         <div className="flex flex-col items-center">
-            <div className='w-full flex justify-center px-[100px] py-14' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>
-                <h1 className="text-2xl font-semibold text-txt-red">Việc làm đã ứng tuyển</h1>
+            <div className='w-full flex justify-center flex-col py-14' style={{ background: 'linear-gradient(to bottom, #ff9fb0 0%, #fff 100%)' }}>
+                <p className="text-2xl font-bold text-txt-red mb-2">Việc làm đã ứng tuyển</p>
             </div>
             <div className="grid grid-cols-1 gap-8 w-full px-[100px] pb-10">
                 {appliedJobs.map((job, idx) => (

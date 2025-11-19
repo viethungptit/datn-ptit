@@ -49,11 +49,8 @@ export const updateJobForAdmin = (
 export const deleteJob = (jobId: string) =>
   gatewayApi.delete(`/api/recruit-service/jobs/${jobId}`);
 
-export const closeJob = (jobId: string) =>
-  gatewayApi.put(`/api/recruit-service/jobs/${jobId}/close`);
-
-export const approveJob = (jobId: string) =>
-  gatewayApi.put(`/api/recruit-service/jobs/${jobId}/approve`);
+export const changeStatusJob = (jobId: string, status: string) =>
+  gatewayApi.put(`/api/recruit-service/jobs/${jobId}/change-status/${status}`);
 
 export const createJob = (payload: {
   title: string;
@@ -85,6 +82,9 @@ export const createJobForAdmin = (payload: {
 
 export const getJobByCompany = (companyId: string) =>
   gatewayApi.get(`/api/recruit-service/jobs/all-by-company/${companyId}`);
+
+export const retryEmbeddingJob = (jobId: string) =>
+  gatewayApi.post(`/api/recruit-service/jobs/${jobId}/retry-embedding`);
 
 export const createJobTag = (payload: { jobName: string }) =>
   gatewayApi.post("/api/recruit-service/job-tag", payload);
@@ -178,6 +178,9 @@ export const getAllCVs = () => gatewayApi.get("/api/recruit-service/cvs/all");
 
 export const getAllCVsByUser = (userId: string) =>
   gatewayApi.get(`/api/recruit-service/cvs/all-by-user/${userId}`);
+
+export const retryEmbeddingCV = (cvId: string) =>
+  gatewayApi.post(`/api/recruit-service/cvs/${cvId}/retry-embedding`);
 
 export const getTemplateDetail = (templateId: string) =>
   gatewayApi.get(`/api/recruit-service/cv-templates/${templateId}`);

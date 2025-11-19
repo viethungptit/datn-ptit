@@ -48,7 +48,6 @@ const EmployerProfile: React.FC = () => {
             try {
                 const res = await getCurrentUserProfile();
                 setProfile(res.data);
-                console.log('Employer Profile:', res.data);
                 setError(null);
             } catch {
                 setError('Không thể tải thông tin hồ sơ');
@@ -99,9 +98,9 @@ const EmployerProfile: React.FC = () => {
 
 
     return (
-        <div className="w-full py-10 px-3 flex flex-col items-center">
-            <h1 className="text-xl font-semibold mb-6">Hồ sơ của tôi</h1>
-            <div className='flex flex-row justify-between w-full'>
+        <div className="w-full py-2 px-4 flex flex-col">
+            <h1 className="text-left font-semibold mb-6">Hồ sơ của tôi</h1>
+            <div className='flex flex-row items-start justify-between w-full'>
                 <div className="bg-white shadow-lg rounded-lg py-5 px-8 border-2 w-[49%] flex flex-col items-center">
                     <h2 className='font-semibold text-lg mb-3'>Thông tin cá nhân</h2>
                     <img
@@ -120,11 +119,14 @@ const EmployerProfile: React.FC = () => {
                             <div className="text-gray-900">{profile?.active === true ? 'Hoạt động' : profile?.active === false ? 'Không hoạt động' : 'Chưa cập nhật'}</div>
                             <div className="font-medium text-gray-700">Vị trí:</div>
                             <div className="text-gray-900">{employer?.position || 'Chưa cập nhật'}</div>
+                            <div className="font-medium text-gray-700">Quyền hạn:</div>
+                            <div className="text-gray-900">{employer?.admin === true ? 'Quản trị nhân sự' : employer?.admin === false ? 'Nhân viên' : 'Chưa cập nhật'}
+                            </div>
                             <div className="font-medium text-gray-700">Trạng thái việc làm:</div>
                             <div className="text-gray-900">
-                                {employer?.active == null
+                                {employer?.status == null
                                     ? 'Chưa cập nhật'
-                                    : employer.active
+                                    : employer.status === 'VERIFIED'
                                         ? 'Đang làm việc'
                                         : 'Không làm việc'}
                             </div>
@@ -179,10 +181,10 @@ const EmployerProfile: React.FC = () => {
                                                     <label className="flex items-center gap-2">
                                                         <input
                                                             type="checkbox"
-                                                            checked={isHrAdmin ?? false}
+                                                            checked={isHrAdmin || false}
                                                             onChange={(e) => setIsHrAdmin(e.target.checked)}
                                                         />
-                                                        Tôi là HR Admin
+                                                        Tôi là HR Admin (có quyền quản lý hồ sơ nhân sự, duyệt đăng tuyển)
                                                     </label>
 
                                                     {joinError && <div className="text-red-500 text-sm">{joinError}</div>}
@@ -207,7 +209,7 @@ const EmployerProfile: React.FC = () => {
                                                                 companyId: selectedCompanyId,
                                                                 position: positionInput || undefined,
                                                                 status: 'PENDING',
-                                                                isHrAdmin: isHrAdmin ?? false
+                                                                isAdmin: isHrAdmin ?? false
                                                             });
 
                                                             // refresh profile
@@ -235,9 +237,7 @@ const EmployerProfile: React.FC = () => {
                                     <Button
                                         variant="outline"
                                         onClick={() => {
-                                            // close the join dialog first so the new dialog isn't rendered behind it
                                             setJoinOpen(false);
-                                            // small delay to allow closing animation/stack change, then open company dialog
                                             setTimeout(() => setCompanyDialogOpen(true), 180);
                                         }}
                                     >
@@ -298,10 +298,6 @@ const EmployerProfile: React.FC = () => {
 
                                             {/* Nút sửa và rời công ty */}
                                             <div className="mt-4 flex justify-between w-full">
-                                                <Button variant="outline" onClick={() => setCompanyDialogOpen(true)}>
-                                                    Sửa thông tin công ty
-                                                </Button>
-
                                                 <Button
                                                     variant="login"
                                                     onClick={async () => {
@@ -323,20 +319,68 @@ const EmployerProfile: React.FC = () => {
                                                 >
                                                     {leavingCompany ? 'Đang xử lý...' : 'Rời công ty'}
                                                 </Button>
+                                                {
+                                                    profile.employer.admin && (
+                                                        <Button variant="outline" onClick={() => setCompanyDialogOpen(true)}>
+                                                            Sửa thông tin công ty
+                                                        </Button>
+                                                    )
+                                                }
                                             </div>
                                         </div>
                                     ) : profile.employer.status === 'PENDING' ? (
                                         <div className="mt-20 flex flex-col items-center gap-3">
                                             <span className="font-semibold text-yellow-600">
-                                                Yêu cầu gia nhập công ty đang được xét duyệt
+                                                Yêu cầu gia nhập {profile.company.companyName} đang được xét duyệt
                                             </span>
+                                            <Button
+                                                variant="login"
+                                                onClick={async () => {
+                                                    if (!window.confirm('Bạn có chắc muốn huỷ yêu cầu và rời công ty này?')) return;
+                                                    setLeavingCompany(true);
+                                                    try {
+                                                        await leaveCompanyApi();
+                                                        const res = await getCurrentUserProfile();
+                                                        setProfile(res.data);
+                                                        toast.success('Bạn đã huỷ yêu cầu và rời công ty');
+                                                    } catch (err: any) {
+                                                        const msg = err?.response?.data?.message || err?.message || 'Huỷ yêu cầu và rời công ty thất bại';
+                                                        toast.error(msg);
+                                                    } finally {
+                                                        setLeavingCompany(false);
+                                                    }
+                                                }}
+                                                disabled={leavingCompany}
+                                            >
+                                                {leavingCompany ? 'Đang xử lý...' : 'Huỷ yêu cầu và rời công ty'}
+                                            </Button>
                                         </div>
                                     ) : (
                                         <div className="mt-20 flex flex-col items-center gap-3">
                                             <span className="font-semibold text-red-600">
-                                                Yêu cầu gia nhập công ty bị từ chối
+                                                Yêu cầu gia nhập công ty {profile.company.companyName} bị từ chối
                                             </span>
-                                            {/* Bạn có thể để nút "Thêm công ty / Thử lại" ở đây nếu muốn */}
+                                            <Button
+                                                variant="login"
+                                                onClick={async () => {
+                                                    if (!window.confirm('Bạn có chắc muốn huỷ yêu cầu và rời công ty này?')) return;
+                                                    setLeavingCompany(true);
+                                                    try {
+                                                        await leaveCompanyApi();
+                                                        const res = await getCurrentUserProfile();
+                                                        setProfile(res.data);
+                                                        toast.success('Bạn đã huỷ yêu cầu và rời công ty');
+                                                    } catch (err: any) {
+                                                        const msg = err?.response?.data?.message || err?.message || 'Huỷ yêu cầu và rời công ty thất bại';
+                                                        toast.error(msg);
+                                                    } finally {
+                                                        setLeavingCompany(false);
+                                                    }
+                                                }}
+                                                disabled={leavingCompany}
+                                            >
+                                                {leavingCompany ? 'Đang xử lý...' : 'Huỷ yêu cầu và rời công ty'}
+                                            </Button>
                                         </div>
                                     )}
                                 </>

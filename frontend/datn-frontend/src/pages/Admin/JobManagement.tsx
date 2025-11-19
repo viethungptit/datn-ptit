@@ -24,12 +24,13 @@ import {
     getAllJobs,
     createJobForAdmin,
     deleteJob,
-    closeJob,
     updateJobForAdmin,
     getAllJobTags,
     getAllGroupJobTags,
-    approveJob,
+    changeStatusJob,
+    retryEmbeddingJob,
 } from "@/api/recruitApi";
+import JobDetailDialog from "@/components/JobDetailDialog";
 
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
 type GroupTag = { groupTagId: string; groupJobName: string; isDeleted?: boolean };
@@ -51,7 +52,8 @@ export type Job = {
     jobType?: string; // expected: full_time, part_time, internship, freelance
     quantity?: number;
     deadline?: string;
-    status?: string; // pending | closed | open
+    status?: string; // pending | closed | open | rejected
+    statusEmbedding?: string; // pending | embedded | failed
     deleted?: boolean;
     groupTagIds?: string[];
     jobTagIds?: string[];
@@ -66,6 +68,12 @@ const JobManagement = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [form, setForm] = useState<Partial<Job>>({});
     const [isEdit, setIsEdit] = useState(false);
+    const [detailJobId, setDetailJobId] = useState<string | null>(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const handleDetailOpenChange = (open: boolean) => {
+        setDetailOpen(open);
+        if (!open) setDetailJobId(null);
+    };
 
     const JOB_TYPE_OPTIONS = [
         { value: 'full_time', label: 'Toàn thời gian' },
@@ -78,6 +86,16 @@ const JobManagement = () => {
         { value: 'open', label: 'Đang mở' },
         { value: 'closed', label: 'Đã đóng' },
     ];
+
+    const STATUS_EMBEDDING = [
+        { value: "pending", label: "Đang chờ" },
+        { value: "embedded", label: "Hoàn tất" },
+        { value: "failed", label: "Thất bại" },
+    ];
+
+    const STATUS_EMBEDDING_MAP = Object.fromEntries(
+        STATUS_EMBEDDING.map(item => [item.value, item.label])
+    );
 
     useEffect(() => {
         (async () => {
@@ -105,6 +123,7 @@ const JobManagement = () => {
                     quantity: j.quantity,
                     deadline: j.deadline,
                     status: j.status,
+                    statusEmbedding: j.statusEmbedding,
                     deleted: j.deleted,
                     createdAt: j.createdAt ?? j.created_at,
                 }));
@@ -126,6 +145,8 @@ const JobManagement = () => {
 
     const [jobTags, setJobTags] = useState<JobTag[]>([]);
     const [groupTags, setGroupTags] = useState<GroupTag[]>([]);
+    const [updatingJobs, setUpdatingJobs] = useState<string[]>([]);
+    const [retryingEmbeddings, setRetryingEmbeddings] = useState<string[]>([]);
 
     const openDialogJob = (job?: Job) => {
         if (job) {
@@ -150,27 +171,33 @@ const JobManagement = () => {
         }
     };
 
-    const handleCloseJob = async (jobId: string) => {
+    const handleChangeStatus = async (jobId: string, status: string) => {
         try {
-            const res = await closeJob(jobId);
+            setUpdatingJobs(prev => Array.from(new Set([...prev, jobId])));
+            const res = await changeStatusJob(jobId, status);
             const updated = res?.data;
-            setJobs(jobs.map(j => (j.jobId === jobId ? { ...j, ...updated } : j)));
-            toast.success("Công việc đã được đóng");
+            setJobs(prev => prev.map(j => (j.jobId === jobId ? { ...j, ...(updated || { status }) } : j)));
+            toast.success('Cập nhật trạng thái thành công');
         } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || "Đóng công việc thất bại";
+            const msg = err?.response?.data?.message || err?.message || 'Cập nhật trạng thái thất bại';
             toast.error(msg);
+        } finally {
+            setUpdatingJobs(prev => prev.filter(id => id !== jobId));
         }
     };
 
-    const handleVerify = async (jobId: string) => {
+    const handleRetryEmbedding = async (jobId: string) => {
         try {
-            const res = await approveJob(jobId);
+            setRetryingEmbeddings(prev => Array.from(new Set([...prev, jobId])));
+            const res = await retryEmbeddingJob(jobId);
             const updated = res?.data;
-            setJobs(jobs.map(j => (j.jobId === jobId ? { ...j, ...updated } : j)));
-            toast.success('Công việc đã được duyệt');
+            setJobs(prev => prev.map(j => (j.jobId === jobId ? { ...j, ...(updated || {}) } : j)));
+            toast.success('Khởi chạy lại embedding thành công');
         } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Duyệt công việc thất bại';
+            const msg = err?.response?.data?.message || err?.message || 'Khởi chạy lại embedding thất bại';
             toast.error(msg);
+        } finally {
+            setRetryingEmbeddings(prev => prev.filter(id => id !== jobId));
         }
     };
 
@@ -192,8 +219,16 @@ const JobManagement = () => {
 
     const handleSubmit = async () => {
         try {
-            if (!form.title) {
-                toast.error('Vui lòng nhập tiêu đề công việc');
+            if (!form.title || !form.jobType || form.minSalary === undefined || form.maxSalary === undefined || !form.location || !form.city || !form.quantity || !form.deadline || !form.experience || !form.description) {
+                toast.error("Vui lòng nhập đầy đủ các trường bắt buộc");
+                return;
+            }
+            if (form.quantity! <= 0) {
+                toast.error("Vui lòng nhập số lượng hợp lệ");
+                return;
+            }
+            if (form.minSalary! < 0 || form.maxSalary! < 0 || form.minSalary! > form.maxSalary!) {
+                toast.error("Vui lòng nhập mức lương hợp lệ, mức lương tối thiểu phải nhỏ hơn hoặc bằng mức lương tối đa");
                 return;
             }
 
@@ -260,6 +295,7 @@ const JobManagement = () => {
     const displayStatus = (j: Job) => {
         if (!j.status) return '';
         if (j.status === 'closed') return 'Đã đóng';
+        if (j.status === 'rejected') return 'Đã từ chối';
         if (j.status === 'pending') return 'Chờ duyệt';
         return 'Đang mở';
     };
@@ -282,12 +318,11 @@ const JobManagement = () => {
                         <TableRow>
                             <TableHead className="text-left">Tiêu đề</TableHead>
                             <TableHead className="text-left">Công ty</TableHead>
-                            <TableHead className="text-center">Lương khởi điểm</TableHead>
-                            <TableHead className="text-center">Lương tối đa</TableHead>
-                            <TableHead className="text-center">Địa điểm</TableHead>
                             <TableHead className="text-center">Loại</TableHead>
-                            <TableHead className="text-left">Trạng thái</TableHead>
-                            <TableHead className="text-left">Ngày tạo</TableHead>
+                            <TableHead className="text-center">Trạng thái</TableHead>
+                            <TableHead className="text-center">Trạng thái phân tích</TableHead>
+                            <TableHead className="text-center">Hạn nộp</TableHead>
+                            <TableHead className="text-center">Ngày tạo</TableHead>
                             <TableHead className="text-center">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -305,18 +340,42 @@ const JobManagement = () => {
                                 <TableRow key={j.jobId}>
                                     <TableCell className="text-left">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
-                                    <TableCell className="text-center">{j.minSalary}</TableCell>
-                                    <TableCell className="text-center">{j.maxSalary}</TableCell>
-                                    <TableCell className="text-center">{j.location || j.city}</TableCell>
                                     <TableCell className="text-center">{getJobTypeLabel(j.jobType)}</TableCell>
-                                    <TableCell className="text-left">{displayStatus(j)}</TableCell>
-                                    <TableCell className="text-left">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
-                                    <TableCell className="text-left">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
+                                    <TableCell className="text-center w-[120px]">
+                                        <Select
+                                            value={j.status ?? ''}
+                                            onValueChange={(v) => handleChangeStatus(j.jobId, v)}
+                                            disabled={updatingJobs.includes(j.jobId)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={displayStatus(j)} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="pending">Chờ duyệt</SelectItem>
+                                                <SelectItem value="open">Đang mở</SelectItem>
+                                                <SelectItem value="rejected">Đã từ chối</SelectItem>
+                                                <SelectItem value="closed">Đã đóng</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        {j.statusEmbedding ? (STATUS_EMBEDDING_MAP[j.statusEmbedding] || '') : ''}
+                                        {j.statusEmbedding === 'failed' && (
+                                            <i
+                                                role="button"
+                                                aria-label="Retry embedding"
+                                                title="Khởi chạy lại embedding"
+                                                onClick={() => handleRetryEmbedding(j.jobId)}
+                                                className={`ml-1 fa-lg fa-solid fa-arrows-rotate cursor-pointer hover:animate-spin ${retryingEmbeddings.includes(j.jobId) ? 'animate-spin' : ''}`}
+                                            />
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
+                                    <TableCell className="text-center">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => { setDetailJobId(j.jobId); setDetailOpen(true); }}>Xem</Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogJob(j)}>Sửa</Button>
-                                            {j.status === 'pending' && <Button size="sm" variant="login" onClick={() => handleVerify(j.jobId)}>Xác nhận</Button>}
-                                            {!(j.deleted || j.status === 'closed') && <Button size="sm" variant="secondary" onClick={() => handleCloseJob(j.jobId)}>Đóng</Button>}
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(j.jobId)}>Xóa</Button>
                                         </div>
                                     </TableCell>
@@ -358,7 +417,7 @@ const JobManagement = () => {
 
                         <div className="flex justify-between">
                             <div className="mr-3">
-                                <Label htmlFor="minSalary">Mức lương khởi điểm</Label>
+                                <Label htmlFor="minSalary">Mức lương khởi điểm (VNĐ)</Label>
                                 <Input
                                     id="minSalary"
                                     type="number"
@@ -374,7 +433,7 @@ const JobManagement = () => {
                             </div>
 
                             <div>
-                                <Label htmlFor="maxSalary">Mức lương tối đa</Label>
+                                <Label htmlFor="maxSalary">Mức lương tối đa (VNĐ)</Label>
                                 <Input
                                     id="maxSalary"
                                     type="number"
@@ -519,6 +578,7 @@ const JobManagement = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <JobDetailDialog open={detailOpen} onOpenChange={handleDetailOpenChange} jobId={detailJobId} />
         </div>
     );
 };
