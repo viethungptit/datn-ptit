@@ -448,6 +448,18 @@ public class JobService {
         return toDto(job);
     }
 
+    @Transactional
+    public void softDeleteJobsByCompany(UUID companyId) {
+        List<Job> jobs = jobRepository.findByCompanyIdAndIsDeletedFalse(companyId);
+        if (jobs == null || jobs.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy công việc nào cho công ty: " + companyId);
+        }
+        for (Job job : jobs) {
+            job.setIsDeleted(true);
+        }
+        List<Job> saved = jobRepository.saveAll(jobs);
+    }
+
     public List<JobDto> getAllJobs() {
         return jobRepository.findByIsDeletedFalse().stream().map(this::toDto).collect(Collectors.toList());
     }

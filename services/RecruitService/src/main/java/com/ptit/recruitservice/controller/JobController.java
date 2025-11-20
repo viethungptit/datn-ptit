@@ -5,7 +5,6 @@ import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -126,5 +125,14 @@ public class JobController {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }
         return jobService.updateStatusEmbedding(jobId, status);
+    }
+
+    @PutMapping("/company/{company_id}/soft-delete")
+    public void softDeleteJobsByCompany(@PathVariable("company_id") UUID companyId,
+                                                @RequestHeader("X-Internal-Secret") String secret) {
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
+        jobService.softDeleteJobsByCompany(companyId);
     }
 }

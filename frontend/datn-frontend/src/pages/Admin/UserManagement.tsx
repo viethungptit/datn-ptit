@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { createNewUserApi, deleteUserApi, getAllUsersApi, updateUserApi } from "@/api/userApi";
+import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 
 export type User = {
     userId: string;
@@ -17,6 +18,10 @@ export type User = {
     createdAt: string;
     deleted: boolean;
     active: boolean;
+    // optional nested objects returned by API
+    candidate?: any;
+    employer?: any;
+    company?: any;
 };
 
 
@@ -27,6 +32,10 @@ const UserManagement = () => {
     // include password in the form for create/update
     const [form, setForm] = useState<Partial<User & { password?: string }>>({});
     const [isEdit, setIsEdit] = useState(false);
+    const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+    const getValue = (val: any) => (val ? val : 'Chưa cập nhật');
 
     useEffect(() => {
         (async () => {
@@ -58,6 +67,11 @@ const UserManagement = () => {
         setOpenDialog(true);
     };
 
+    const openViewUser = (user: User) => {
+        setSelectedUser(user);
+        setViewDialogOpen(true);
+    };
+
     const handleDelete = async (userId: string) => {
         if (!window.confirm("Bạn có chắc muốn xóa người dùng này?")) return;
         try {
@@ -74,6 +88,10 @@ const UserManagement = () => {
         try {
             if (isEdit && form.userId) {
                 // updateUserApi signature: (userId, { password: string, fullName?: string, phone?: string, role?: string })
+                if (!form.email || !form.password || !form.role || !form.fullName || !form.phone) {
+                    toast.error('Vui lòng nhập đầy đủ thông tin');
+                    return;
+                }
                 await updateUserApi(form.userId, {
                     password: form.password || '',
                     fullName: form.fullName,
@@ -84,8 +102,8 @@ const UserManagement = () => {
                 toast.success("Cập nhật thành công");
             } else {
                 // validate required fields for creation
-                if (!form.email || !form.password || !form.role) {
-                    toast.error('Vui lòng nhập email, mật khẩu và vai trò');
+                if (!form.email || !form.password || !form.role || !form.fullName || !form.phone) {
+                    toast.error('Vui lòng nhập đầy đủ thông tin');
                     return;
                 }
                 // createNewUserApi expects non-optional fullName and phone, so default to empty strings if not provided
@@ -123,7 +141,7 @@ const UserManagement = () => {
                             <TableHead className="text-left">SĐT</TableHead>
                             <TableHead className="text-left">Vai trò</TableHead>
                             <TableHead className="text-left">Ngày tạo</TableHead>
-                            <TableHead className="text-left">Hành động</TableHead>
+                            <TableHead className="text-center">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -145,8 +163,9 @@ const UserManagement = () => {
                                         {user.role === 'admin' ? 'Quản trị viên' : user.role === 'employer' ? 'Nhà tuyển dụng' : user.role === 'candidate' ? 'Ứng viên' : user.role}
                                     </TableCell>
                                     <TableCell className="text-left">{new Date(user.createdAt).toLocaleDateString('vi-VN')}</TableCell>
-                                    <TableCell className="text-left">
-                                        <div className="flex gap-2">
+                                    <TableCell className="text-center">
+                                        <div className="flex justify-center gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => openViewUser(user)}>Xem</Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogUser(user)}>Sửa</Button>
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(user.userId)}>Xóa</Button>
                                         </div>
@@ -225,6 +244,109 @@ const UserManagement = () => {
                             <Button variant="outline">Hủy</Button>
                         </DialogClose>
                         <Button onClick={handleSubmit}>{isEdit ? "Lưu" : "Thêm"}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Thông tin người dùng</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {selectedUser ? (
+                            selectedUser.role === 'candidate' ? (
+                                <div className="flex flex-col items-center">
+                                    <img
+                                        src={selectedUser.candidate?.avatarUrl ? `${MINIO_ENDPOINT}/datn/${selectedUser.candidate.avatarUrl}` : '/avatar-default.svg'}
+                                        alt="Avatar"
+                                        className="w-28 h-28 p-1 rounded-full object-cover mb-4 border"
+                                        onError={e => (e.currentTarget.src = '/avatar-default.svg')}
+                                    />
+                                    <h2 className="text-lg font-semibold">{getValue(selectedUser.fullName)}</h2>
+                                    <span className="text-sm text-gray-600 mb-3">Ứng viên</span>
+                                    <div className="w-full">
+                                        <div className="grid grid-cols-2 gap-4 text-left text-sm">
+                                            <div className="font-medium text-gray-700">Email:</div>
+                                            <div className="text-gray-900">{getValue(selectedUser.email)}</div>
+                                            <div className="font-medium text-gray-700">Số điện thoại:</div>
+                                            <div className="text-gray-900">{getValue(selectedUser.phone)}</div>
+                                            <div className="font-medium text-gray-700">Ngày sinh:</div>
+                                            <div className="text-gray-900">{selectedUser.candidate?.dob ? new Date(selectedUser.candidate.dob).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Giới tính:</div>
+                                            <div className="text-gray-900">{selectedUser.candidate?.gender === 'male' ? 'Nam' : selectedUser.candidate?.gender === 'female' ? 'Nữ' : selectedUser.candidate?.gender === 'other' ? 'Khác' : 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Địa chỉ:</div>
+                                            <div className="text-gray-900">{getValue(selectedUser.candidate?.address)}</div>
+                                            <div className="font-medium text-gray-700">Ngày tạo tài khoản:</div>
+                                            <div className="text-gray-900">{selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Trạng thái:</div>
+                                            <div className="text-gray-900">{selectedUser.active === true ? 'Hoạt động' : selectedUser.active === false ? 'Không hoạt động' : 'Chưa cập nhật'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : selectedUser.role === 'employer' ? (
+                                <div className="w-full">
+                                    <div className="bg-white p-2">
+                                        <h3 className="font-semibold mb-2">Thông tin cá nhân</h3>
+                                        <div className="grid grid-cols-2 gap-4 text-left text-sm mb-4">
+                                            <div className="font-medium text-gray-700">Họ và tên:</div>
+                                            <div className="text-gray-900">{getValue(selectedUser.fullName)}</div>
+                                            <div className="font-medium text-gray-700">Ngày tạo tài khoản:</div>
+                                            <div className="text-gray-900">{selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Trạng thái:</div>
+                                            <div className="text-gray-900">{selectedUser.active === true ? 'Hoạt động' : selectedUser.active === false ? 'Không hoạt động' : 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Vị trí:</div>
+                                            <div className="text-gray-900">{selectedUser.employer?.position || 'Chưa cập nhật'}</div>
+                                            <div className="font-medium text-gray-700">Quyền hạn:</div>
+                                            <div className="text-gray-900">{selectedUser.employer?.admin ? 'Quản trị nhân sự' : selectedUser.employer?.admin === false ? 'Nhân viên' : 'Chưa cập nhật'}</div>
+                                        </div>
+
+                                        <h3 className="font-semibold mb-2">Thông tin công ty</h3>
+                                        {selectedUser.company ? (
+                                            <div className="grid grid-cols-2 gap-4 text-left text-sm">
+                                                <div className="font-medium text-gray-700">Tên công ty:</div>
+                                                <div className="text-gray-900">{selectedUser.company.companyName || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Ngành nghề:</div>
+                                                <div className="text-gray-900">{selectedUser.company.industry || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Quy mô:</div>
+                                                <div className="text-gray-900">{selectedUser.company.companySize ? `${selectedUser.company.companySize} nhân viên` : 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Website:</div>
+                                                <div className="text-gray-900">{selectedUser.company.website || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Địa điểm:</div>
+                                                <div className="text-gray-900">{selectedUser.company.location || 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Ngày tạo:</div>
+                                                <div className="text-gray-900">{selectedUser.company.createdAt ? new Date(selectedUser.company.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</div>
+                                                <div className="font-medium text-gray-700">Trạng thái:</div>
+                                                <div className="text-gray-900">{selectedUser.company.verified ? 'Đã xác minh' : 'Chưa xác minh'}</div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm">Chưa có thông tin công ty</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="w-full">
+                                    <div className="grid grid-cols-2 gap-4 text-left text-sm">
+                                        <div className="font-medium text-gray-700">Email:</div>
+                                        <div className="text-gray-900">{getValue(selectedUser.email)}</div>
+                                        <div className="font-medium text-gray-700">Họ tên:</div>
+                                        <div className="text-gray-900">{getValue(selectedUser.fullName)}</div>
+                                        <div className="font-medium text-gray-700">Số điện thoại:</div>
+                                        <div className="text-gray-900">{getValue(selectedUser.phone)}</div>
+                                        <div className="font-medium text-gray-700">Vai trò:</div>
+                                        <div className="text-gray-900">{selectedUser.role ? "Quản trị viên" : 'Chưa cập nhật'}</div>
+                                    </div>
+                                </div>
+                            )
+                        ) : (
+                            <div>Không có dữ liệu</div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Đóng</Button>
+                        </DialogClose>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

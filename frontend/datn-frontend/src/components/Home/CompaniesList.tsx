@@ -38,7 +38,7 @@ const CompaniesList: React.FC = () => {
                         <div className="flex flex-col gap-2">
                             <span className="font-semibold text-base text-txt-red w-[220px] text-center line-clamp-2">{company.companyName}</span>
                             <p className="text-sm text-gray-700 line-clamp-2 w-[220px] text-center truncate">{company.industry}</p>
-                            <span className="text-sm text-gray-500 text-center">{company.companySize} việc làm</span>
+                            <span className="text-sm text-gray-500 text-center">{company.companySize} nhân sự</span>
                         </div>
                     </div>
                 ))}

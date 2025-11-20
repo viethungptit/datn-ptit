@@ -144,8 +144,8 @@ const TagManagement: React.FC = () => {
                 <h2 className="font-semibold">Quản lý thẻ</h2>
             </div>
 
-            <div className="flex flex-col justify-between gap-10">
-                <section>
+            <div className="flex flex-col h-[calc(100vh-60px)] gap-6">
+                <section className="h-1/2">
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="font-semibold">Thẻ công việc</h2>
                         <Button variant="login" size="sm" onClick={() => openCreate("job")}>Thêm thẻ công việc</Button>
@@ -156,7 +156,7 @@ const TagManagement: React.FC = () => {
                         ) : jobTags.length === 0 ? (
                             <div className="p-6 text-center text-muted-foreground">Không có thẻ nào</div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[220px] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[300px] overflow-y-auto">
                                 {jobTags.map((t, idx) => (
                                     <div key={t.id} className="flex items-center justify-between border rounded-md p-4">
                                         <div className="flex flex-row items-center gap-2">
@@ -181,7 +181,7 @@ const TagManagement: React.FC = () => {
                     </div>
                 </section>
 
-                <section>
+                <section className="h-1/2">
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="font-semibold">Thẻ ngành nghề</h2>
                         <Button variant="login" size="sm" onClick={() => openCreate("group")}>Thêm thẻ ngành nghề</Button>
@@ -192,7 +192,7 @@ const TagManagement: React.FC = () => {
                         ) : groupTags.length === 0 ? (
                             <div className="p-6 text-center text-muted-foreground">Không có thẻ nào</div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-[220px] overflow-y-auto">
+                            <div className="grid grid-cols-4 gap-4 h-[300px] overflow-y-auto">
                                 {groupTags.map((g, idx) => (
                                     <div key={g.id} className="flex items-center justify-between border rounded-md p-4">
                                         <div className="flex flex-row items-center gap-2">

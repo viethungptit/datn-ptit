@@ -64,6 +64,7 @@ interface Company {
     companyId: string;
     companyName: string;
     verified?: boolean;
+    deleted?: boolean;
     logoUrl?: string;
 }
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
@@ -381,6 +382,13 @@ const EmployerJobs: React.FC = () => {
         return (
             <div className="text-center py-10">
                 <h1 className="mb-4">Hồ sơ của bạn chưa được xác thực</h1>
+                <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
+            </div>
+        );
+    if (company.deleted === true)
+        return (
+            <div className="text-center py-10">
+                <h1 className="mb-4">Công ty của bạn đã giải thể</h1>
                 <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
             </div>
         );
