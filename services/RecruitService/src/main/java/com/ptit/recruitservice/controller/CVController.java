@@ -113,7 +113,6 @@ public class CVController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         return cvService.retryEmbedding(cvId, UUID.fromString(currentUserId), isAdmin);
     }
-
     @PutMapping("/{cv_id}/status-embedding")
     public CVDto updateStatusEmbedding(@PathVariable("cv_id") UUID cvId,
                                         @RequestParam("status") CV.StatusEmbedding status,

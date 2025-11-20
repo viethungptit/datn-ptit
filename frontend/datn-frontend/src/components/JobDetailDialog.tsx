@@ -5,6 +5,7 @@ import { getJob } from '@/api/recruitApi';
 import { getDetailCompanyApi } from '@/api/userApi';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { formatTime } from '@/lib/utils';
+import EmployerAppliedCVsDialog from './Employer/EmployerAppliedCVsDialog';
 
 interface Props {
     open: boolean;
@@ -42,7 +43,7 @@ const EXPERIENCE_MAP = Object.fromEntries(
 const JobDetailDialog: React.FC<Props> = ({ open, onOpenChange, jobId }) => {
     const [job, setJob] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
-
+    const [selectedJob, setSelectedJob] = useState(null);
     useEffect(() => {
         if (!open || !jobId) return;
         let mounted = true;
@@ -87,7 +88,9 @@ const JobDetailDialog: React.FC<Props> = ({ open, onOpenChange, jobId }) => {
         fetchData();
         return () => { mounted = false; };
     }, [open, jobId]);
-
+    const openViewCV = (job: any) => {
+        setSelectedJob(job.jobId);
+    }
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-[90%] h-[97vh] overflow-y-auto">
@@ -133,7 +136,18 @@ const JobDetailDialog: React.FC<Props> = ({ open, onOpenChange, jobId }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-left text-gray-600">Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span></span>
+                                <div className="flex justify-between items-center">
+                                    <div className="text-gray-600">
+                                        Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => openViewCV(job)}
+                                        className="px-4 py-2 rounded-xl bg-[#d90429] text-white font-medium 
+               hover:bg-[#b80322] transition mr-5 "
+                                    >
+                                        Xem danh sách CV đã ứng tuyển
+                                    </button>
+                                </div>
                                 <div className='text-left border-t-2 pt-5'>
                                     <h2 className="text-lg font-semibold mb-2">Chi tiết công việc</h2><br />
                                     <p className="text-gray-700 text-base whitespace-pre-line">{job.description}</p>
@@ -210,6 +224,13 @@ const JobDetailDialog: React.FC<Props> = ({ open, onOpenChange, jobId }) => {
                         <Button variant="outline">Đóng</Button>
                     </DialogClose>
                 </DialogFooter>
+                {selectedJob && (
+                    <EmployerAppliedCVsDialog
+                        jobId={selectedJob}
+                        open={!!selectedJob}
+                        onClose={() => setSelectedJob(null)}
+                        role='admin' />
+                )}
             </DialogContent>
         </Dialog>
     );

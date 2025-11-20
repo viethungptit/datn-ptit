@@ -339,7 +339,6 @@ public class CVService {
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
-
     public List<CVDto> getAllCVsByUser(UUID userId) {
         return cvRepository.findByUserIdAndIsDeletedFalse(userId).stream().map(this::toDto).collect(Collectors.toList());
     }
