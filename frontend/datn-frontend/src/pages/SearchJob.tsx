@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import JobsList from "@/components/Home/JobsList";
 import SearchBar from "@/components/Home/SearchBar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,7 +65,6 @@ const SearchJob: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [filterValues, setFilterValues] = useState<Record<string, string[]>>({});
     const [dynamicFilters, setDynamicFilters] = useState(initialFilters);
-    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchFilters = async () => {
@@ -132,7 +131,9 @@ const SearchJob: React.FC = () => {
         setSearchParams(newParams, { replace: true });
     };
 
-    const handleViewAll = () => navigate("/jobs");
+    const handleViewAll = () => {
+        setSearchParams(new URLSearchParams(), { replace: true });
+    };
 
     return (
         <div className="flex flex-col gap-8 px-[100px] py-10 overflow-y-auto">

@@ -5,6 +5,7 @@ import com.ptit.userservice.dto.*;
 import com.ptit.userservice.entity.Company;
 import com.ptit.userservice.entity.Employer;
 import com.ptit.userservice.exception.ResourceNotFoundException;
+import com.ptit.userservice.feign.RecruitServiceFeign;
 import com.ptit.userservice.repository.CompanyRepository;
 import com.ptit.userservice.repository.EmployerRepository;
 import io.minio.MinioClient;
@@ -32,6 +33,12 @@ public class CompanyService {
     @Autowired
     private EventPublisher eventPublisher;
 
+    @Autowired
+    private RecruitServiceFeign externalRecruitServiceFeignClient;
+
+    @Value("${internal.secret}")
+    private String internalSecret;
+
     @Value("${log.exchange}")
     private String logExchange;
 
@@ -40,6 +47,10 @@ public class CompanyService {
 
     @Value("${minio.bucket}")
     private String bucketName;
+
+    public void deleteJobByCompanyId(UUID companyId) {
+        externalRecruitServiceFeignClient.softDeleteJobByCompanyId(companyId, internalSecret);
+    }
 
     private String uploadLogo(MultipartFile logo) {
         if (logo == null || logo.isEmpty()) return null;
@@ -269,6 +280,9 @@ public class CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin công ty"));
         company.setDeleted(true);
         company = companyRepository.save(company);
+
+        // Soft delete all related jobs
+        deleteJobByCompanyId(companyId);
 
         // Gửi log sang AdminService
         eventPublisher.publish(

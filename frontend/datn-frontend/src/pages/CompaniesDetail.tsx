@@ -136,7 +136,7 @@ const CompaniesDetail = () => {
                         <div className='w-full'>
                             <h1 className="text-2xl text-left font-semibold mb-2 line-clamp-2">{company.companyName}</h1>
                             <div className="flex flex-row justify-between text-gray-600">
-                                <span className='w-1/3 text-left truncate'><i className="fa-solid fa-industry"></i>Technology</span>
+                                <span className='w-1/3 text-left truncate'><i className="fa-solid fa-industry"></i> {company.industry}</span>
                                 <span className='w-1/3 text-left truncate'><i className="fa-solid fa-building"></i> {company.companySize} nhân viên</span>
                                 <span className='w-1/3 text-left truncate'><i className="fa-solid fa-link"></i> {company.website}</span>
                             </div>
@@ -157,7 +157,7 @@ const CompaniesDetail = () => {
                                 company.jobs
                                     .filter((job: Job) => job.status === "open")
                                     .map((job: Job, index: number) => (
-                                        <div className='flex flex-row p-3' key={index + job.jobId + job.title + job.companyId}>
+                                        <div className='flex flex-row px-5 py-10 border-b-2' key={index + job.jobId + job.title + job.companyId}>
                                             <div className="grid grid-cols-2 w-5/6 gap-y-2 text-sm text-gray-700">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium">Vị trí:</span>

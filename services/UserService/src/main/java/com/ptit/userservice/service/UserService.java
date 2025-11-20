@@ -2,7 +2,6 @@ package com.ptit.userservice.service;
 
 import com.ptit.userservice.config.EventPublisher;
 import com.ptit.userservice.dto.*;
-import com.ptit.userservice.entity.OtpToken;
 import com.ptit.userservice.entity.User;
 import com.ptit.userservice.exception.BusinessException;
 import com.ptit.userservice.exception.ResourceNotFoundException;
@@ -157,7 +156,22 @@ public class UserService {
     public List<UserResponse> listUsers() {
         return userRepository.findAll().stream()
                 .filter(u -> !u.isDeleted())
-                .map(this::toResponse)
+                .map(user -> {
+                    UserResponse response = toResponse(user);
+                    if (user.getRole() == User.Role.candidate) {
+                        candidateRepository.findByUser_UserId(user.getUserId())
+                                .ifPresent(candidate -> response.setCandidate(userProfileService.toCandidateResponse(candidate)));
+                    } else if (user.getRole() == User.Role.employer) {
+                        employerRepository.findByUser_UserId(user.getUserId())
+                                .ifPresent(employer -> {
+                                    response.setEmployer(userProfileService.toEmployerResponse(employer));
+                                    if (employer.getCompany() != null) {
+                                        response.setCompany(userProfileService.toCompanyResponse(employer.getCompany()));
+                                    }
+                                });
+                    }
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 

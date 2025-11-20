@@ -49,3 +49,5 @@ management.endpoint.health.show-details=always
 
 # --- Add service name tag for easier identification ---
 management.metrics.tags.application=user-service
+
+external.recruit.service.url=

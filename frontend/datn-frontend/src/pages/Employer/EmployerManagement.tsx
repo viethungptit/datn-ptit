@@ -119,6 +119,14 @@ const EmployerManagement = () => {
             </div>
         );
 
+    if (profile?.company?.deleted === true)
+        return (
+            <div className="text-center py-10">
+                <h1 className="mb-4">Công ty của bạn đã giải thể</h1>
+                <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
+            </div>
+        );
+
     return (
         <div className="px-4 py-2">
             <div className="flex justify-between items-center mb-3">

@@ -36,6 +36,7 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import EmployerAppliedCVsDialog from "@/components/Employer/EmployerAppliedCVsDialog";
 
 export type Job = {
     jobId: string;
@@ -64,6 +65,7 @@ interface Company {
     companyId: string;
     companyName: string;
     verified?: boolean;
+    deleted?: boolean;
     logoUrl?: string;
 }
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
@@ -124,6 +126,7 @@ const EmployerJobs: React.FC = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [updating, setUpdating] = useState<string | null>(null);
     const [openDialog, setOpenDialog] = useState(false);
+    const [selectedJob, setSelectedJob] = useState<string | null>(null);
     const [detailJobId, setDetailJobId] = useState<string | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const handleDetailOpenChange = (open: boolean) => {
@@ -205,6 +208,9 @@ const EmployerJobs: React.FC = () => {
         }
         setOpenDialog(true);
     };
+    const setOpenViewCV = (job: any) => {
+        setSelectedJob(job.jobId);
+    }
     const toggleGroupTag = (id: string, checked: boolean) => {
         setForm(f => {
             const prev = f.groupTagIds || [];
@@ -384,6 +390,13 @@ const EmployerJobs: React.FC = () => {
                 <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
             </div>
         );
+    if (company.deleted === true)
+        return (
+            <div className="text-center py-10">
+                <h1 className="mb-4">Công ty của bạn đã giải thể</h1>
+                <Button onClick={() => navigate("/employer/profile")}>Xem thông tin</Button>
+            </div>
+        );
     return (
         <div className="px-4 py-2">
             <div className="flex justify-between w-full">
@@ -482,6 +495,13 @@ const EmployerJobs: React.FC = () => {
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setOpenViewCV(job) }}
+                                            >
+                                                Xem danh sách cv đã nộp
+                                            </Button>
                                             <Button
                                                 size="sm"
                                                 variant="outline"
@@ -775,7 +795,13 @@ const EmployerJobs: React.FC = () => {
             </Tabs>
 
             <JobDetailDialog open={detailOpen} onOpenChange={handleDetailOpenChange} jobId={detailJobId} />
-
+            {selectedJob && (
+                <EmployerAppliedCVsDialog
+                    jobId={selectedJob}
+                    open={!!selectedJob}
+                    onClose={() => setSelectedJob(null)}
+                    role={profile?.role} />
+            )}
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogContent className="max-w-7xl">
                     <DialogHeader>
