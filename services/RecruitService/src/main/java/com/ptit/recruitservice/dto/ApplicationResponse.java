@@ -10,7 +10,7 @@ public class ApplicationResponse {
     private String status;
     private boolean isDeleted;
     private Timestamp appliedAt;
-
+    private CVDto cv;
     public UUID getApplicationId() { return applicationId; }
     public void setApplicationId(UUID applicationId) { this.applicationId = applicationId; }
     public UUID getJobId() { return jobId; }
@@ -23,5 +23,13 @@ public class ApplicationResponse {
     public void setDeleted(boolean deleted) { isDeleted = deleted; }
     public Timestamp getAppliedAt() { return appliedAt; }
     public void setAppliedAt(Timestamp appliedAt) { this.appliedAt = appliedAt; }
+
+    public CVDto getCv() {
+        return cv;
+    }
+
+    public void setCv(CVDto cv) {
+        this.cv = cv;
+    }
 }
 

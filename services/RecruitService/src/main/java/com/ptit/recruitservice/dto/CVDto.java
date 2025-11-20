@@ -15,7 +15,6 @@ public class CVDto {
     private String statusEmbedding;
     private boolean isDeleted;
     private Timestamp createdAt;
-
     public UUID getCvId() { return cvId; }
     public void setCvId(UUID cvId) { this.cvId = cvId; }
     public UUID getUserId() { return userId; }

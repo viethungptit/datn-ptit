@@ -8,7 +8,10 @@ import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { formatTime } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated } from '@/redux/authSlice';
+import { getCurrentUserProfile } from '@/api/userApi';;
+import ApplyJobDialog from '@/components/UploadCV/ApplyJobDialog';
 import { toast } from 'react-toastify';
+import AppliedCVsDialog from '@/components/UploadCV/AppliedCVDialog';
 
 const JOB_TYPE_OPTIONS = [
     { value: 'full_time', label: 'Toàn thời gian' },
@@ -42,6 +45,28 @@ const JobDetail = () => {
     const isAuthenticated = useSelector(selectIsAuthenticated);
     const [job, setJob] = useState<any | null>(null);
     const [favorite, setFavorite] = useState<any | null>(null);
+    const [profile, setProfile] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const openDialog = () => setIsDialogOpen(true);
+    const closeDialog = () => setIsDialogOpen(false);
+    const [isAppliedCVsDialogOpen, setIsAppliedCVsDialogOpen] = useState(false);
+    const openAppliedCVsDialog = () => setIsAppliedCVsDialogOpen(true);
+    const closeAppliedCVsDialog = () => setIsAppliedCVsDialogOpen(false);
+    useEffect(() => {
+        const fetchProfile = async () => {
+            setLoading(true);
+            try {
+                const res = await getCurrentUserProfile();
+                setProfile(res.data);
+            } catch (err) {
+                toast.error("Không thể tải hồ sơ người dùng");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     useEffect(() => {
         if (!jobId) return;
@@ -125,6 +150,7 @@ const JobDetail = () => {
         }
     };
 
+    if (loading) return <div className="text-center py-10">Đang tải...</div>;
     if (!job) return <div className="p-10 text-center text-xl">Không tìm thấy công việc!</div>;
 
     return (
@@ -165,7 +191,12 @@ const JobDetail = () => {
                     </div>
                     <span className="text-left text-gray-600">Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span></span>
                     <div className="flex items-center justify-between">
-                        <Button variant="seek" className='w-1/3'>Ứng tuyển ngay</Button>
+                        <Button variant="seek" className='w-1/3' onClick={openDialog}>Ứng tuyển ngay</Button>
+                        {profile?.role === 'candidate' && (
+                            <Button variant="outline" className="mt-4" onClick={openAppliedCVsDialog}>
+                                Xem CV đã nộp
+                            </Button>
+                        )}
                         <div
                             onClick={() => toggleFavorite()}
                             className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
@@ -241,6 +272,12 @@ const JobDetail = () => {
                     </div>
                 </div>
             </div>
+            <ApplyJobDialog open={isDialogOpen} onClose={closeDialog} jobId={jobId as string} />
+            <AppliedCVsDialog
+                jobId={jobId as string}
+                open={isAppliedCVsDialogOpen}
+                onClose={closeAppliedCVsDialog}
+            />
             <Footer />
         </div>
     );

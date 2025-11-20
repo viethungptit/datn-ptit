@@ -16,10 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -73,19 +70,17 @@ public class ApplicationService {
 
     private String getVietnameseStatusLog(Application.Status status) {
         return switch (status) {
-            case applied -> "nộp";
-            case shortlisted -> "chấp nhận";
+            case pending -> "đang nộp";
+            case approved -> "chấp nhận";
             case rejected -> "từ chối";
-            case hired -> "tuyển";
         };
     }
 
     private String getVietnameseStatusEmail(Application.Status status) {
         return switch (status) {
-            case applied -> "Đang ứng tuyển";
-            case shortlisted -> "Được chấp nhận";
-            case rejected -> "Bị từ chối";
-            case hired -> "Đã tuyển dụng";
+            case pending -> "đang nộp";
+            case approved -> "chấp nhận";
+            case rejected -> "từ chối";
         };
     }
 
@@ -103,7 +98,7 @@ public class ApplicationService {
         Application application = new Application();
         application.setJob(job);
         application.setCv(cv);
-        application.setStatus(Application.Status.applied);
+        application.setStatus(Application.Status.pending);
         application.setIsDeleted(false);
         application.setAppliedAt(new Timestamp(System.currentTimeMillis()));
         application = applicationRepository.save(application);
@@ -213,11 +208,82 @@ public class ApplicationService {
     }
 
     public List<ApplicationResponse> getApplicationsByJobId(UUID jobId) {
-        List<Application> applications = applicationRepository.findAll()
+
+        // Lấy toàn bộ application theo job, không deleted
+        List<Application> applications = applicationRepository
+                .findAll()
                 .stream()
-                .filter(app -> app.getJob().getJobId().equals(jobId) && !Boolean.TRUE.equals(app.getIsDeleted()))
+                .filter(app -> app.getJob().getJobId().equals(jobId)
+                        && !Boolean.TRUE.equals(app.getIsDeleted()))
                 .collect(Collectors.toList());
-        return applications.stream().map(this::toResponse).collect(Collectors.toList());
+
+        List<ApplicationResponse> responses = new ArrayList<>();
+
+        for (Application app : applications) {
+
+            // Build CVDto
+            CVDto cvDto = new CVDto();
+            cvDto.setCvId(app.getCv().getCvId());
+            cvDto.setUserId(app.getCv().getUserId());
+            cvDto.setSourceType(app.getCv().getSourceType() != null ? app.getCv().getSourceType().name() : null);
+            cvDto.setTemplateId(app.getCv().getTemplate() != null ? app.getCv().getTemplate().getTemplateId() : null);
+            cvDto.setDataJson(app.getCv().getDataJson());
+            cvDto.setFileUrl(app.getCv().getFileUrl());
+            cvDto.setTitle(app.getCv().getTitle());
+            cvDto.setStatusEmbedding(app.getCv().getStatusEmbedding() != null ? app.getCv().getStatusEmbedding().name() : null);
+            cvDto.setDeleted(app.getCv().getIsDeleted());
+            cvDto.setCreatedAt(app.getCv().getCreatedAt());
+
+            // Build ApplicationResponse
+            ApplicationResponse resp = new ApplicationResponse();
+            resp.setApplicationId(app.getApplicationId());
+            resp.setJobId(app.getJob().getJobId());
+            resp.setCvId(app.getCv().getCvId());
+            resp.setStatus(app.getStatus().name());
+            resp.setDeleted(app.getIsDeleted());
+            resp.setAppliedAt(app.getAppliedAt());
+            resp.setCv(cvDto);
+
+            responses.add(resp);
+        }
+
+        return responses;
+    }
+
+    public List<ApplicationResponse> getApplicationsByJobIdForCandidate(UUID jobId, UUID currentUserId) {
+        List<Application> applications = applicationRepository
+                .findByJob_JobIdAndCv_UserIdAndIsDeletedFalse(jobId, currentUserId);
+
+        List<ApplicationResponse> responses = new ArrayList<>();
+
+        for (Application app : applications) {
+
+            CVDto cvDto = new CVDto();
+            cvDto.setCvId(app.getCv().getCvId());
+            cvDto.setUserId(app.getCv().getUserId());
+            cvDto.setSourceType(app.getCv().getSourceType() != null ? app.getCv().getSourceType().name() : null);
+            cvDto.setTemplateId(app.getCv().getTemplate() != null ? app.getCv().getTemplate().getTemplateId() : null);
+            cvDto.setDataJson(app.getCv().getDataJson());
+            cvDto.setFileUrl(app.getCv().getFileUrl());
+            cvDto.setTitle(app.getCv().getTitle());
+            cvDto.setStatusEmbedding(app.getCv().getStatusEmbedding() != null ? app.getCv().getStatusEmbedding().name() : null);
+            cvDto.setDeleted(app.getCv().getIsDeleted());
+            cvDto.setCreatedAt(app.getCv().getCreatedAt());
+
+            // Tạo ApplicationResponse
+            ApplicationResponse resp = new ApplicationResponse();
+            resp.setApplicationId(app.getApplicationId());
+            resp.setJobId(app.getJob().getJobId());
+            resp.setCvId(app.getCv().getCvId());
+            resp.setStatus(app.getStatus().name());
+            resp.setDeleted(app.getIsDeleted());
+            resp.setAppliedAt(app.getAppliedAt());
+            resp.setCv(cvDto); // nếu ApplicationResponse có field CVDto
+
+            responses.add(resp);
+        }
+
+        return responses;
     }
 
     private ApplicationResponse toResponse(Application application) {
