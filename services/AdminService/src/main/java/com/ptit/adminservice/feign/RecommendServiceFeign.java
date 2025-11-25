@@ -11,8 +11,5 @@ import java.util.Map;
 public interface RecommendServiceFeign {
     @GetMapping("/api/recommend-service/health")
     Map<String, Object> getHealthStatus(@RequestHeader("X-Internal-Secret") String secret);
-
-    @GetMapping("/internal/stats")
-    Map<String, Object> getRecommendStats(@RequestHeader("X-Internal-Secret") String secret);
 }
 

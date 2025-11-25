@@ -3,6 +3,10 @@ from starlette.requests import Request
 from fastapi import Response
 
 class HeaderAuthMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, skip_paths=None):
+        super().__init__(app)
+        self.skip_paths = skip_paths or []
+
     async def dispatch(self, request: Request, call_next):
         user_id = request.headers.get("X-User-Id")
         user_role = request.headers.get("X-User-Role")

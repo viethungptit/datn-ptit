@@ -1,34 +1,16 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "react-toastify";
-import { getApplicationsByJobForCandidate, exportCV } from '@/api/recruitApi';
+import { exportCV } from '@/api/recruitApi';
 
 interface AppliedCVsDialogProps {
-    jobId: string;
+    appliedCVs: any[];
     open: boolean;
     onClose: () => void;
 }
 
-export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDialogProps) {
-    const [appliedCVs, setAppliedCVs] = useState<any[]>([]);
-    const navigate = useNavigate();
-
-    const fetchAppliedCVs = async () => {
-        try {
-            const res = await getApplicationsByJobForCandidate(jobId);
-            setAppliedCVs(res.data);
-        } catch (error) {
-            console.error("Failed to fetch applied CVs", error);
-            toast.error("Không tải được danh sách CV đã nộp");
-        }
-    };
-
-    useEffect(() => {
-        if (open) fetchAppliedCVs();
-    }, [open]);
+export default function AppliedCVsDialog({ appliedCVs, open, onClose }: AppliedCVsDialogProps) {
 
     const handlePrintClick = async (cvId: string) => {
         try {
@@ -52,7 +34,8 @@ export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDia
             return;
         }
         if (cv.sourceType === "system") {
-            navigate(`/preview-cvs/${cv.cvId}`);
+            const url = `/preview-cvs/${cv.cvId}`;
+            window.open(url, '_blank');
             return;
         }
         handlePrintClick(cv.cvId);
@@ -103,7 +86,7 @@ export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDia
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl">
+            <DialogContent className="max-w-7xl">
                 <DialogHeader>
                     <DialogTitle>Danh sách CV đã nộp</DialogTitle>
                 </DialogHeader>
@@ -115,7 +98,7 @@ export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDia
                         <TabsTrigger value="rejected">Đã từ chối</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="pending" className="py-4">
+                    <TabsContent value="pending" className="py-4 max-h-[500px] overflow-y-auto">
                         {pendingCVs.length === 0 ? (
                             <p>Không có CV chờ duyệt</p>
                         ) : (
@@ -125,7 +108,7 @@ export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDia
                         )}
                     </TabsContent>
 
-                    <TabsContent value="approved" className="py-4">
+                    <TabsContent value="approved" className="py-4 max-h-[500px] overflow-y-auto">
                         {approvedCVs.length === 0 ? (
                             <p>Chưa có CV nào được duyệt</p>
                         ) : (
@@ -135,7 +118,7 @@ export default function AppliedCVsDialog({ jobId, open, onClose }: AppliedCVsDia
                         )}
                     </TabsContent>
 
-                    <TabsContent value="rejected" className="py-4">
+                    <TabsContent value="rejected" className="py-4 max-h-[500px] overflow-y-auto">
                         {rejectedCVs.length === 0 ? (
                             <p>Chưa có CV nào bị từ chối</p>
                         ) : (

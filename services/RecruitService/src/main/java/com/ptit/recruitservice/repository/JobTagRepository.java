@@ -12,4 +12,7 @@ public interface JobTagRepository extends JpaRepository<JobTag, UUID> {
     List<JobTag> findByIsDeletedFalse();
     @Query("SELECT t FROM JobTag t JOIN JobTagMapping m ON t.id = m.jobTag.id WHERE m.job.jobId = :jobId")
     List<JobTag> findAllByJobId(@Param("jobId") UUID jobId);
+
+    // count for stats
+    long countByIsDeletedFalse();
 }

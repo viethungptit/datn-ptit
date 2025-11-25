@@ -2,13 +2,15 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import React, { useState } from "react";
 import { login } from "../redux/authReduxAPI";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setAuthData } from "@/redux/authSlice";
 
 const Login: React.FC = () => {
+    const [searchParams] = useSearchParams();
+    const jobId = searchParams.get("jobId");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -25,6 +27,10 @@ const Login: React.FC = () => {
                 dispatch(setAuthData(res));
                 localStorage.setItem('accessToken', res.accessToken);
                 toast.success("Đăng nhập thành công!");
+                if (jobId) {
+                    navigate(`/jobs/${jobId}`);
+                    return;
+                }
                 navigate("/");
             }
             else {

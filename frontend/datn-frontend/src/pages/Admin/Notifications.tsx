@@ -115,9 +115,9 @@ const Notifications: React.FC = () => {
                                             const obj = JSON.parse(n.payload);
                                             if (obj?.to) return <div className="text-sm">{obj.to}</div>;
                                             if (obj?.data && obj.data.email) return <div className="text-sm">{obj.data.email}</div>;
-                                            return <div className="text-sm">{JSON.stringify(obj)}</div>;
+                                            return <div className="text-sm">Không có người nhận</div>;
                                         } catch (e) {
-                                            return <div className="text-sm">{n.payload}</div>;
+                                            return <div className="text-sm">Không có người nhận</div>;
                                         }
                                     })()}
                                 </TableCell>

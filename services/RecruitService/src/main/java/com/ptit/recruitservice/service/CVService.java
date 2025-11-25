@@ -18,6 +18,9 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -347,6 +350,13 @@ public class CVService {
         return cvRepository.findByIsDeletedFalse().stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    public Page<CVDto> getAllCVsPaged(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return cvRepository.findByIsDeletedFalse(pageable)
+                .map(this::toDto);
+    }
+
+
     private CVDto toDto(CV cv) {
         CVDto dto = new CVDto();
         dto.setCvId(cv.getCvId());
@@ -419,5 +429,15 @@ public class CVService {
         }
         cv = cvRepository.save(cv);
         return toDto(cv);
+    }
+
+    public List<CVDto> getCvsByIds(List<UUID> cvIds) {
+        List<CV> cvs = cvRepository.findAllById(cvIds);
+        if (cvs.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy CV nào với các ID đã cung cấp");
+        }
+        return cvs.stream()
+                .map(this::toDto)
+                .toList();
     }
 }

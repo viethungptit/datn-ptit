@@ -6,6 +6,7 @@ import java.util.UUID;
 public class CompanyResponse {
     private UUID companyId;
     private String companyName;
+    private String logoUrl;
 
     public String getCompanyName() {
         return companyName;
@@ -22,4 +23,8 @@ public class CompanyResponse {
     public void setCompanyId(UUID companyId) {
         this.companyId = companyId;
     }
+
+    public String getLogoUrl() {return logoUrl;}
+
+    public void setLogoUrl(String logoUrl) {this.logoUrl = logoUrl;}
 }

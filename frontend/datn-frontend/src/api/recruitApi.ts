@@ -176,6 +176,14 @@ export const uploadCV = (payload: FormData) =>
 
 export const getAllCVs = () => gatewayApi.get("/api/recruit-service/cvs/all");
 
+export const getAllCVsWithPagination = (
+  page: number = 0,
+  pageSize: number = 10
+) =>
+  gatewayApi.get("/api/recruit-service/cvs/all/paged", {
+    params: { page, size: pageSize },
+  });
+
 export const getAllCVsByUser = (userId: string) =>
   gatewayApi.get(`/api/recruit-service/cvs/all-by-user/${userId}`);
 
@@ -205,10 +213,15 @@ export const getApplicationsByJob = (jobId: string) =>
   gatewayApi.get("/api/recruit-service/applications", {
     params: { job_id: jobId },
   });
+
 export const getApplicationsByJobForCandidate = (jobId: string) =>
   gatewayApi.get("/api/recruit-service/applications/candidate", {
     params: { job_id: jobId },
   });
+
+export const getAllApplicationsForCandidate = () =>
+  gatewayApi.get("/api/recruit-service/applications/all/candidate");
+
 export const applyForJob = (payload: { jobId: string; cvId: string }) =>
   gatewayApi.post("/api/recruit-service/applications", payload);
 
@@ -222,8 +235,27 @@ export const deleteApplication = (applicationId: string) =>
   gatewayApi.delete(`/api/recruit-service/applications/${applicationId}`);
 
 export const getAllJobs = () => gatewayApi.get("/api/recruit-service/jobs/all");
+
+export const getAllJobsWithPagination = (page: number, pageSize: number) =>
+  gatewayApi.get("/api/recruit-service/jobs/all/paged", {
+    params: { page, size: pageSize },
+  });
+
 export const filterJobsApi = (params: Record<string, any>) => {
   return gatewayApi.get("/api/recruit-service/jobs/filter", { params });
+};
+export const filterJobsApiWithPagination = (
+  params: Record<string, any>,
+  page: number,
+  pageSize: number
+) => {
+  return gatewayApi.get("/api/recruit-service/jobs/filter/paged", {
+    params: {
+      ...params,
+      page,
+      size: pageSize,
+    },
+  });
 };
 export const searchJobs = (keyword?: string, location?: string) => {
   const params = new URLSearchParams();

@@ -68,6 +68,9 @@ public class ApplicationService {
     @Value("${embedding.application.delete.routing-key}")
     private String embeddingApplicationDeleteRoutingKey;
 
+    @Value("${embedding.application.status.routing-key}")
+    private String embeddingApplicationStatusRoutingKey;
+
     private String getVietnameseStatusLog(Application.Status status) {
         return switch (status) {
             case pending -> "đang nộp";
@@ -105,8 +108,10 @@ public class ApplicationService {
 
         // Đồng bộ DB với RecommendService
         Map<String, Object> event1 = new HashMap<>();
+        event1.put("application_id", application.getApplicationId());
         event1.put("job_id", job.getJobId());
         event1.put("cv_id", cv.getCvId());
+        event1.put("apply_status", application.getStatus().name());
         eventPublisher.publish(embeddingExchange, embeddingApplicationRoutingKey, event1);
 
         // Gửi notification sang NotificationService
@@ -145,6 +150,12 @@ public class ApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn ứng tuyển"));
         application.setStatus(status);
         application = applicationRepository.save(application);
+
+        // Đồng bộ DB với RecommendService
+        Map<String, Object> event1 = new HashMap<>();
+        event1.put("application_id", application.getApplicationId());
+        event1.put("apply_status", application.getStatus().name());
+        eventPublisher.publish(embeddingExchange, embeddingApplicationStatusRoutingKey, event1);
 
         // Gửi notification sang NotificationService
         UserResponse user = getUserByUserId(application.getCv().getUserId());
@@ -279,6 +290,66 @@ public class ApplicationService {
             resp.setDeleted(app.getIsDeleted());
             resp.setAppliedAt(app.getAppliedAt());
             resp.setCv(cvDto); // nếu ApplicationResponse có field CVDto
+
+            responses.add(resp);
+        }
+
+        return responses;
+    }
+
+    public List<ApplicationResponse> getApplicationsForCandidate(UUID currentUserId) {
+        List<Application> applications = applicationRepository
+                .findByCv_UserIdAndIsDeletedFalse(currentUserId);
+
+        List<ApplicationResponse> responses = new ArrayList<>();
+
+        for (Application app : applications) {
+
+            CVDto cvDto = new CVDto();
+            cvDto.setCvId(app.getCv().getCvId());
+            cvDto.setUserId(app.getCv().getUserId());
+            cvDto.setSourceType(app.getCv().getSourceType() != null ? app.getCv().getSourceType().name() : null);
+            cvDto.setTemplateId(app.getCv().getTemplate() != null ? app.getCv().getTemplate().getTemplateId() : null);
+            cvDto.setDataJson(app.getCv().getDataJson());
+            cvDto.setFileUrl(app.getCv().getFileUrl());
+            cvDto.setTitle(app.getCv().getTitle());
+            cvDto.setStatusEmbedding(app.getCv().getStatusEmbedding() != null ? app.getCv().getStatusEmbedding().name() : null);
+            cvDto.setDeleted(app.getCv().getIsDeleted());
+            cvDto.setCreatedAt(app.getCv().getCreatedAt());
+
+            JobDto jobDto = new JobDto();
+            jobDto.setJobId(app.getJob().getJobId());
+            jobDto.setCompanyId(app.getJob().getCompanyId());
+            jobDto.setTitle(app.getJob().getTitle());
+            jobDto.setDescription(app.getJob().getDescription());
+            jobDto.setMinSalary(app.getJob().getMinSalary());
+            jobDto.setMaxSalary(app.getJob().getMaxSalary());
+            jobDto.setLocation(app.getJob().getLocation());
+            jobDto.setCity(app.getJob().getCity());
+            jobDto.setQuantity(app.getJob().getQuantity());
+            jobDto.setExperience(app.getJob().getExperience());
+            jobDto.setDeadline(app.getJob().getDeadline());
+            jobDto.setJobType(app.getJob().getJobType().name());
+            jobDto.setStatus(app.getJob().getStatus().name());
+            jobDto.setStatusEmbedding(app.getJob().getStatusEmbedding().name());
+            jobDto.setDeleted(Boolean.TRUE.equals(app.getJob().getIsDeleted()));
+            jobDto.setCreatedAt(app.getJob().getCreatedAt());
+            jobDto.setCreatedBy(app.getJob().getCreatedBy());
+            jobDto.setUpdatedBy(app.getJob().getUpdatedBy());
+
+            CompanyResponse company = getCompanyByCompanyId(app.getJob().getCompanyId());
+
+            // Tạo ApplicationResponse
+            ApplicationResponse resp = new ApplicationResponse();
+            resp.setApplicationId(app.getApplicationId());
+            resp.setJobId(app.getJob().getJobId());
+            resp.setCvId(app.getCv().getCvId());
+            resp.setStatus(app.getStatus().name());
+            resp.setDeleted(app.getIsDeleted());
+            resp.setAppliedAt(app.getAppliedAt());
+            resp.setCv(cvDto);
+            resp.setJob(jobDto);
+            resp.setCompany(company);
 
             responses.add(resp);
         }

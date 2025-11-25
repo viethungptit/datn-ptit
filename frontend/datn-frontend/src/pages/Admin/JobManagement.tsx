@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAllCompaniesApi } from "@/api/userApi";
 import {
-    getAllJobs,
     createJobForAdmin,
     deleteJob,
     updateJobForAdmin,
@@ -29,8 +28,11 @@ import {
     getAllGroupJobTags,
     changeStatusJob,
     retryEmbeddingJob,
+    getAllJobsWithPagination,
 } from "@/api/recruitApi";
 import JobDetailDialog from "@/components/JobDetailDialog";
+import EmployerAppliedCVsDialog from "@/components/Employer/EmployerAppliedCVsDialog";
+import Pagination from "@/components/Pagination/Pagination";
 
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
 type GroupTag = { groupTagId: string; groupJobName: string; isDeleted?: boolean };
@@ -70,6 +72,10 @@ const JobManagement = () => {
     const [isEdit, setIsEdit] = useState(false);
     const [detailJobId, setDetailJobId] = useState<string | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedJob, setSelectedJob] = useState<string | null>(null);
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
     const handleDetailOpenChange = (open: boolean) => {
         setDetailOpen(open);
         if (!open) setDetailJobId(null);
@@ -102,7 +108,7 @@ const JobManagement = () => {
             setLoading(true);
             try {
                 const [jobsRes, companiesRes, jobTagsRes, groupTagsRes] = await Promise.all([
-                    getAllJobs(),
+                    getAllJobsWithPagination(page, pageSize),
                     getAllCompaniesApi(),
                     getAllJobTags(),
                     getAllGroupJobTags(),
@@ -110,7 +116,7 @@ const JobManagement = () => {
                 if (!jobsRes || !jobsRes.data) throw new Error("Failed to fetch jobs");
                 if (!companiesRes || !companiesRes.data) throw new Error("Failed to fetch companies");
                 // map jobs to Job[] shape (assume backend returns jobId or id)
-                const mappedJobs: Job[] = (jobsRes.data || []).map((j: any) => ({
+                const mappedJobs: Job[] = (jobsRes.data.content || []).map((j: any) => ({
                     jobId: j.jobId ?? j.id ?? j.job_id,
                     companyId: j.companyId ?? j.company_id,
                     title: j.title,
@@ -128,6 +134,7 @@ const JobManagement = () => {
                     createdAt: j.createdAt ?? j.created_at,
                 }));
                 setJobs(mappedJobs);
+                setTotalPages(jobsRes.data.totalPages)
                 setCompanies(companiesRes.data || []);
                 // map job tags and group tags
                 const jobTagsData = (jobTagsRes as any)?.data ?? jobTagsRes ?? [];
@@ -141,7 +148,7 @@ const JobManagement = () => {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize]);
 
     const [jobTags, setJobTags] = useState<JobTag[]>([]);
     const [groupTags, setGroupTags] = useState<GroupTag[]>([]);
@@ -300,11 +307,9 @@ const JobManagement = () => {
         return 'Đang mở';
     };
 
-    const getJobTypeLabel = (val?: string) => {
-        if (!val) return '';
-        const found = JOB_TYPE_OPTIONS.find(x => x.value === val);
-        return found ? found.label : val;
-    };
+    const setOpenViewCV = (job: any) => {
+        setSelectedJob(job.jobId);
+    }
 
     return (
         <div className="px-4 py-2">
@@ -318,10 +323,8 @@ const JobManagement = () => {
                         <TableRow>
                             <TableHead className="text-left">Tiêu đề</TableHead>
                             <TableHead className="text-left">Công ty</TableHead>
-                            <TableHead className="text-center">Loại</TableHead>
                             <TableHead className="text-center">Trạng thái</TableHead>
                             <TableHead className="text-center">Trạng thái phân tích</TableHead>
-                            <TableHead className="text-center">Hạn nộp</TableHead>
                             <TableHead className="text-center">Ngày tạo</TableHead>
                             <TableHead className="text-center">Hành động</TableHead>
                         </TableRow>
@@ -340,7 +343,6 @@ const JobManagement = () => {
                                 <TableRow key={j.jobId}>
                                     <TableCell className="text-left">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
-                                    <TableCell className="text-center">{getJobTypeLabel(j.jobType)}</TableCell>
                                     <TableCell className="text-center w-[120px]">
                                         <Select
                                             value={j.status ?? ''}
@@ -370,10 +372,16 @@ const JobManagement = () => {
                                             />
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-center">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setOpenViewCV(j) }}
+                                            >
+                                                CV đã nộp
+                                            </Button>
                                             <Button size="sm" variant="outline" onClick={() => { setDetailJobId(j.jobId); setDetailOpen(true); }}>Xem</Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogJob(j)}>Sửa</Button>
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(j.jobId)}>Xóa</Button>
@@ -579,6 +587,17 @@ const JobManagement = () => {
                 </DialogContent>
             </Dialog>
             <JobDetailDialog open={detailOpen} onOpenChange={handleDetailOpenChange} jobId={detailJobId} />
+            {selectedJob && (
+                <EmployerAppliedCVsDialog
+                    jobId={selectedJob}
+                    open={!!selectedJob}
+                    onClose={() => setSelectedJob(null)}
+                    role="admin" />
+            )}
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
         </div>
     );
 };

@@ -4,14 +4,14 @@ import { toast } from 'react-toastify';
 import { getAllLogsApi } from '@/api/adminApi';
 
 type Logs = {
-  id: string;
-  actorId: string;
-  actorRole: string; 
-  action: string;    
-  targetType: string;
-  targetId: string;
-  description: string;
-  createdAt: string;
+    id: string;
+    actorId: string;
+    actorRole: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    description: string;
+    createdAt: string;
 };
 
 const LogsUI: React.FC = () => {
@@ -65,7 +65,7 @@ const LogsUI: React.FC = () => {
                             </TableRow>
                         )}
 
-                        {logs.map((t) => (
+                        {logs.reverse().map((t) => (
                             <TableRow key={t.id} className="border-t">
                                 <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{t.actorId}</TableCell>
                                 <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{t.actorRole}</TableCell>

@@ -29,12 +29,5 @@ public class AdminAlertRecipientController {
         List<AdminAlertRecipientDto> created = service.createRecipients(request.getEmails());
         return ResponseEntity.ok(created);
     }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping
-    public ResponseEntity<List<AdminAlertRecipientDto>> update(@RequestBody CreateRecipientsRequest request) {
-        List<AdminAlertRecipientDto> updated = service.updateRecipients(request.getEmails());
-        return ResponseEntity.ok(updated);
-    }
 }
 

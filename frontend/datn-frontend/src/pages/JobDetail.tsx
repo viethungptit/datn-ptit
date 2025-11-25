@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { getJob, addFavorite, getFavorites, removeFavorite } from '@/api/recruitApi';
+import { getJob, addFavorite, getFavorites, removeFavorite, getApplicationsByJobForCandidate } from '@/api/recruitApi';
 import { getDetailCompanyApi } from '@/api/userApi';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { formatTime } from '@/lib/utils';
@@ -51,27 +51,60 @@ const JobDetail = () => {
     const openDialog = () => setIsDialogOpen(true);
     const closeDialog = () => setIsDialogOpen(false);
     const [isAppliedCVsDialogOpen, setIsAppliedCVsDialogOpen] = useState(false);
+    const [isHiddenButton, setIsHiddenButton] = useState(false);
     const openAppliedCVsDialog = () => setIsAppliedCVsDialogOpen(true);
     const closeAppliedCVsDialog = () => setIsAppliedCVsDialogOpen(false);
+    const [appliedCVs, setAppliedCVs] = useState<any[]>([]);
+
+    const fetchAppliedCVs = async () => {
+        try {
+            const res = await getApplicationsByJobForCandidate(jobId as string);
+            setAppliedCVs(res.data);
+            if (res.data.length > 0) {
+                setIsHiddenButton(true);
+            }
+        } catch (error) {
+            console.error("Failed to fetch applied CVs", error);
+            toast.error("Không tải được danh sách CV đã nộp");
+        }
+    };
+
+    useEffect(() => {
+        if (jobId && isAuthenticated) {
+            fetchAppliedCVs();
+        }
+    }, [jobId, isAuthenticated]);
+
+    const formatSalary = (minSalary?: number, maxSalary?: number) => {
+        if (minSalary && maxSalary) {
+            return `${minSalary.toLocaleString("vi-VN")} - ${maxSalary.toLocaleString("vi-VN")} VNĐ`;
+        } else if (minSalary) {
+            return `Từ ${minSalary.toLocaleString("vi-VN")} VNĐ`;
+        } else if (maxSalary) {
+            return `Đến ${maxSalary.toLocaleString("vi-VN")} VNĐ`;
+        }
+        return "Thoả thuận";
+    }
+
     useEffect(() => {
         const fetchProfile = async () => {
-            setLoading(true);
             try {
                 const res = await getCurrentUserProfile();
                 setProfile(res.data);
             } catch (err) {
                 toast.error("Không thể tải hồ sơ người dùng");
-            } finally {
-                setLoading(false);
             }
         };
-        fetchProfile();
+        if (isAuthenticated) {
+            fetchProfile();
+        }
     }, []);
 
     useEffect(() => {
         if (!jobId) return;
 
         const fetchData = async () => {
+            setLoading(true);
             try {
                 // Get job detail
                 const jobRes = await getJob(jobId);
@@ -92,7 +125,7 @@ const JobDetail = () => {
                     // job fields
                     ...jobData,
                     // fill or rename fields expected by the UI
-                    salaryRange: jobData.salaryRange ?? (jobData.minSalary || jobData.maxSalary ? `${jobData.minSalary ?? ''}${jobData.minSalary && jobData.maxSalary ? ' - ' : ''}${jobData.maxSalary ?? ''}` : ''),
+                    salaryRange: jobData.salaryRange ?? formatSalary(jobData.minSalary, jobData.maxSalary),
                     tags: jobData.jobTagIds ?? [],
                     categories: jobData.groupTagIds ?? [],
                     // company fields
@@ -109,6 +142,7 @@ const JobDetail = () => {
                 console.error(err);
                 setJob(null);
             } finally {
+                setLoading(false);
             }
         };
 
@@ -150,6 +184,14 @@ const JobDetail = () => {
         }
     };
 
+    const handleApply = () => {
+        if (!isAuthenticated) {
+            navigate('/login?jobId=' + jobId);
+            return;
+        }
+        openDialog();
+    };
+
     if (loading) return <div className="text-center py-10">Đang tải...</div>;
     if (!job) return <div className="p-10 text-center text-xl">Không tìm thấy công việc!</div>;
 
@@ -167,7 +209,7 @@ const JobDetail = () => {
                             </div>
                             <div className='flex flex-col'>
                                 <span className="text-left text-sm">Mức lương</span>
-                                <span className="text-left font-semibold">{job.salaryRange} VNĐ</span>
+                                <span className="text-left font-semibold">{job.salaryRange}</span>
                             </div>
                         </div>
                         <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
@@ -191,18 +233,23 @@ const JobDetail = () => {
                     </div>
                     <span className="text-left text-gray-600">Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span></span>
                     <div className="flex items-center justify-between">
-                        <Button variant="seek" className='w-1/3' onClick={openDialog}>Ứng tuyển ngay</Button>
+                        <Button variant="seek" className='w-1/3' onClick={handleApply}>Ứng tuyển ngay</Button>
                         {profile?.role === 'candidate' && (
-                            <Button variant="outline" className="mt-4" onClick={openAppliedCVsDialog}>
-                                Xem CV đã nộp
-                            </Button>
+                            <div className='flex items-center gap-4'>
+                                {
+                                    isHiddenButton &&
+                                    <Button variant="seek" onClick={openAppliedCVsDialog}>
+                                        Xem CV đã nộp
+                                    </Button>
+                                }
+                                <div
+                                    onClick={() => toggleFavorite()}
+                                    className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
+                                >
+                                    <i className={`${favorite ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
+                                </div>
+                            </div>
                         )}
-                        <div
-                            onClick={() => toggleFavorite()}
-                            className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
-                        >
-                            <i className={`${favorite ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
-                        </div>
                     </div>
                     <div className='text-left border-t-2 pt-5'>
                         <h2 className="text-lg font-semibold mb-2">Chi tiết công việc</h2><br />
@@ -272,9 +319,9 @@ const JobDetail = () => {
                     </div>
                 </div>
             </div>
-            <ApplyJobDialog open={isDialogOpen} onClose={closeDialog} jobId={jobId as string} />
+            <ApplyJobDialog isAuthenticated={isAuthenticated} open={isDialogOpen} onClose={closeDialog} jobId={jobId as string} />
             <AppliedCVsDialog
-                jobId={jobId as string}
+                appliedCVs={appliedCVs}
                 open={isAppliedCVsDialogOpen}
                 onClose={closeAppliedCVsDialog}
             />

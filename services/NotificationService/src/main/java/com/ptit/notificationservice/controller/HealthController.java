@@ -10,12 +10,16 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.Map;
 
+import com.ptit.notificationservice.repository.EmailDeliveryRepository;
+import com.ptit.notificationservice.entity.EmailDelivery;
+
 @RestController
 @RequestMapping("/api/notification-service/health")
 public class HealthController {
 
     private final HealthEndpoint healthEndpoint;
     private final MetricsEndpoint metricsEndpoint;
+    private final EmailDeliveryRepository emailDeliveryRepository;
 
     @Value("${internal.secret}")
     private String internalSecret;
@@ -23,9 +27,10 @@ public class HealthController {
     @Value("${spring.application.name:notification-service}")
     private String serviceName;
 
-    public HealthController(HealthEndpoint healthEndpoint, MetricsEndpoint metricsEndpoint) {
+    public HealthController(HealthEndpoint healthEndpoint, MetricsEndpoint metricsEndpoint, EmailDeliveryRepository emailDeliveryRepository) {
         this.healthEndpoint = healthEndpoint;
         this.metricsEndpoint = metricsEndpoint;
+        this.emailDeliveryRepository = emailDeliveryRepository;
     }
 
     @GetMapping
@@ -59,5 +64,25 @@ public class HealthController {
                 "memory", Math.round(memoryMB)
         );
         return ResponseEntity.ok(response);
+    }
+
+    // New: return notification-service stats map used by other services
+    @GetMapping("/stats")
+    public Map<String, Object> getNotificationStats(@RequestHeader(value = "X-Internal-Secret", required = false) String secret) {
+        if (secret == null || !secret.equals(internalSecret)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập tài nguyên này.");
+        }
+
+        long total = emailDeliveryRepository.count();
+        long success = emailDeliveryRepository.countByStatus(EmailDelivery.EmailDeliveryStatus.success);
+        long pending = emailDeliveryRepository.countByStatus(EmailDelivery.EmailDeliveryStatus.pending);
+        long fail = emailDeliveryRepository.countByStatus(EmailDelivery.EmailDeliveryStatus.fail);
+
+        return Map.of(
+                "email_deli_count", total,
+                "email_success_count", success,
+                "email_pending_count", pending,
+                "email_fail_count", fail
+        );
     }
 }

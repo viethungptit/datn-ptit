@@ -5,6 +5,8 @@ import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -85,6 +87,15 @@ public class JobController {
         return jobService.getAllJobs();
     }
 
+    @GetMapping("/all/paged")
+    public ResponseEntity<Page<JobDto>> getJobsPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<JobDto> jobs = jobService.getJobsPaged(page, size);
+        return ResponseEntity.ok(jobs);
+    }
+
     @GetMapping("/filter")
     public List<JobDto> filterJobs(
             @RequestParam(required = false) String keyword,
@@ -94,14 +105,32 @@ public class JobController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer minSalary,
             @RequestParam(required = false) Integer maxSalary,
-            @RequestParam(required = false) String experience
-    ) {
-        return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary,experience);
+            @RequestParam(required = false) String experience) {
+        return jobService.filterJobs(keyword, location, industry, tags, type, minSalary, maxSalary, experience);
     }
+
+    @GetMapping("/filter/paged")
+    public PaginatedResponse<JobDto> filterJobsPaged(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) List<String> industry,
+            @RequestParam(required = false) List<String> tags,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Integer minSalary,
+            @RequestParam(required = false) Integer maxSalary,
+            @RequestParam(required = false) String experience,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return jobService.filterJobsPaged(
+                keyword, location, industry, tags, type,
+                minSalary, maxSalary, experience,
+                page, size);
+    }
+
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping("/{job_id}/change-status/{status}")
     public JobDto changeJobStatus(@PathVariable("job_id") UUID jobId,
-                                  @PathVariable("status") Job.Status status) {
+            @PathVariable("status") Job.Status status) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = (String) auth.getPrincipal();
         return jobService.changeJobStatus(jobId, UUID.fromString(currentUserId), status);
@@ -119,8 +148,8 @@ public class JobController {
 
     @PutMapping("/{job_id}/status-embedding")
     public JobDto updateStatusEmbedding(@PathVariable("job_id") UUID jobId,
-                                        @RequestParam("status") Job.StatusEmbedding status,
-                                        @RequestHeader("X-Internal-Secret") String secret) {
+            @RequestParam("status") Job.StatusEmbedding status,
+            @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }
@@ -129,7 +158,7 @@ public class JobController {
 
     @PutMapping("/company/{company_id}/soft-delete")
     public void softDeleteJobsByCompany(@PathVariable("company_id") UUID companyId,
-                                                @RequestHeader("X-Internal-Secret") String secret) {
+            @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }

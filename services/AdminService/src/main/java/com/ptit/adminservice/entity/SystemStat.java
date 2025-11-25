@@ -39,11 +39,41 @@ public class SystemStat {
     @Column(name = "total_jobs", nullable = false)
     private int totalJobs;
 
-    @Column(name = "active_jobs", nullable = false)
-    private int activeJobs;
+    @Column(name = "open_jobs", nullable = false)
+    private int openJobs;
 
-    @Column(name = "avg_match_score", nullable = false)
-    private float avgMatchScore;
+    @Column(name = "pending_jobs", nullable = false)
+    private int pendingJobs;
+
+    @Column(name = "total_cvs", nullable = false)
+    private int totalCvs;
+
+    @Column(name = "approved_applies", nullable = false)
+    private int approvedApplies;
+
+    @Column(name = "rejected_applies", nullable = false)
+    private int rejectedApplies;
+
+    @Column(name = "pending_applies", nullable = false)
+    private int pendingApplies;
+
+    @Column(name = "job_tags_count", nullable = false)
+    private int jobTagsCount;
+
+    @Column(name = "group_job_tags_count", nullable = false)
+    private int groupJobTagsCount;
+
+    @Column(name = "email_deli_count", nullable = false)
+    private int emailDeliCount;
+
+    @Column(name = "email_pending_count", nullable = false)
+    private int emailPendingCount;
+
+    @Column(name = "email_success_count", nullable = false)
+    private int emailSuccessCount;
+
+    @Column(name = "email_fail_count", nullable = false)
+    private int emailFailCount;
 
     @Column(name = "collected_at", nullable = false)
     private Instant collectedAt = Instant.now();
@@ -52,20 +82,12 @@ public class SystemStat {
         return collectedAt;
     }
 
-    public float getAvgMatchScore() {
-        return avgMatchScore;
-    }
-
-    public void setAvgMatchScore(float avgMatchScore) {
-        this.avgMatchScore = avgMatchScore;
-    }
-
     public int getActiveJobs() {
-        return activeJobs;
+        return openJobs;
     }
 
-    public void setActiveJobs(int activeJobs) {
-        this.activeJobs = activeJobs;
+    public void setActiveJobs(int openJobs) {
+        this.openJobs = openJobs;
     }
 
     public int getTotalJobs() {
@@ -116,11 +138,111 @@ public class SystemStat {
         this.totalAdmins = totalAdmins;
     }
 
+    public int getOpenJobs() {
+        return openJobs;
+    }
+
+    public void setOpenJobs(int openJobs) {
+        this.openJobs = openJobs;
+    }
+
+    public int getPendingJobs() {
+        return pendingJobs;
+    }
+
+    public void setPendingJobs(int pendingJobs) {
+        this.pendingJobs = pendingJobs;
+    }
+
+    public int getTotalCvs() {
+        return totalCvs;
+    }
+
+    public void setTotalCvs(int totalCvs) {
+        this.totalCvs = totalCvs;
+    }
+
+    public int getApprovedApplies() {
+        return approvedApplies;
+    }
+
+    public void setApprovedApplies(int approvedApplies) {
+        this.approvedApplies = approvedApplies;
+    }
+
+    public int getRejectedApplies() {
+        return rejectedApplies;
+    }
+
+    public void setRejectedApplies(int rejectedApplies) {
+        this.rejectedApplies = rejectedApplies;
+    }
+
+    public int getPendingApplies() {
+        return pendingApplies;
+    }
+
+    public void setPendingApplies(int pendingApplies) {
+        this.pendingApplies = pendingApplies;
+    }
+
+    public int getJobTagsCount() {
+        return jobTagsCount;
+    }
+
+    public void setJobTagsCount(int jobTagsCount) {
+        this.jobTagsCount = jobTagsCount;
+    }
+
+    public int getGroupJobTagsCount() {
+        return groupJobTagsCount;
+    }
+
+    public void setGroupJobTagsCount(int groupJobTagsCount) {
+        this.groupJobTagsCount = groupJobTagsCount;
+    }
+
     public UUID getStatId() {
         return statId;
     }
 
     public void setStatId(UUID statId) {
         this.statId = statId;
+    }
+
+    public int getEmailDeliCount() {
+        return emailDeliCount;
+    }
+
+    public void setEmailDeliCount(int emailDeliCount) {
+        this.emailDeliCount = emailDeliCount;
+    }
+
+    public int getEmailPendingCount() {
+        return emailPendingCount;
+    }
+
+    public void setEmailPendingCount(int emailPendingCount) {
+        this.emailPendingCount = emailPendingCount;
+    }
+
+    public int getEmailSuccessCount() {
+        return emailSuccessCount;
+    }
+
+    public void setEmailSuccessCount(int emailSuccessCount) {
+        this.emailSuccessCount = emailSuccessCount;
+    }
+
+    public int getEmailFailCount() {
+        return emailFailCount;
+    }
+
+    public void setEmailFailCount(int emailFailCount) {
+        this.emailFailCount = emailFailCount;
+    }
+
+    public void setCollectedAt(Instant collectedAt) {
+        this.collectedAt = collectedAt;
     }
 }

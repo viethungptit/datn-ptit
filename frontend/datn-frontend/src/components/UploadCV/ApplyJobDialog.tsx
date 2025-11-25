@@ -13,12 +13,13 @@ export type CVItem = {
 };
 
 interface ApplyJobDialogProps {
+    isAuthenticated: boolean;
     jobId: string;
     open: boolean;
     onClose: () => void;
 }
 
-export default function ApplyJobDialog({ open, onClose, jobId }: ApplyJobDialogProps) {
+export default function ApplyJobDialog({ isAuthenticated, open, onClose, jobId }: ApplyJobDialogProps) {
     const [selectedCVs, setSelectedCVs] = useState<string[]>([]);
     const [templateCVs, setTemplateCVs] = useState<CVItem[]>([]);
     const [uploadedCVList, setUploadedCVList] = useState<CVItem[]>([]);
@@ -68,9 +69,10 @@ export default function ApplyJobDialog({ open, onClose, jobId }: ApplyJobDialogP
     };
 
     useEffect(() => {
+        if (!isAuthenticated) return;
         fetchTemplateCVs();
         fetchUploadedCVs();
-    }, []);
+    }, [isAuthenticated]);
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -89,7 +91,7 @@ export default function ApplyJobDialog({ open, onClose, jobId }: ApplyJobDialogP
                                         <div className="h-20 flex items-center justify-center">
                                             <i className="fa-solid fa-file fa-3x text-btn-red"></i>
                                         </div>
-                                        <span className="font-semibold mb-2 text-center line-clamp-2">{cv.title}</span>
+                                        <span className="font-semibold mb-2 text-center line-clamp-2 w-[280px]">{cv.title}</span>
                                         <span className="text-xs text-gray-500 mb-2">Ngày tạo: {new Date(cv.createdAt).toLocaleDateString('vi-VN')}</span>
                                         <div className="absolute top-2 right-2">
                                             <Checkbox checked={selectedCVs.includes(cv.cvId)} onCheckedChange={() => toggleSelect(cv.cvId)} />
@@ -109,7 +111,7 @@ export default function ApplyJobDialog({ open, onClose, jobId }: ApplyJobDialogP
                                         <div className="h-20 flex items-center justify-center">
                                             <i className="fa-solid fa-folder-open fa-3x text-btn-red"></i>
                                         </div>
-                                        <span className="font-semibold mb-2 text-center">{cv.title}</span>
+                                        <span className="font-semibold mb-2 text-center line-clamp-2 w-[280px]">{cv.title}</span>
                                         <span className="text-xs text-gray-500 mb-2">Ngày tạo: {new Date(cv.createdAt).toLocaleDateString('vi-VN')}</span>
                                         <div className="absolute top-2 right-2">
                                             <Checkbox checked={selectedCVs.includes(cv.cvId)} onCheckedChange={() => toggleSelect(cv.cvId)} />

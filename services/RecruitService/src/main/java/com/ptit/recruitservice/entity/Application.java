@@ -23,7 +23,7 @@ public class Application {
     @JoinColumn(name = "cv_id", referencedColumnName = "cv_id")
     private CV cv;
 
-    public enum Status { pending,approved,rejected }
+    public enum Status { pending, approved, rejected }
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     private Status status;

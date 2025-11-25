@@ -12,7 +12,7 @@ public interface RecruitServiceFeign {
     @GetMapping("/api/recruit-service/health")
     Map<String, Object> getHealthStatus(@RequestHeader("X-Internal-Secret") String secret);
 
-    @GetMapping("/internal/stats")
+    @GetMapping("/api/recruit-service/health/stats")
     Map<String, Object> getRecruitStats(@RequestHeader("X-Internal-Secret") String secret);
 }
 

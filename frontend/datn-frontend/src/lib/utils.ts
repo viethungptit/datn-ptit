@@ -16,13 +16,10 @@ export const formatTime = (iso: string) => {
 export const getTimeAgo = (timestamp: string) => {
   if (!timestamp) return "";
 
+  const past = new Date(timestamp);
   const now = new Date();
-  const past = new Date(timestamp.replace(" ", "T"));
 
-  if (isNaN(past.getTime())) return ""; // xử lý lỗi Invalid Date
-
-  const diffMs = now.getTime() - past.getTime() + 7 * 60 * 60 * 1000;
-
+  const diffMs = now.getTime() - past.getTime();
   if (diffMs < 10) return "Vừa xong";
 
   const diffSeconds = Math.floor(diffMs / 1000);
@@ -37,3 +34,4 @@ export const getTimeAgo = (timestamp: string) => {
 
   return past.toLocaleDateString("vi-VN");
 };
+

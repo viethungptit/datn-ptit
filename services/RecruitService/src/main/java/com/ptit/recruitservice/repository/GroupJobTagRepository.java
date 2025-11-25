@@ -12,4 +12,6 @@ public interface GroupJobTagRepository extends JpaRepository<GroupJobTag, UUID> 
     List<GroupJobTag> findByIsDeletedFalse();
     @Query("SELECT g FROM GroupJobTag g JOIN JobGroupTagMapping m ON g.id = m.groupJobTag.id WHERE m.job.jobId = :jobId")
     List<GroupJobTag> findAllByJobId(@Param("jobId") UUID jobId);
+
+    long countByIsDeletedFalse();
 }

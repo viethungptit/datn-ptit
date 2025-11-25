@@ -9,4 +9,7 @@ import java.util.Map;
 public interface NotificationServiceFeign {
     @GetMapping("/api/notification-service/health")
     Map<String, Object> getHealthStatus(@RequestHeader("X-Internal-Secret") String secret);
+
+    @GetMapping("/api/notification-service/health/stats")
+    Map<String, Object> getNotificationStats(@RequestHeader("X-Internal-Secret") String secret);
 }

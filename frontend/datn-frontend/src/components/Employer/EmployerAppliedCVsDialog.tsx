@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
     Dialog,
     DialogContent,
@@ -31,7 +30,6 @@ export default function EmployerAppliedCVsDialog({
     role,
 }: AppliedCVsDialogProps) {
     const [appliedCVs, setAppliedCVs] = useState<any[]>([]);
-    const navigate = useNavigate();
 
     const fetchAppliedCVs = async () => {
         try {
@@ -55,7 +53,8 @@ export default function EmployerAppliedCVsDialog({
             return;
         }
         if (cv.sourceType === "system") {
-            navigate(`/preview-cvs/${cv.cvId}`);
+            const url = `/preview-cvs/${cv.cvId}`;
+            window.open(url, '_blank');
             return;
         }
         handlePrintClick(cv.cvId);
@@ -97,101 +96,85 @@ export default function EmployerAppliedCVsDialog({
         approved: { label: "Đã duyệt", color: "text-green-600" },
         rejected: { label: "Đã từ chối", color: "text-red-600" },
     };
-    const renderCVCard = (app: any) => {
-        const cv = app.cv;
-        return (
-            <div
-                key={app.applicationId}
-                className="border rounded p-4 flex flex-col items-center relative"
-            >
-                <div className="h-32 flex items-center justify-center">
-                    <i className="fa-solid fa-file fa-5x text-btn-red"></i>
-                </div>
-
-                <span className="font-semibold mb-1 text-center">
-                    {cv?.title || "Không có tiêu đề"}
-                </span>
-
-                <span className="text-xs text-gray-500 mb-1">
-                    Ngày nộp:{" "}
-                    {app.appliedAt
-                        ? new Date(app.appliedAt).toLocaleDateString("vi-VN")
-                        : ""}
-                </span>
-                <div className="mt-2 w-full flex justify-center mb-1">
-                    <button
-                        className="text-gray-700 hover:text-gray-900"
-                        onClick={() => handlePreview(app)}
-                    >
-                        <i className="fa-solid fa-eye fa-lg"></i>
-                    </button>
-                </div>
-                {(role === "employer" || role === 'admin') && (
-                    <div className="text-sm font-medium mb-2">
-                        Trạng thái:&nbsp;
-                        <span className={`${statusMap[app.status]?.color} font-semibold`}>
-                            {statusMap[app.status]?.label}
-                        </span>
-
-                        {app.status === "pending" && (
-                            <div className="flex gap-2 mt-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button size="sm">✔ Duyệt</Button>
-                                    </PopoverTrigger>
-
-                                    <PopoverContent className="w-48">
-                                        <p className="text-sm mb-3">Xác nhận duyệt CV này?</p>
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm">Hủy</Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handleStatusChange(app.applicationId, "approved")}
-                                            >
-                                                Duyệt
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="destructive" size="sm">✖ Từ chối</Button>
-                                    </PopoverTrigger>
-
-                                    <PopoverContent className="w-48">
-                                        <p className="text-sm mb-3">Xác nhận từ chối CV này?</p>
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm">Hủy</Button>
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => handleStatusChange(app.applicationId, "rejected")}
-                                            >
-                                                Từ chối
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {(role !== "employer" && role !== 'admin') && (
-                    <span className="text-sm font-medium mb-2">
-                        Trạng thái CV:&nbsp;
-                        <span className={`${statusMap[app.status]?.color} font-semibold`}>
-                            {statusMap[app.status]?.label}
-                        </span>
-                    </span>
-                )}
-            </div>
+    const renderTableRows = (apps: any[]) => {
+        if (!apps || apps.length === 0) return (
+            <tr>
+                <td colSpan={4} className="py-4 text-center text-sm text-gray-500">Không có dữ liệu</td>
+            </tr>
         );
+
+        return apps.map((app) => {
+            const cv = app.cv;
+            return (
+                <tr key={app.applicationId} className="border-t">
+                    <td className="px-4 py-3 text-sm">
+                        <div className="font-medium text-gray-800">{cv?.title || 'Không có tiêu đề'}</div>
+                    </td>
+
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                        {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('vi-VN') : ''}
+                    </td>
+
+                    <td className="px-4 py-3 text-sm">
+                        <div>
+                            <span className={`${statusMap[app.status]?.color} font-semibold`}>{statusMap[app.status]?.label}</span>
+                        </div>
+                    </td>
+
+                    <td className="px-4 py-3 text-sm w-64">
+                        <div className="flex items-center justify-between gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-gray-700 hover:text-gray-900"
+                                onClick={() => handlePreview(app)}
+                                title="Xem trước"
+                            >
+                                <i className="fa-solid fa-eye"></i> Xem
+                            </Button>
+                            <div>
+                                {(role === 'employer' || role === 'admin') && app.status === 'pending' && (
+                                    <div className="flex gap-2">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button size="sm">✔ Duyệt</Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48">
+                                                <p className="text-sm mb-3">Xác nhận duyệt CV này?</p>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button size="sm" onClick={() => handleStatusChange(app.applicationId, 'approved')}>Duyệt</Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="destructive" size="sm">✖ Từ chối</Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48">
+                                                <p className="text-sm mb-3">Xác nhận từ chối CV này?</p>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="destructive" size="sm" onClick={() => handleStatusChange(app.applicationId, 'rejected')}>Từ chối</Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                )}
+
+                                {(role !== 'employer' && role !== 'admin') && (
+                                    <div className="text-sm text-gray-600">&nbsp;</div>
+                                )}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            );
+        });
     };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl">
+            <DialogContent className="max-w-7xl">
                 <DialogHeader>
                     <DialogTitle>Danh sách CV đã nộp</DialogTitle>
                 </DialogHeader>
@@ -203,12 +186,24 @@ export default function EmployerAppliedCVsDialog({
                         <TabsTrigger value="rejected">Đã từ chối</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="pending" className="py-4">
+                    <TabsContent value="pending" className="py-4 max-h-[75vh] overflow-y-auto">
                         {pendingCVs.length === 0 ? (
                             <p>Không có CV chờ duyệt</p>
                         ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {pendingCVs.map(renderCVCard)}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-left">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Tiêu đề</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Ngày nộp</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Trạng thái</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white">
+                                        {renderTableRows(pendingCVs)}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </TabsContent>
@@ -217,8 +212,20 @@ export default function EmployerAppliedCVsDialog({
                         {approvedCVs.length === 0 ? (
                             <p>Chưa có CV nào được duyệt</p>
                         ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {approvedCVs.map(renderCVCard)}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-left">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Tiêu đề</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Ngày nộp</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Trạng thái</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white">
+                                        {renderTableRows(approvedCVs)}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </TabsContent>
@@ -227,8 +234,20 @@ export default function EmployerAppliedCVsDialog({
                         {rejectedCVs.length === 0 ? (
                             <p>Chưa có CV nào bị từ chối</p>
                         ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {rejectedCVs.map(renderCVCard)}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full text-left">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Tiêu đề</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Ngày nộp</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Xem</th>
+                                            <th className="px-4 py-2 text-sm text-gray-500">Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white">
+                                        {renderTableRows(rejectedCVs)}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </TabsContent>

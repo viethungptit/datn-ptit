@@ -11,6 +11,12 @@ public class ApplicationResponse {
     private boolean isDeleted;
     private Timestamp appliedAt;
     private CVDto cv;
+    private JobDto job;
+    private CompanyResponse company;
+    public CompanyResponse getCompany() {return company;}
+    public void setCompany(CompanyResponse company) {this.company = company;}
+    public JobDto getJob() {return job;}
+    public void setJob(JobDto job) {this.job = job;}
     public UUID getApplicationId() { return applicationId; }
     public void setApplicationId(UUID applicationId) { this.applicationId = applicationId; }
     public UUID getJobId() { return jobId; }

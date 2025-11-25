@@ -47,6 +47,7 @@ import EmployerJobs from './pages/Employer/EmployerJobs';
 import EmployerManagement from './pages/Employer/EmployerManagement';
 import CVManagement from './pages/Admin/CVManagement';
 import LogsUI from './pages/Admin/LogsUI';
+import Dashboard from './pages/Admin/Dashboard';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -123,6 +124,7 @@ function App() {
           <Route path="/employer/employers" element={<RoleRoute element={<EmployerManagement />} allowedRoles={['employer']} />} />
 
           {/* Admin user management route */}
+          <Route path="/admin/dashboard" element={<RoleRoute element={<Dashboard />} allowedRoles={['admin']} />} />
           <Route path="/admin/users" element={<RoleRoute element={<UserManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />

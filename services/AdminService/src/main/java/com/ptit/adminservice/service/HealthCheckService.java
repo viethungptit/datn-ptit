@@ -8,6 +8,8 @@ import com.ptit.adminservice.repository.AdminAlertRepository;
 import com.ptit.adminservice.repository.SystemHealthRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.health.HealthEndpoint;
+import org.springframework.boot.actuate.metrics.MetricsEndpoint;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -29,6 +31,10 @@ public class HealthCheckService {
     private final RecommendServiceFeign recommendServiceFeign;
     private final NotificationServiceFeign notificationServiceFeign;
 
+    // inject actuators to allow local health check
+    private final HealthEndpoint healthEndpoint;
+    private final MetricsEndpoint metricsEndpoint;
+
     @Value("${internal.secret}")
     private String internalSecret;
 
@@ -43,6 +49,7 @@ public class HealthCheckService {
      */
     public void checkAllServices() {
         Map<String, Supplier<Map<String, Object>>> serviceMap = Map.of(
+                "admin-service", this::fetchLocalHealth,
                 "user-service", () -> userServiceFeign.getHealthStatus(internalSecret),
                 "recruit-service", () -> recruitServiceFeign.getHealthStatus(internalSecret),
                 "recommend-service", () -> recommendServiceFeign.getHealthStatus(internalSecret),
@@ -56,6 +63,43 @@ public class HealthCheckService {
                 handleAlert(serviceName, "DOWN", "CRITICAL", serviceName + " hiện không phản hồi!");
             }
         });
+    }
+
+    /**
+     * Build local admin-service health map (same shape as remote services)
+     */
+    private Map<String, Object> fetchLocalHealth() {
+        String status = "DOWN";
+        double cpuUsage = 0.0;
+        double memoryMB = 0.0;
+
+        try {
+            var health = healthEndpoint.health();
+            status = health.getStatus().getCode();
+
+            var cpuMetric = metricsEndpoint.metric("system.cpu.usage", null);
+            if (cpuMetric != null && !cpuMetric.getMeasurements().isEmpty()) {
+                cpuUsage = cpuMetric.getMeasurements().get(0).getValue() * 100.0;
+            }
+
+            var memoryMetric = metricsEndpoint.metric("jvm.memory.used", null);
+            if (memoryMetric != null && !memoryMetric.getMeasurements().isEmpty()) {
+                memoryMB = memoryMetric.getMeasurements().get(0).getValue() / (1024 * 1024);
+            }
+
+            // Round similarly to HealthController
+            cpuUsage = Math.round(cpuUsage * 10.0) / 10.0;
+            memoryMB = Math.round(memoryMB);
+
+        } catch (Exception ignored) {
+        }
+
+        return Map.of(
+                "service", "admin-service",
+                "status", status,
+                "cpu", cpuUsage,
+                "memory", memoryMB
+        );
     }
 
     /**
