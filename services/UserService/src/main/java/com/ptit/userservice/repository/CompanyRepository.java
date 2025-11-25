@@ -7,5 +7,5 @@ import java.util.UUID;
 
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
     // Custom query methods if needed
+    long countByIsDeletedFalse();
 }
-

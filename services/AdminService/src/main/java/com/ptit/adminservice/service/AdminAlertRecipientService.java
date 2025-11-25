@@ -9,10 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,23 +23,20 @@ public class AdminAlertRecipientService {
 
     @Transactional
     public List<AdminAlertRecipientDto> createRecipients(List<String> emails) {
-        repository.deleteAll();
+        repository.truncateAll();
         if (emails == null || emails.isEmpty()) return Collections.emptyList();
-        List<String> normalized = normalizeEmails(emails);
+        Set<String> normalized = new LinkedHashSet<>(normalizeEmails(emails));
         List<AdminAlertRecipient> toSave = normalized.stream()
                 .map(email -> AdminAlertRecipient.builder()
                         .email(email)
                         .createdAt(Instant.now())
                         .build())
                 .collect(Collectors.toList());
-        if (!toSave.isEmpty()) repository.saveAll(toSave);
+
+        repository.saveAll(toSave);
         return repository.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    @Transactional
-    public List<AdminAlertRecipientDto> updateRecipients(List<String> emails) {
-        return createRecipients(emails);
-    }
 
     private AdminAlertRecipientDto toDto(AdminAlertRecipient r) {
         return AdminAlertRecipientDto.builder()

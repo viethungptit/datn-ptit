@@ -8,5 +8,9 @@ import java.util.UUID;
 
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
     List<Application> findByJob_JobIdAndCv_UserIdAndIsDeletedFalse(UUID jobId, UUID userId);
-}
+    List<Application> findByCv_UserIdAndIsDeletedFalse(UUID userId);
 
+    // Count helpers for stats
+    long countByIsDeletedFalse();
+    long countByStatusAndIsDeletedFalse(Application.Status status);
+}

@@ -6,6 +6,7 @@ import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.service.CVService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -121,5 +122,18 @@ public class CVController {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }
         return cvService.updateStatusEmbedding(cvId, status);
+    }
+
+    @PostMapping("/by-cvIds")
+    public ResponseEntity<List<CVDto>> getCvsByIds(
+            @RequestBody List<UUID> cvIds,
+            @RequestHeader("X-Internal-Secret") String secret) {
+
+        if (!internalSecret.equals(secret)) {
+            throw new AccessDeniedException("Access denied: invalid internal secret");
+        }
+
+        List<CVDto> response = cvService.getCvsByIds(cvIds);
+        return ResponseEntity.ok(response);
     }
 }

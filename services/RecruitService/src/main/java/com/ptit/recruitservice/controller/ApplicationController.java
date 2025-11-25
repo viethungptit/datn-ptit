@@ -28,6 +28,7 @@ public class ApplicationController {
         ApplicationResponse response = applicationService.applyForJob(request, UUID.fromString(currentUserId));
         return ResponseEntity.ok(response);
     }
+
     @PreAuthorize("hasRole('CANDIDATE')")
     @GetMapping("/candidate")
     public ResponseEntity<List<ApplicationResponse>> getApplicationsByJobIdForCandidate(@RequestParam("job_id") UUID jobId) {
@@ -37,6 +38,17 @@ public class ApplicationController {
         List<ApplicationResponse> responses = applicationService.getApplicationsByJobIdForCandidate(jobId,currentUserId);
         return ResponseEntity.ok(responses);
     }
+
+    @PreAuthorize("hasRole('CANDIDATE')")
+    @GetMapping("/all/candidate")
+    public ResponseEntity<List<ApplicationResponse>> getApplicationsForCandidate() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserIdStr = (String) auth.getPrincipal();
+        UUID currentUserId = UUID.fromString(currentUserIdStr);
+        List<ApplicationResponse> responses = applicationService.getApplicationsForCandidate(currentUserId);
+        return ResponseEntity.ok(responses);
+    }
+
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping("/{applicationId}")
     public ResponseEntity<ApplicationResponse> updateStatus(@PathVariable UUID applicationId, @RequestBody ApplicationStatusUpdateRequest request) {

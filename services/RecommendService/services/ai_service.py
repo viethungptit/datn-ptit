@@ -6,6 +6,8 @@ import re
 from typing import List, Dict, Any
 import asyncio
 from db import get_pool
+from utils.service_client import get_cv_details_batch
+from datetime import datetime
 
 logger = logging.getLogger("ai_service")
 
@@ -73,8 +75,12 @@ PROMPT_TEMPLATE = r"""
       - Đảm bảo trải nghiệm mượt mà và tối ưu hiệu năng hiển thị
     - education:
       Giữ nguyên tên trường, degree, major, GPA nếu có.
-      Format mỗi dòng:
-      "**<Tên trường>** (*<Năm vào>–<Năm ra>*) – <Degree> – <Major> – <GPA> (nếu có)".
+      Format mỗi trường như sau (xuống dòng sau tên trường, không gạch đầu dòng):
+        **<Tên trường>**
+        <Degree>
+        <Major>
+        <GPA> (nếu có)
+        (*<Năm vào> – <Năm ra>*)
       Nếu có nhiều trường, cách nhau bằng **1 dòng trống**.
     - skills:
       Giữ nguyên cấu trúc nhóm nếu có (ví dụ: “Programming”, “Tools”, “Soft skills”).
@@ -274,7 +280,7 @@ async def insert_ai_suggestion(section_name: str, original_content: str, suggest
         )
     return str(row["suggestion_id"]) if row and row["suggestion_id"] is not None else None
 
-async def match_job(job_id: str, top_k: int = 5) -> List[Dict[str, Any]]:
+async def match_job(job_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
     try:
         pool = await get_pool()
     except Exception as e:
@@ -292,9 +298,14 @@ async def match_job(job_id: str, top_k: int = 5) -> List[Dict[str, Any]]:
 
             rows = await conn.fetch(
                 """
-                SELECT c.cv_id, 1 - (c.embedding_vector <=> j.embedding_vector) AS similarity
-                FROM embedding_cv c, embedding_jd j
-                WHERE j.job_id = $1
+                SELECT 
+                    a.application_id,
+                    1 - (c.embedding_vector <=> j.embedding_vector) AS score,
+                    a.cv_id, a.applied_at
+                FROM embedding_cv c
+                JOIN applications a ON a.cv_id = c.cv_id   -- chỉ lấy CV đã nộp
+                JOIN embedding_jd j ON j.job_id = $1       -- job đang xét
+                WHERE a.job_id = $1                        -- chỉ những applications thuộc job này
                 ORDER BY (c.embedding_vector <=> j.embedding_vector)
                 LIMIT $2
                 """,
@@ -307,7 +318,19 @@ async def match_job(job_id: str, top_k: int = 5) -> List[Dict[str, Any]]:
         logging.getLogger("ai_service").exception("DB query failed: %s", e)
         raise DBError("Database query failed")
 
-    return [{"cv_id": str(r["cv_id"]), "similarity": float(r["similarity"])} for r in rows]
+    raw_results = [
+        {
+            "application_id": str(r["application_id"]),
+            "cv_id": str(r["cv_id"]),
+            "score": float(r["score"]) if r["score"] else None,
+            "applied_at": r["applied_at"].isoformat() if r["applied_at"] else None,
+        }
+        for r in rows
+    ]
+
+    enriched_results = await enrich_results_with_cv_and_user(raw_results)
+
+    return enriched_results;
 
 
 async def create_recommend_batch(job_id: str, user_id: str) -> str:
@@ -328,10 +351,10 @@ async def create_recommend_batch(job_id: str, user_id: str) -> str:
     return str(row["batch_id"]) if row and row["batch_id"] is not None else None
 
 
-async def store_recommend_results(batch_id: str, job_id: str, results: List[Dict[str, Any]]) -> None:
+async def store_recommend_results(batch_id: str, results: List[Dict[str, Any]]) -> None:
     """
     Insert multiple rows into recommend_results for a given batch.
-    `results` is a list of dicts with keys: cv_id (str) and similarity (float)
+    `results` is a list of dicts with keys: cv_id (str) and score (float)
     """
     if not results:
         return
@@ -339,30 +362,148 @@ async def store_recommend_results(batch_id: str, job_id: str, results: List[Dict
     async with pool.acquire() as conn:
         async with conn.transaction():
             for r in results:
-                # Use explicit NULL if similarity missing
-                score = r.get("similarity")
+                # Use explicit NULL if score missing
+                score = r.get("score")
                 await conn.execute(
                     """
-                    INSERT INTO recommend_results (batch_id, job_id, cv_id, score)
-                    VALUES ($1, $2, $3, $4)
+                    INSERT INTO recommend_results (batch_id, application_id, score)
+                    VALUES ($1, $2, $3)
                     """,
                     batch_id,
-                    job_id,
-                    r.get("cv_id"),
+                    r.get("application_id"),
                     score,
                 )
 
 
-async def match_and_store(job_id: str, user_id: str, top_k: int = 5) -> Dict[str, Any]:
+async def match_and_store(job_id: str, user_id: str, top_k: int = 10) -> Dict[str, Any]:
     results = await match_job(job_id, top_k=top_k)
+    now = datetime.utcnow()
     try:
         batch_id = await create_recommend_batch(job_id=job_id, user_id=user_id)
         if batch_id:
-            await store_recommend_results(batch_id=batch_id, job_id=job_id, results=results)
+            await store_recommend_results(batch_id=batch_id, results=results)
     except Exception:
         logger.exception("Failed to persist recommend batch/results")
         batch_id = None
 
-    return {"batch_id": batch_id, "results": results}
+    return {"batch_id": batch_id, "job_id": job_id, "user_id": user_id, "created_at": now.isoformat() if now else None, "results": results}
 
+
+async def enrich_results_with_cv_and_user(results: list[dict]) -> list[dict]:
+    # Lấy tất cả cv_id duy nhất
+    cv_ids = list({r["cv_id"] for r in results})
+
+    # Gọi batch API 1 lần
+    cv_data_map = await get_cv_details_batch(cv_ids)
+
+    # Merge vào kết quả
+    enriched = []
+    for r in results:
+        enriched.append({
+            **r,
+            "cv": cv_data_map.get(r["cv_id"]),  # Trả None nếu không có
+        })
+
+    return enriched
+
+
+
+async def get_recommend_batches_for_user(
+    user_id: str | None,
+    job_id: str,
+    limit: int = 10
+) -> List[Dict[str, Any]]:
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        # ADMIN: không lọc theo user_id
+        if user_id is None:
+            batch_rows = await conn.fetch(
+                """
+                SELECT batch_id, job_id, user_id, created_at
+                FROM recommend_batches
+                WHERE job_id = $1
+                ORDER BY created_at DESC
+                LIMIT $2
+                """,
+                job_id, limit
+            )
+          
+        else:
+            # EMPLOYER: chỉ lấy của mình
+            batch_rows = await conn.fetch(
+                """
+                SELECT batch_id, job_id, user_id, created_at
+                FROM recommend_batches
+                WHERE user_id = $1 AND job_id = $2
+                ORDER BY created_at DESC
+                LIMIT $3
+                """,
+                user_id, job_id, limit
+            )
+
+        # Return only batch metadata (no results/enrichment) for listing.
+        batches: List[Dict[str, Any]] = []
+        for br in batch_rows:
+            batches.append(
+                {
+                    "batch_id": str(br["batch_id"]),
+                    "job_id": str(br["job_id"]),
+                    "user_id": str(br["user_id"]),
+                    "created_at": br["created_at"].isoformat() if br["created_at"] else None,
+                }
+            )
+
+    return batches
+
+
+async def get_recommend_batch_detail(batch_id: str) -> Dict[str, Any]:
+    """
+    Return a single recommend batch with enriched results (including CV data).
+    Raises ValueError if batch not found.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        br = await conn.fetchrow(
+            """
+            SELECT batch_id, job_id, user_id, created_at
+            FROM recommend_batches
+            WHERE batch_id = $1
+            """,
+            batch_id,
+        )
+        if not br:
+            raise ValueError("Batch not found")
+
+        results = await conn.fetch(
+            """
+            SELECT rr.application_id, rr.score, rr.created_at, a.cv_id, a.applied_at
+            FROM recommend_results rr
+            JOIN applications a ON rr.application_id = a.application_id
+            WHERE rr.batch_id = $1
+            ORDER BY rr.score DESC
+            """,
+            batch_id,
+        )
+
+        raw_results = [
+            {
+                "application_id": str(r["application_id"]),
+                "cv_id": str(r["cv_id"]),
+                "score": float(r["score"]) if r["score"] else None,
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "applied_at": r["applied_at"].isoformat() if r["applied_at"] else None,
+            }
+            for r in results
+        ]
+
+        enriched_results = await enrich_results_with_cv_and_user(raw_results)
+
+        return {
+            "batch_id": str(br["batch_id"]),
+            "job_id": str(br["job_id"]),
+            "user_id": str(br["user_id"]),
+            "created_at": br["created_at"].isoformat() if br["created_at"] else None,
+            "results": enriched_results,
+        }
 

@@ -205,10 +205,15 @@ export const getApplicationsByJob = (jobId: string) =>
   gatewayApi.get("/api/recruit-service/applications", {
     params: { job_id: jobId },
   });
+
 export const getApplicationsByJobForCandidate = (jobId: string) =>
   gatewayApi.get("/api/recruit-service/applications/candidate", {
     params: { job_id: jobId },
   });
+
+export const getAllApplicationsForCandidate = () =>
+  gatewayApi.get("/api/recruit-service/applications/all/candidate");
+
 export const applyForJob = (payload: { jobId: string; cvId: string }) =>
   gatewayApi.post("/api/recruit-service/applications", payload);
 

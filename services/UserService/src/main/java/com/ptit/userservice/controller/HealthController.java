@@ -10,12 +10,18 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.Map;
 
+import com.ptit.userservice.repository.UserRepository;
+import com.ptit.userservice.repository.CompanyRepository;
+import com.ptit.userservice.entity.User;
+
 @RestController
 @RequestMapping("/api/user-service/health")
 public class HealthController {
 
     private final HealthEndpoint healthEndpoint;
     private final MetricsEndpoint metricsEndpoint;
+    private final UserRepository userRepository;
+    private final CompanyRepository companyRepository;
 
     @Value("${internal.secret}")
     private String internalSecret;
@@ -23,9 +29,12 @@ public class HealthController {
     @Value("${spring.application.name:user-service}")
     private String serviceName;
 
-    public HealthController(HealthEndpoint healthEndpoint, MetricsEndpoint metricsEndpoint) {
+    public HealthController(HealthEndpoint healthEndpoint, MetricsEndpoint metricsEndpoint,
+                            UserRepository userRepository, CompanyRepository companyRepository) {
         this.healthEndpoint = healthEndpoint;
         this.metricsEndpoint = metricsEndpoint;
+        this.userRepository = userRepository;
+        this.companyRepository = companyRepository;
     }
 
     @GetMapping
@@ -59,5 +68,25 @@ public class HealthController {
                 "memory", Math.round(memoryMB)
         );
         return ResponseEntity.ok(response);
+    }
+
+    // New: return user-service stats map used by other services
+    @GetMapping("/stats")
+    public Map<String, Object> getUserStats(@RequestHeader(value = "X-Internal-Secret", required = false) String secret) {
+        if (secret == null || !secret.equals(internalSecret)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập tài nguyên này.");
+        }
+
+        long totalAdmins = userRepository.countByRoleAndIsDeletedFalse(User.Role.admin);
+        long totalCandidates = userRepository.countByRoleAndIsDeletedFalse(User.Role.candidate);
+        long totalEmployers = userRepository.countByRoleAndIsDeletedFalse(User.Role.employer);
+        long totalCompanies = companyRepository.countByIsDeletedFalse();
+
+        return Map.of(
+                "total_admins", totalAdmins,
+                "total_candidates", totalCandidates,
+                "total_employers", totalEmployers,
+                "total_companies", totalCompanies
+        );
     }
 }

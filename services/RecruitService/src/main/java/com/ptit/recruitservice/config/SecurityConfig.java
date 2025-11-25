@@ -25,6 +25,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/recruit-service/group-tag/all").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/recruit-service/cv-templates/all").permitAll()
                                 .requestMatchers(HttpMethod.PUT, "/api/recruit-service/jobs/company/**").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/recruit-service/cvs/by-cvIds").permitAll()
                                 .requestMatchers(
                                         "/swagger-ui/**",
                                         "/swagger-ui.html",

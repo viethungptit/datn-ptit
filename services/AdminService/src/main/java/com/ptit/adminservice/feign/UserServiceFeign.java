@@ -18,7 +18,7 @@ public interface UserServiceFeign {
     @GetMapping("/api/user-service/health")
     Map<String, Object> getHealthStatus(@RequestHeader("X-Internal-Secret") String secret);
 
-    @GetMapping("/internal/stats")
+    @GetMapping("/api/user-service/health/stats")
     Map<String, Object> getUserStats(@RequestHeader("X-Internal-Secret") String secret);
 }
 

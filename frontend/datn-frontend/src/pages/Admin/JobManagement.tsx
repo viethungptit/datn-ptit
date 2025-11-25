@@ -31,6 +31,7 @@ import {
     retryEmbeddingJob,
 } from "@/api/recruitApi";
 import JobDetailDialog from "@/components/JobDetailDialog";
+import EmployerAppliedCVsDialog from "@/components/Employer/EmployerAppliedCVsDialog";
 
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
 type GroupTag = { groupTagId: string; groupJobName: string; isDeleted?: boolean };
@@ -70,6 +71,7 @@ const JobManagement = () => {
     const [isEdit, setIsEdit] = useState(false);
     const [detailJobId, setDetailJobId] = useState<string | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
+    const [selectedJob, setSelectedJob] = useState<string | null>(null);
     const handleDetailOpenChange = (open: boolean) => {
         setDetailOpen(open);
         if (!open) setDetailJobId(null);
@@ -300,11 +302,9 @@ const JobManagement = () => {
         return 'Đang mở';
     };
 
-    const getJobTypeLabel = (val?: string) => {
-        if (!val) return '';
-        const found = JOB_TYPE_OPTIONS.find(x => x.value === val);
-        return found ? found.label : val;
-    };
+    const setOpenViewCV = (job: any) => {
+        setSelectedJob(job.jobId);
+    }
 
     return (
         <div className="px-4 py-2">
@@ -318,10 +318,8 @@ const JobManagement = () => {
                         <TableRow>
                             <TableHead className="text-left">Tiêu đề</TableHead>
                             <TableHead className="text-left">Công ty</TableHead>
-                            <TableHead className="text-center">Loại</TableHead>
                             <TableHead className="text-center">Trạng thái</TableHead>
                             <TableHead className="text-center">Trạng thái phân tích</TableHead>
-                            <TableHead className="text-center">Hạn nộp</TableHead>
                             <TableHead className="text-center">Ngày tạo</TableHead>
                             <TableHead className="text-center">Hành động</TableHead>
                         </TableRow>
@@ -340,7 +338,6 @@ const JobManagement = () => {
                                 <TableRow key={j.jobId}>
                                     <TableCell className="text-left">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
-                                    <TableCell className="text-center">{getJobTypeLabel(j.jobType)}</TableCell>
                                     <TableCell className="text-center w-[120px]">
                                         <Select
                                             value={j.status ?? ''}
@@ -370,10 +367,16 @@ const JobManagement = () => {
                                             />
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-center">{j.deadline ? new Date(j.deadline).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">{j.createdAt ? new Date(j.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex justify-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => { setOpenViewCV(j) }}
+                                            >
+                                                CV đã nộp
+                                            </Button>
                                             <Button size="sm" variant="outline" onClick={() => { setDetailJobId(j.jobId); setDetailOpen(true); }}>Xem</Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogJob(j)}>Sửa</Button>
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(j.jobId)}>Xóa</Button>
@@ -579,6 +582,13 @@ const JobManagement = () => {
                 </DialogContent>
             </Dialog>
             <JobDetailDialog open={detailOpen} onOpenChange={handleDetailOpenChange} jobId={detailJobId} />
+            {selectedJob && (
+                <EmployerAppliedCVsDialog
+                    jobId={selectedJob}
+                    open={!!selectedJob}
+                    onClose={() => setSelectedJob(null)}
+                    role="admin" />
+            )}
         </div>
     );
 };

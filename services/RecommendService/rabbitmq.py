@@ -21,6 +21,7 @@ JD_ROUTING_KEY = os.getenv("EMBEDDING_JD_ROUTING_KEY")
 APPLICATION_QUEUE = os.getenv("EMBEDDING_APPLICATION_QUEUE")
 APPLICATION_ROUTING_KEY = os.getenv("EMBEDDING_APPLICATION_ROUTING_KEY")
 EMBEDDING_DELETE_APPLICATION_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_APPLICATION_ROUTING_KEY")
+EMBEDDING_APPLICATION_STATUS_ROUTING_KEY = os.getenv("EMBEDDING_APPLICATION_STATUS_ROUTING_KEY")
 EMBEDDING_DELETE_QUEUE = os.getenv("EMBEDDING_DELETE_QUEUE")
 EMBEDDING_DELETE_CV_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_CV_ROUTING_KEY")
 EMBEDDING_DELETE_JD_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_JD_ROUTING_KEY")
@@ -31,6 +32,18 @@ async def start_rabbit_listener():
     channel = await connection.channel()
     await channel.set_qos(prefetch_count=10)
 
+    async def handle_application_events(message: aio_pika.IncomingMessage):
+        routing_key = message.routing_key  
+        if routing_key == APPLICATION_ROUTING_KEY:
+            await process_event_application(message, "applications", "application_id")
+        elif routing_key == EMBEDDING_APPLICATION_STATUS_ROUTING_KEY:
+            await process_event_application_status(message, "applications", "application_id")
+        elif routing_key == EMBEDDING_DELETE_APPLICATION_ROUTING_KEY:
+            await process_event_application_delete(message, "applications", "application_id")
+        else:
+            logger.warning(f"⚠️ Unknown routing_key='{routing_key}', skipping message")
+
+
     exchange = await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True)
     cv_queue = await channel.declare_queue(CV_QUEUE, durable=True)
     jd_queue = await channel.declare_queue(JD_QUEUE, durable=True)
@@ -40,14 +53,14 @@ async def start_rabbit_listener():
     await cv_queue.bind(exchange, routing_key=CV_ROUTING_KEY)
     await jd_queue.bind(exchange, routing_key=JD_ROUTING_KEY)
     await application_queue.bind(exchange, routing_key=APPLICATION_ROUTING_KEY)
+    await application_queue.bind(exchange, routing_key=EMBEDDING_APPLICATION_STATUS_ROUTING_KEY)
     await application_queue.bind(exchange, routing_key=EMBEDDING_DELETE_APPLICATION_ROUTING_KEY)
     await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_CV_ROUTING_KEY)
     await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_JD_ROUTING_KEY)
  
     await cv_queue.consume(lambda msg: process_event_embedding(msg, "embedding_cv", "cv_id"))
     await jd_queue.consume(lambda msg: process_event_embedding(msg, "embedding_jd", "job_id"))
-    await application_queue.consume(lambda msg: process_event_application(msg, "applications", "application_id"))
-    await application_queue.consume(lambda msg: process_event_application_delete(msg, "applications", "application_id"))
+    await application_queue.consume(handle_application_events)
     await delete_queue.consume(lambda msg: process_event_delete_embedding(msg))
 
     logger.info("RabbitMQ listeners started for CV + JD + Application")
@@ -76,13 +89,15 @@ async def process_event_embedding(message: aio_pika.IncomingMessage, table: str,
             pool = await get_pool()
             async with pool.acquire() as conn:
                 await conn.execute(f"""
-                    INSERT INTO {table} ({id_field}, raw_text, embedding_vector, created_at)
-                    VALUES ($1, $2, $3, NOW())
+                    INSERT INTO {table} ({id_field}, origin_text, raw_text, embedding_vector, created_at)
+                    VALUES ($1, $2, $3, $4, NOW())
                     ON CONFLICT ({id_field}) DO UPDATE
-                        SET raw_text = EXCLUDED.raw_text,
+                        SET 
+                            origin_text = EXCLUDED.origin_text,
+                            raw_text = EXCLUDED.raw_text,
                             embedding_vector = EXCLUDED.embedding_vector,
                             created_at = NOW()
-                    """, record_id, summary, pg_vector)
+                    """, record_id, summary, raw_text, pg_vector)
 
             status = "embedded"
             logger.info("%s updated for %s=%s", table, id_field, record_id)
@@ -105,23 +120,40 @@ async def process_event_application(message: aio_pika.IncomingMessage, table: st
         application_id = data.get(id_field)
         job_id = data.get("job_id")
         cv_id = data.get("cv_id")
+        apply_status = data.get("apply_status")
 
-        if not application_id or not job_id or not cv_id:
+        if not application_id or not job_id or not cv_id or not apply_status:
             logger.warning("Skipping application sync: missing required fields in event: %s", data)
             return
 
         pool = await get_pool()
         async with pool.acquire() as conn:
             await conn.execute(f"""
-                INSERT INTO {table} ({id_field}, job_id, cv_id, applied_at)
-                VALUES ($1, $2, $3, NOW())
+                INSERT INTO {table} ({id_field}, job_id, cv_id, apply_status, applied_at)
+                VALUES ($1, $2, $3, $4, NOW())
                 ON CONFLICT ({id_field}) DO UPDATE
                     SET job_id = EXCLUDED.job_id,
                         cv_id = EXCLUDED.cv_id,
+                        apply_status = EXCLUDED.apply_status,
                         applied_at = EXCLUDED.applied_at
-                """, application_id, job_id, cv_id)
+                """, application_id, job_id, cv_id, apply_status)
 
         logger.info("%s synced for %s=%s", table, id_field, application_id)
+
+async def process_event_application_status(message: aio_pika.IncomingMessage, table: str, id_field: str):
+    async with message.process():
+        data = json.loads(message.body)
+        application_id = data.get(id_field)
+        apply_status = data.get("apply_status")
+        if not application_id or not apply_status:
+            logger.warning("Skipping application status update: missing %s or apply_status in event: %s", id_field, data)
+            return
+
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            result = await conn.execute(f"UPDATE {table} SET apply_status = $1 WHERE {id_field} = $2", apply_status, application_id)
+
+        logger.info("%s status updated for %s=%s to %s, result=%s", table, id_field, application_id, apply_status, result)
 
 
 async def process_event_application_delete(message: aio_pika.IncomingMessage, table: str, id_field: str):

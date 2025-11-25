@@ -38,7 +38,7 @@ app = FastAPI(
 )
 
 # Thêm middleware (giống Filter)
-app.add_middleware(HeaderAuthMiddleware)
+app.add_middleware(HeaderAuthMiddleware, skip_paths=["/public", "/api/recommend-service/health/stats", "/api/recommend-service/health"])
 
 # Include routers
 app.include_router(controller.router)
@@ -72,6 +72,7 @@ def root():
 
         # Other services
         "RECRUIT_SERVICE_URL": os.getenv("RECRUIT_SERVICE_URL"), 
+        "USER_SERVICE_URL": os.getenv("USER_SERVICE_URL"),
         "INTERNAL_SECRET": os.getenv("INTERNAL_SECRET"),
         "MINIO_URL": os.getenv("MINIO_URL"),
     }

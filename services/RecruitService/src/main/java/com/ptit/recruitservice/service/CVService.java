@@ -420,4 +420,14 @@ public class CVService {
         cv = cvRepository.save(cv);
         return toDto(cv);
     }
+
+    public List<CVDto> getCvsByIds(List<UUID> cvIds) {
+        List<CV> cvs = cvRepository.findAllById(cvIds);
+        if (cvs.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy CV nào với các ID đã cung cấp");
+        }
+        return cvs.stream()
+                .map(this::toDto)
+                .toList();
+    }
 }

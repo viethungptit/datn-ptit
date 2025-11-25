@@ -8,5 +8,5 @@ import java.util.UUID;
 public interface CVRepository extends JpaRepository<CV, UUID> {
     List<CV> findByUserIdAndIsDeletedFalse(UUID userId);
     List<CV> findByIsDeletedFalse();
+    long countByIsDeletedFalse();
 }
-
