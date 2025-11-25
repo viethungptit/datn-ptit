@@ -13,6 +13,8 @@ import io.minio.RemoveObjectArgs;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -189,6 +191,15 @@ public class CompanyService {
                         c.getCompanyName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+    public Page<CompanyResponse> getAllCompaniesWithPagination(Pageable pageable) {
+        return companyRepository.findAllByIsDeletedFalse(pageable)
+                .map(this::toResponse);
+    }
+
+    public Page<CompanyResponse> searchCompaniesWithPagination(String keyword, Pageable pageable) {
+        return companyRepository.findByIsDeletedFalseAndCompanyNameContainingIgnoreCase(keyword, pageable)
+                .map(this::toResponse);
     }
 
     public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request, boolean isAdmin, UUID currentUserId) {

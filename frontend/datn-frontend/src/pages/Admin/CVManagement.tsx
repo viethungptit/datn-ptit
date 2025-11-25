@@ -3,8 +3,9 @@ import { Button } from "../../components/ui/button";
 import { toast } from "react-toastify";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
-import { deleteCV, getAllCVs, retryEmbeddingCV } from "@/api/recruitApi";
+import { deleteCV, getAllCVsWithPagination, retryEmbeddingCV } from "@/api/recruitApi";
 import { getUserByIdApi } from "@/api/userApi";
+import Pagination from "@/components/Pagination/Pagination";
 
 export type CV = {
     cvId: string;
@@ -44,7 +45,9 @@ const CVManagement = () => {
     const [loading, setLoading] = useState(false);
     const [userEmails, setUserEmails] = useState<Record<string, string>>({});
     const [retryingEmbeddingsCV, setRetryingEmbeddingsCV] = useState<string[]>([]);
-
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(3);
+    const [totalPages, setTotalPages] = useState(1);
     const previewCV = (cvId: string) => {
         const url = `/preview-cvs/${cvId}`;
         window.open(url, '_blank');
@@ -54,10 +57,11 @@ const CVManagement = () => {
         (async () => {
             setLoading(true);
             try {
-                const res = await getAllCVs();
+                const res = await getAllCVsWithPagination(page, pageSize);
                 if (!res || !res.data) throw new Error("Failed to fetch cvs");
-                const cvs = res.data;
+                const cvs = res.data.content;
                 setTemplates(cvs);
+                setTotalPages(res.data.totalPages)
                 const ids = Array.from(new Set((cvs || []).map((x: any) => x.userId).filter(Boolean))) as string[];
                 if (ids.length > 0) {
                     const promises = ids.map((id: string) =>
@@ -79,7 +83,7 @@ const CVManagement = () => {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize]);
 
     const handleDelete = async (cvId: string) => {
         if (!window.confirm("Bạn có chắc muốn xóa CV này?")) return;
@@ -178,6 +182,10 @@ const CVManagement = () => {
                     </TableBody>
                 </Table>
             </div>
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
         </div>
     );
 };

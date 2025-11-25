@@ -4,6 +4,9 @@ import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.CompanyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -50,7 +53,23 @@ public class CompanyController {
         }
         return ResponseEntity.ok(companyService.searchCompanies(keyword));
     }
+    @GetMapping("/paged")
+    public ResponseEntity<Page<CompanyResponse>> getAllCompaniesWithPagination(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<CompanyResponse> result;
+        if (keyword == null || keyword.isBlank()) {
+            result = companyService.getAllCompaniesWithPagination(pageable);
+        } else {
+            result = companyService.searchCompaniesWithPagination(keyword, pageable);
+        }
+
+        return ResponseEntity.ok(result);
+    }
     @PreAuthorize("hasAnyRole('EMPLOYER', 'ADMIN')")
     @PutMapping(value = "/{companyId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CompanyResponse> updateCompany(

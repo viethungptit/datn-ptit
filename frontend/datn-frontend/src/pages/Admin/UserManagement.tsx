@@ -6,7 +6,8 @@ import { toast } from "react-toastify";
 import { Label } from "@/components/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
-import { createNewUserApi, deleteUserApi, getAllUsersApi, updateUserApi } from "@/api/userApi";
+import { createNewUserApi, deleteUserApi, getAllUsersApiWithPagination, updateUserApi } from "@/api/userApi";
+import Pagination from "@/components/Pagination/Pagination";
 
 export type User = {
     userId: string;
@@ -27,14 +28,17 @@ const UserManagement = () => {
     // include password in the form for create/update
     const [form, setForm] = useState<Partial<User & { password?: string }>>({});
     const [isEdit, setIsEdit] = useState(false);
-
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
     useEffect(() => {
         (async () => {
             setLoading(true);
             try {
-                const res = await getAllUsersApi();
+                const res = await getAllUsersApiWithPagination(page, pageSize);
                 if (!res || !res.data) throw new Error("Failed to fetch users");
-                setUsers(res.data);
+                setUsers(res.data.content);
+                setTotalPages(res.data.totalPages)
             } catch (err: any) {
                 const msg = err?.response?.data?.message || err?.message || "Không thể tải danh sách người dùng";
                 toast.error(msg);
@@ -42,7 +46,7 @@ const UserManagement = () => {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize]);
 
     // Gộp logic mở dialog thêm/sửa vào 1 hàm
     const openDialogUser = (user?: User) => {
@@ -157,6 +161,10 @@ const UserManagement = () => {
                     </TableBody>
                 </Table>
             </div>
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
@@ -219,7 +227,6 @@ const UserManagement = () => {
                             </Select>
                         </div>
                     </div>
-
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button variant="outline">Hủy</Button>

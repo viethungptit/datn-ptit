@@ -13,6 +13,9 @@ import com.ptit.userservice.repository.EmployerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -160,7 +163,11 @@ public class UserService {
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
-
+    public Page<UserResponse> listUsersPaged(int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        return userRepository.findAllByIsDeletedFalse(pageRequest)
+                .map(this::toResponse);
+    }
     public UserResponse getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .filter(u -> !u.isDeleted())

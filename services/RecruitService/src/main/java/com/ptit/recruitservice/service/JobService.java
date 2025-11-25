@@ -16,6 +16,9 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -451,6 +454,11 @@ public class JobService {
     public List<JobDto> getAllJobs() {
         return jobRepository.findByIsDeletedFalse().stream().map(this::toDto).collect(Collectors.toList());
     }
+    public Page<JobDto> getJobsPaged(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return jobRepository.findByIsDeletedFalse(pageable)
+                .map(this::toDto);
+    }
     public List<JobDto> filterJobs(
             String keyword,
             String location,
@@ -536,7 +544,91 @@ public class JobService {
 
         return jobs.stream().map(this::toDto).collect(Collectors.toList());
     }
+    public PaginatedResponse<JobDto> filterJobsPaged(
+            String keyword,
+            String location,
+            List<String> industry,
+            List<String> tags,
+            String type,
+            Integer minSalary,
+            Integer maxSalary,
+            String experience,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
 
+        Page<Job> jobPage = jobRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+            predicates.add(cb.equal(root.get("status"), Job.Status.open));
+
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("title")),
+                        "%" + keyword.toLowerCase() + "%"));
+            }
+
+            if (location != null && !location.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("location")),
+                        "%" + location.toLowerCase() + "%"));
+            }
+
+            if (experience != null && !experience.trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("experience")),
+                        "%" + experience.toLowerCase() + "%"));
+            }
+
+            if (industry != null && !industry.isEmpty()) {
+                Join<Object, Object> groupJoin = root.join("jobGroupTagMappings", JoinType.LEFT)
+                        .join("groupJobTag", JoinType.LEFT);
+                predicates.add(cb.lower(groupJoin.get("groupJobName"))
+                        .in(industry.stream().map(String::toLowerCase).toList()));
+            }
+
+            if (tags != null && !tags.isEmpty()) {
+                Join<Object, Object> tagJoin = root.join("jobTagMappings", JoinType.LEFT)
+                        .join("jobTag", JoinType.LEFT);
+                predicates.add(cb.lower(tagJoin.get("jobName"))
+                        .in(tags.stream().map(String::toLowerCase).toList()));
+            }
+
+            if (type != null && !type.isEmpty()) {
+                predicates.add(cb.equal(root.get("jobType"), type));
+            }
+
+            if (minSalary != null && maxSalary != null) {
+                int min = minSalary * 1_000_000;
+                int max = maxSalary * 1_000_000;
+                predicates.add(cb.and(
+                        cb.lessThanOrEqualTo(root.get("minSalary"), max),
+                        cb.greaterThanOrEqualTo(root.get("maxSalary"), min)
+                ));
+            } else if (minSalary != null) {
+                int min = minSalary * 1_000_000;
+                predicates.add(cb.greaterThanOrEqualTo(root.get("maxSalary"), min));
+            } else if (maxSalary != null) {
+                int max = maxSalary * 1_000_000;
+                predicates.add(cb.lessThanOrEqualTo(root.get("minSalary"), max));
+            }
+
+            query.distinct(true);
+            return cb.and(predicates.toArray(new Predicate[0]));
+        }, pageable);
+
+        List<JobDto> jobDtos = jobPage.getContent()
+                .stream()
+                .map(this::toDto)
+                .toList();
+
+        return new PaginatedResponse<>(
+                jobDtos,
+                page,
+                size,
+                jobPage.getTotalElements(),
+                jobPage.getTotalPages()
+        );
+    }
     public List<JobDto> getAllJobsByCompany(UUID companyId) {
         return jobRepository.findByCompanyIdAndIsDeletedFalse(companyId).stream().map(this::toDto).collect(Collectors.toList());
     }

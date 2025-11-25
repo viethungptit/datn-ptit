@@ -6,6 +6,8 @@ import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.service.CVService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -102,6 +104,16 @@ public class CVController {
     @GetMapping("/all")
     public List<CVDto> getAllCVs() {
         return cvService.getAllCVs();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all/paged")
+    public ResponseEntity<Page<CVDto>> getAllCVsPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<CVDto> cvs = cvService.getAllCVsPaged(page, size);
+        return ResponseEntity.ok(cvs);
     }
 
     @PreAuthorize("hasAnyRole('CANDIDATE', 'ADMIN')")
