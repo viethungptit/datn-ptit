@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import { addFavorite, filterJobsApi, getFavorites, removeFavorite } from "@/api/recruitApi";
+import { addFavorite, filterJobsApiWithPagination, getFavorites, removeFavorite } from "@/api/recruitApi";
 import { getAllCompaniesApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import { selectIsAuthenticated } from "@/redux/authSlice";
 import { useSelector } from "react-redux";
+import Pagination from "../Pagination/Pagination";
 
 interface Job {
     jobId: string;
@@ -62,13 +63,18 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
     const [jobs, setJobs] = useState<MergedJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    useEffect(() => {
+        setPage(0);
+    }, [filters]);
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
                 const promises: Promise<any>[] = [
-                    filterJobsApi(filters),
+                    filterJobsApiWithPagination({ ...filters }, page, pageSize),
                     getAllCompaniesApi(),
                 ];
                 if (isAuthenticated) {
@@ -78,7 +84,8 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                 }
 
                 const [jobRes, companyRes, favoriteRes] = await Promise.all(promises);
-                const jobList: Job[] = jobRes?.data || [];
+                const jobList: Job[] = jobRes?.data?.data || [];
+                setTotalPages(jobRes.data.totalPages);
                 const companyList: Company[] = companyRes?.data || [];
                 const favoriteList: Favorite[] = favoriteRes?.data || [];
 
@@ -100,7 +107,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
         };
 
         fetchData();
-    }, [filters, isAuthenticated]);
+    }, [filters, isAuthenticated, page]);
 
     const handleLoginRedirect = () => navigate('/login');
     const handleViewDetailJob = (jobId: string) => navigate(`/jobs/${jobId}`);
@@ -320,6 +327,14 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                     );
                 })}
             </div>
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            < Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={(p) => setPage(p)}
+            />
         </div>
     );
 };

@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { toast } from "react-toastify";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { deleteCompanyApi, getAllCompaniesApi, verifyCompanyApi } from "@/api/userApi";
+import { deleteCompanyApi, getAllCompaniesApiWithPagination, verifyCompanyApi } from "@/api/userApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import CompanyDialog from "@/components/Company/CompanyDialog";
 import EmployerDialog from "@/components/Company/EmployerDialog";
+import Pagination from "@/components/Pagination/Pagination";
 
 export type Company = {
     companyId: string;
@@ -31,14 +32,18 @@ const CompanyManagement = () => {
     const [employerDialogOpen, setEmployerDialogOpen] = useState(false);
     const [employerDialogCompanyId, setEmployerDialogCompanyId] = useState<string | null>(null);
     const [employerDialogCompanyName, setEmployerDialogCompanyName] = useState<string | null>(null);
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(3);
+    const [totalPages, setTotalPages] = useState(1);
     // no route navigation needed for employee dialog
     useEffect(() => {
         (async () => {
             setLoading(true);
             try {
-                const res = await getAllCompaniesApi();
+                const res = await getAllCompaniesApiWithPagination(page, pageSize);
                 if (!res || !res.data) throw new Error("Failed to fetch companies");
-                setCompanies(res.data);
+                setCompanies(res.data.content);
+                setTotalPages(res.data.totalPages);
             } catch (err: any) {
                 const msg = err?.response?.data?.message || err?.message || "Không thể tải danh sách công ty";
                 toast.error(msg);
@@ -157,6 +162,10 @@ const CompanyManagement = () => {
                     </TableBody>
                 </Table>
             </div>
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
 
             <CompanyDialog open={openDialog} onOpenChange={setOpenDialog} company={dialogCompany ?? undefined} onSaved={handleDialogSaved} />
             <EmployerDialog

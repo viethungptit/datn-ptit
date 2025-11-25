@@ -2,18 +2,16 @@ package com.ptit.recruitservice.controller;
 
 import com.ptit.recruitservice.dto.*;
 import com.ptit.recruitservice.entity.CV;
-import com.ptit.recruitservice.entity.Job;
 import com.ptit.recruitservice.service.CVService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -105,6 +103,16 @@ public class CVController {
         return cvService.getAllCVs();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all/paged")
+    public ResponseEntity<Page<CVDto>> getAllCVsPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Page<CVDto> cvs = cvService.getAllCVsPaged(page, size);
+        return ResponseEntity.ok(cvs);
+    }
+
     @PreAuthorize("hasAnyRole('CANDIDATE', 'ADMIN')")
     @PostMapping("/{cv_id}/retry-embedding")
     public CVDto retryEmbedding(@PathVariable("cv_id") UUID cvId) {
@@ -114,10 +122,11 @@ public class CVController {
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         return cvService.retryEmbedding(cvId, UUID.fromString(currentUserId), isAdmin);
     }
+
     @PutMapping("/{cv_id}/status-embedding")
     public CVDto updateStatusEmbedding(@PathVariable("cv_id") UUID cvId,
-                                        @RequestParam("status") CV.StatusEmbedding status,
-                                        @RequestHeader("X-Internal-Secret") String secret) {
+            @RequestParam("status") CV.StatusEmbedding status,
+            @RequestHeader("X-Internal-Secret") String secret) {
         if (!internalSecret.equals(secret)) {
             throw new AccessDeniedException("Access denied: invalid internal secret");
         }

@@ -68,6 +68,14 @@ export const updateCurrentUserApi = (payload: {
 
 export const getAllUsersApi = () => gatewayApi.get("/api/user-service/users");
 
+export const getAllUsersApiWithPagination = (
+  page: number = 0,
+  pageSize: number = 10
+) =>
+  gatewayApi.get("/api/user-service/users/paged", {
+    params: { page, size: pageSize },
+  });
+
 export const getUserByIdApi = (userId: string) =>
   gatewayApi.get(`/api/user-service/users/${userId}`);
 
@@ -113,6 +121,23 @@ export const getAllCompaniesApi = () =>
 
 export const searchCompaniesApi = (keyword: string) =>
   gatewayApi.get(`/api/user-service/companies`, { params: { keyword } });
+
+export const getAllCompaniesApiWithPagination = (
+  page: number = 0,
+  pageSize: number = 10
+) =>
+  gatewayApi.get("/api/user-service/companies/paged", {
+    params: { page, pageSize },
+  });
+
+export const searchCompaniesApiWithPagination = (
+  keyword: string,
+  page: number = 0,
+  pageSize: number = 10
+) =>
+  gatewayApi.get("/api/user-service/companies/paged", {
+    params: { keyword, page, pageSize },
+  });
 
 export const getDetailCompanyApi = (companyId: string) =>
   gatewayApi.get(`/api/user-service/companies/${companyId}`);

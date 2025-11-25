@@ -1,4 +1,4 @@
-import { getAllCompaniesApi, searchCompaniesApi } from '@/api/userApi';
+import { getAllCompaniesApiWithPagination, searchCompaniesApiWithPagination } from '@/api/userApi';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,31 +6,38 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Company } from './Admin/CompanyManagement';
 import { MINIO_ENDPOINT } from '@/api/serviceConfig';
+import Pagination from '@/components/Pagination/Pagination';
 
 const Companies: React.FC = () => {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [keyword, setKeyword] = useState<string>("");
     const navigate = useNavigate();
-
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(3);
+    const [totalPages, setTotalPages] = useState(1);
     useEffect(() => {
-        getAllCompaniesApi().then((response) => {
-            setCompanies(response.data);
+        getAllCompaniesApiWithPagination(page, pageSize).then((response) => {
+            setCompanies(response.data.content);
+            setTotalPages(response.data.totalPages);
         });
-    }, []);
+    }, [page, pageSize, keyword]);
 
     const handleViewDetailCompany = (id: string) => {
         navigate(`/companies/${id}`);
     }
 
-    const searchCompany = () => {
-        if (keyword.trim() === "") {
-            getAllCompaniesApi().then((response) => {
-                setCompanies(response.data);
-            });
-        } else {
-            searchCompaniesApi(keyword).then((response) => {
-                setCompanies(response.data);
-            });
+    const searchCompany = async () => {
+        try {
+            let response;
+            if (keyword.trim() === "") {
+                response = await getAllCompaniesApiWithPagination(page, pageSize);
+            } else {
+                response = await searchCompaniesApiWithPagination(keyword, page, pageSize);
+            }
+            setCompanies(response.data.content);
+            setTotalPages(response.data.totalPages);
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -70,7 +77,8 @@ const Companies: React.FC = () => {
                         </div>
                         <p className="text-gray-700 text-sm text-left mt-3 line-clamp-5">{company.description}</p>
                     </div>
-                )) : (
+                )
+                ) : (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3">
                         <div className="bg-white shadow-lg rounded-lg p-8 w-full text-center">
                             <span>Không có công ty nào phù hợp với bộ lọc hiện tại.</span>
@@ -78,6 +86,11 @@ const Companies: React.FC = () => {
                     </div>
                 )}
             </div>
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
+
             <Footer />
         </div>
     );

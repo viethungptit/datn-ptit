@@ -94,7 +94,7 @@ const NotificationEmails: React.FC = () => {
 
                         {items.map((it) => (
                             <TableRow key={it.emailDeliId} className="border-t">
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{it.email}</TableCell>
+                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{it.email ? it.email : "Không có người nhận"}</TableCell>
                                 <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{it.subject}</TableCell>
                                 <TableCell className="px-4 py-3 align-top text-center">
                                     <span

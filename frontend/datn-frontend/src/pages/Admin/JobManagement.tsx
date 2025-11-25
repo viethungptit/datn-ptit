@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getAllCompaniesApi } from "@/api/userApi";
 import {
-    getAllJobs,
     createJobForAdmin,
     deleteJob,
     updateJobForAdmin,
@@ -29,9 +28,11 @@ import {
     getAllGroupJobTags,
     changeStatusJob,
     retryEmbeddingJob,
+    getAllJobsWithPagination,
 } from "@/api/recruitApi";
 import JobDetailDialog from "@/components/JobDetailDialog";
 import EmployerAppliedCVsDialog from "@/components/Employer/EmployerAppliedCVsDialog";
+import Pagination from "@/components/Pagination/Pagination";
 
 type JobTag = { jobTagId: string; jobName: string; isDeleted?: boolean };
 type GroupTag = { groupTagId: string; groupJobName: string; isDeleted?: boolean };
@@ -72,6 +73,9 @@ const JobManagement = () => {
     const [detailJobId, setDetailJobId] = useState<string | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     const [selectedJob, setSelectedJob] = useState<string | null>(null);
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
     const handleDetailOpenChange = (open: boolean) => {
         setDetailOpen(open);
         if (!open) setDetailJobId(null);
@@ -104,7 +108,7 @@ const JobManagement = () => {
             setLoading(true);
             try {
                 const [jobsRes, companiesRes, jobTagsRes, groupTagsRes] = await Promise.all([
-                    getAllJobs(),
+                    getAllJobsWithPagination(page, pageSize),
                     getAllCompaniesApi(),
                     getAllJobTags(),
                     getAllGroupJobTags(),
@@ -112,7 +116,7 @@ const JobManagement = () => {
                 if (!jobsRes || !jobsRes.data) throw new Error("Failed to fetch jobs");
                 if (!companiesRes || !companiesRes.data) throw new Error("Failed to fetch companies");
                 // map jobs to Job[] shape (assume backend returns jobId or id)
-                const mappedJobs: Job[] = (jobsRes.data || []).map((j: any) => ({
+                const mappedJobs: Job[] = (jobsRes.data.content || []).map((j: any) => ({
                     jobId: j.jobId ?? j.id ?? j.job_id,
                     companyId: j.companyId ?? j.company_id,
                     title: j.title,
@@ -130,6 +134,7 @@ const JobManagement = () => {
                     createdAt: j.createdAt ?? j.created_at,
                 }));
                 setJobs(mappedJobs);
+                setTotalPages(jobsRes.data.totalPages)
                 setCompanies(companiesRes.data || []);
                 // map job tags and group tags
                 const jobTagsData = (jobTagsRes as any)?.data ?? jobTagsRes ?? [];
@@ -143,7 +148,7 @@ const JobManagement = () => {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize]);
 
     const [jobTags, setJobTags] = useState<JobTag[]>([]);
     const [groupTags, setGroupTags] = useState<GroupTag[]>([]);
@@ -589,6 +594,10 @@ const JobManagement = () => {
                     onClose={() => setSelectedJob(null)}
                     role="admin" />
             )}
+            <div className="mt-8 text-gray-500">
+                Tổng số trang: {totalPages}
+            </div>
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
         </div>
     );
 };

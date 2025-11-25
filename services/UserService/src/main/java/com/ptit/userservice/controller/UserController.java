@@ -3,6 +3,10 @@ package com.ptit.userservice.controller;
 import com.ptit.userservice.dto.*;
 import com.ptit.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -67,6 +71,16 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<UserResponse>> listUsers() {
         List<UserResponse> users = userService.listUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    //Pagination
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/paged")
+    public ResponseEntity<Page<UserResponse>> listUsersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<UserResponse> users = userService.listUsersPaged(page,size);
         return ResponseEntity.ok(users);
     }
 
