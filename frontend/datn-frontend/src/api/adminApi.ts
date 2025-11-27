@@ -3,6 +3,14 @@ import { gatewayApi } from './axiosInstances';
 export const getAllLogsApi = () =>
     gatewayApi.get('/api/admin-service/logs');
 
+export const getAllLogsApiWithPagination = (
+    page: number = 0,
+    pageSize: number = 10
+) =>
+    gatewayApi.get("/api/admin-service/logs/paged", {
+        params: { page, size: pageSize },
+    });
+
 // Alert recipients
 export const getAlertRecipients = () =>
     gatewayApi.get('/api/admin-service/alert-recipients');

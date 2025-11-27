@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface InappDeliveryRepository extends JpaRepository<InappDelivery, UUID> {
-    List<InappDelivery> findByUserIdAndIsDeletedFalse(UUID userId);
+    List<InappDelivery> findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(UUID userId);
     List<InappDelivery> findByUserId(UUID userId);
 }

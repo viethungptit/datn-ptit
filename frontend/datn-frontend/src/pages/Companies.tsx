@@ -13,7 +13,7 @@ const Companies: React.FC = () => {
     const [keyword, setKeyword] = useState<string>("");
     const navigate = useNavigate();
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(3);
+    const [pageSize] = useState(9);
     const [totalPages, setTotalPages] = useState(1);
     useEffect(() => {
         getAllCompaniesApiWithPagination(page, pageSize).then((response) => {
@@ -86,11 +86,9 @@ const Companies: React.FC = () => {
                     </div>
                 )}
             </div>
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
+            <div className='py-5'>
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
-
             <Footer />
         </div>
     );

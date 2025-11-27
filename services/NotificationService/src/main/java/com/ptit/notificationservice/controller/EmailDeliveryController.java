@@ -2,6 +2,7 @@ package com.ptit.notificationservice.controller;
 
 import com.ptit.notificationservice.entity.EmailDelivery;
 import com.ptit.notificationservice.service.EmailDeliveryService;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +12,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import com.ptit.notificationservice.dto.EmailDeliveryResponse;
 
 @RestController
 @RequestMapping("/api/notification-service/email-deliveries")
@@ -41,6 +46,17 @@ public class EmailDeliveryController {
     @GetMapping
     public ResponseEntity<List<EmailDelivery>> getAll() {
         return ResponseEntity.ok(emailDeliveryService.findAll());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/paged")
+    public ResponseEntity<Page<EmailDeliveryResponse>> getAllEmailDeliveriesWithPagination(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
+        Page<EmailDeliveryResponse> result;
+        result = emailDeliveryService.getAllEmailDeliveriesWithPagination(pageable);
+        return ResponseEntity.ok(result);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

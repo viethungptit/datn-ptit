@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import { getAllCompaniesApi } from "@/api/userApi";
+import { getAllCompaniesApiWithPagination } from "@/api/userApi";
 import type { Company } from "@/pages/Admin/CompanyManagement";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+import Pagination from "../Pagination/Pagination";
 
 
 const CompaniesList: React.FC = () => {
     const [companies, setCompanies] = useState<Company[]>([]);
     const navigate = useNavigate();
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
-        getAllCompaniesApi().then((response) => {
-            setCompanies(response.data);
+        getAllCompaniesApiWithPagination(page, pageSize).then((response) => {
+            setCompanies(response.data.content);
+            setTotalPages(response.data.totalPages);
         });
-    }, []);
+    }, [page, pageSize]);
 
     const handleViewAll = () => {
         navigate("/companies");
@@ -43,7 +48,10 @@ const CompaniesList: React.FC = () => {
                     </div>
                 ))}
             </div>
-            <Button onClick={handleViewAll} variant="seek" size="lg" className="mt-10">Xem tất cả</Button>
+            <div className='py-5'>
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
+            </div>
+            <Button onClick={handleViewAll} variant="seek" size="lg" className="mt-5">Xem tất cả</Button>
         </div>
     );
 };

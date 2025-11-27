@@ -4,6 +4,10 @@ import com.ptit.adminservice.dto.CreateActivityLogRequest;
 import com.ptit.adminservice.entity.ActivityLog;
 import com.ptit.adminservice.repository.ActivityLogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -30,5 +34,9 @@ public class ActivityLogService {
 
     public List<ActivityLog> getAllLogs() {
         return activityLogRepository.findAll();
+    }
+
+    public Page<ActivityLog> getAllActivityLogsWithPagination(Pageable pageable) {
+        return activityLogRepository.findAll(pageable);
     }
 }

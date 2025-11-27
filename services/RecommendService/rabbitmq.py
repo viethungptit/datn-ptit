@@ -28,43 +28,57 @@ EMBEDDING_DELETE_JD_ROUTING_KEY = os.getenv("EMBEDDING_DELETE_JD_ROUTING_KEY")
 MINIO_URL = os.getenv("MINIO_URL")
 
 async def start_rabbit_listener():
-    connection = await aio_pika.connect_robust(RABBIT_URL)
-    channel = await connection.channel()
-    await channel.set_qos(prefetch_count=10)
+    retry_interval = 5       
+    max_wait = 120          
+    elapsed = 0
+    while elapsed < max_wait:
+        try:
+            logger.info("Trying to connect to RabbitMQ...")
+            connection = await aio_pika.connect_robust(RABBIT_URL)
+            channel = await connection.channel()
+            await channel.set_qos(prefetch_count=10)
 
-    async def handle_application_events(message: aio_pika.IncomingMessage):
-        routing_key = message.routing_key  
-        if routing_key == APPLICATION_ROUTING_KEY:
-            await process_event_application(message, "applications", "application_id")
-        elif routing_key == EMBEDDING_APPLICATION_STATUS_ROUTING_KEY:
-            await process_event_application_status(message, "applications", "application_id")
-        elif routing_key == EMBEDDING_DELETE_APPLICATION_ROUTING_KEY:
-            await process_event_application_delete(message, "applications", "application_id")
-        else:
-            logger.warning(f"⚠️ Unknown routing_key='{routing_key}', skipping message")
+            async def handle_application_events(message: aio_pika.IncomingMessage):
+                routing_key = message.routing_key
+                if routing_key == APPLICATION_ROUTING_KEY:
+                    await process_event_application(message, "applications", "application_id")
+                elif routing_key == EMBEDDING_APPLICATION_STATUS_ROUTING_KEY:
+                    await process_event_application_status(message, "applications", "application_id")
+                elif routing_key == EMBEDDING_DELETE_APPLICATION_ROUTING_KEY:
+                    await process_event_application_delete(message, "applications", "application_id")
+                else:
+                    logger.warning(f"Unknown routing_key='{routing_key}', skipping message")
 
+            exchange = await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True)
+            cv_queue = await channel.declare_queue(CV_QUEUE, durable=True)
+            jd_queue = await channel.declare_queue(JD_QUEUE, durable=True)
+            application_queue = await channel.declare_queue(APPLICATION_QUEUE, durable=True)
+            delete_queue = await channel.declare_queue(EMBEDDING_DELETE_QUEUE, durable=True)
 
-    exchange = await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT, durable=True)
-    cv_queue = await channel.declare_queue(CV_QUEUE, durable=True)
-    jd_queue = await channel.declare_queue(JD_QUEUE, durable=True)
-    application_queue = await channel.declare_queue(APPLICATION_QUEUE, durable=True)
-    delete_queue = await channel.declare_queue(EMBEDDING_DELETE_QUEUE, durable=True)
+            await cv_queue.bind(exchange, routing_key=CV_ROUTING_KEY)
+            await jd_queue.bind(exchange, routing_key=JD_ROUTING_KEY)
+            await application_queue.bind(exchange, routing_key=APPLICATION_ROUTING_KEY)
+            await application_queue.bind(exchange, routing_key=EMBEDDING_APPLICATION_STATUS_ROUTING_KEY)
+            await application_queue.bind(exchange, routing_key=EMBEDDING_DELETE_APPLICATION_ROUTING_KEY)
+            await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_CV_ROUTING_KEY)
+            await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_JD_ROUTING_KEY)
 
-    await cv_queue.bind(exchange, routing_key=CV_ROUTING_KEY)
-    await jd_queue.bind(exchange, routing_key=JD_ROUTING_KEY)
-    await application_queue.bind(exchange, routing_key=APPLICATION_ROUTING_KEY)
-    await application_queue.bind(exchange, routing_key=EMBEDDING_APPLICATION_STATUS_ROUTING_KEY)
-    await application_queue.bind(exchange, routing_key=EMBEDDING_DELETE_APPLICATION_ROUTING_KEY)
-    await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_CV_ROUTING_KEY)
-    await delete_queue.bind(exchange, routing_key=EMBEDDING_DELETE_JD_ROUTING_KEY)
- 
-    await cv_queue.consume(lambda msg: process_event_embedding(msg, "embedding_cv", "cv_id"))
-    await jd_queue.consume(lambda msg: process_event_embedding(msg, "embedding_jd", "job_id"))
-    await application_queue.consume(handle_application_events)
-    await delete_queue.consume(lambda msg: process_event_delete_embedding(msg))
+            await cv_queue.consume(lambda msg: process_event_embedding(msg, "embedding_cv", "cv_id"))
+            await jd_queue.consume(lambda msg: process_event_embedding(msg, "embedding_jd", "job_id"))
+            await application_queue.consume(handle_application_events)
+            await delete_queue.consume(lambda msg: process_event_delete_embedding(msg))
 
-    logger.info("RabbitMQ listeners started for CV + JD + Application")
-    return connection
+            logger.info("RabbitMQ listeners started successfully.")
+            return connection
+
+        except Exception as e:
+            logger.error(f"RabbitMQ connection failed: {e}")
+            if elapsed + retry_interval >= max_wait:
+                logger.critical("Cannot connect to RabbitMQ after 60 seconds. Exiting...")
+                raise RuntimeError("Failed to connect to RabbitMQ within max wait time")
+            logger.info(f"Retrying in {retry_interval} seconds...")
+            await asyncio.sleep(retry_interval)
+            elapsed += retry_interval
 
 
 async def process_event_embedding(message: aio_pika.IncomingMessage, table: str, id_field: str):

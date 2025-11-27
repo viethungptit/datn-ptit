@@ -127,7 +127,7 @@ export const getAllCompaniesApiWithPagination = (
   pageSize: number = 10
 ) =>
   gatewayApi.get("/api/user-service/companies/paged", {
-    params: { page, pageSize },
+    params: { page, size: pageSize },
   });
 
 export const searchCompaniesApiWithPagination = (

@@ -33,7 +33,7 @@ public class InappDeliveryService {
     }
 
     public List<InappDelivery> getUserNotifications(UUID userId) {
-        return inappDeliveryRepository.findByUserIdAndIsDeletedFalse(userId);
+        return inappDeliveryRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
     }
 
     @Transactional
@@ -45,7 +45,7 @@ public class InappDeliveryService {
 
     @Transactional
     public List<InappDelivery> markAllAsRead(UUID userId) {
-        List<InappDelivery> deliveries = inappDeliveryRepository.findByUserIdAndIsDeletedFalse(userId);
+        List<InappDelivery> deliveries = inappDeliveryRepository.findByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(userId);
         for (InappDelivery delivery : deliveries) {
             delivery.setIsRead(true);
         }

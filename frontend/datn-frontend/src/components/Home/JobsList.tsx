@@ -64,7 +64,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(10);
+    const [pageSize] = useState(() => (gridNumber === 3 ? 6 : 10));
     const [totalPages, setTotalPages] = useState(1);
     useEffect(() => {
         setPage(0);
@@ -202,7 +202,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                 Việc làm có thể bạn quan tâm
             </h2>
 
-            <div className={`grid grid-cols-${gridNumber} gap-8 w-full`}>
+            <div className={`grid grid-cols-${gridNumber} gap-8 w-full mb-5`}>
                 {displayedJobs.map((job) => {
                     const company = job.company;
                     return (
@@ -327,10 +327,7 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                     );
                 })}
             </div>
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
-            </div>
-            < Pagination
+            <Pagination
                 currentPage={page}
                 totalPages={totalPages}
                 onPageChange={(p) => setPage(p)}

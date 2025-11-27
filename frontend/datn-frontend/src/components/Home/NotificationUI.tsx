@@ -95,7 +95,7 @@ const NotificationUI = () => {
             </div>
 
             {/* Danh sách notifications */}
-            {notifications.slice().reverse().map(item => (
+            {notifications.map(item => (
               <div
                 key={item.inapp_deli_id}
                 className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-0 flex items-start text-left"

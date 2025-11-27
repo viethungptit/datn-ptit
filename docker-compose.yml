@@ -13,6 +13,7 @@ services:
       - frontend.env
     ports:
       - "5173:5173"
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -25,6 +26,7 @@ services:
       - gateway.env
     ports:
       - "${GATEWAY_PORT}:8080"
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -37,6 +39,7 @@ services:
       - user-service.env
     ports:
       - "${USER_SERVICE_PORT}:5000"
+    restart: unless-stopped
     depends_on:
       - user-db
       - rabbitmq
@@ -53,6 +56,7 @@ services:
       - admin-service.env
     ports:
       - "${ADMIN_SERVICE_PORT}:5001"
+    restart: unless-stopped
     depends_on:
       - admin-db
       - rabbitmq
@@ -68,6 +72,7 @@ services:
       - recommend-service.env
     ports:
       - "${RECOMMEND_SERVICE_PORT}:5002"
+    restart: unless-stopped
     depends_on:
       - recommend-db
       - rabbitmq
@@ -84,6 +89,7 @@ services:
       - notification-service.env
     ports:
       - "${NOTIFICATION_SERVICE_PORT}:5003"
+    restart: unless-stopped
     depends_on:
       - notification-db
       - rabbitmq
@@ -99,6 +105,7 @@ services:
       - recruit-service.env
     ports:
       - "${RECRUIT_SERVICE_PORT}:5004"
+    restart: unless-stopped
     depends_on:
       - recruit-db
       - rabbitmq
@@ -117,6 +124,7 @@ services:
       - "${USER_DB_PORT}:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -131,6 +139,7 @@ services:
       - "${ADMIN_DB_PORT}:5432"
     volumes:
       - admin_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -145,6 +154,7 @@ services:
       - "${RECOMMEND_DB_PORT}:5432"
     volumes:
       - recommend_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -159,6 +169,7 @@ services:
       - "${NOTIFY_DB_PORT}:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -173,6 +184,7 @@ services:
       - "${RECRUIT_DB_PORT}:5432"
     volumes:
       - recruit_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - micro_net
 
@@ -182,6 +194,12 @@ services:
     ports:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_UI_PORT}:15672"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
     networks:
       - micro_net
 
@@ -197,6 +215,7 @@ services:
       - "${MINIO_CONSOLE_PORT}:9001"
     volumes:
       - minio_data:/data
+    restart: unless-stopped
     networks:
       - micro_net
 

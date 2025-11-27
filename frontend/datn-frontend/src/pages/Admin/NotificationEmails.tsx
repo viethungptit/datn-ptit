@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getAllEmailDeliveries, deleteEmailDelivery, retrySendEmailDelivery } from '@/api/notificationApi';
+import { deleteEmailDelivery, retrySendEmailDelivery, getAllEmailDeliveriesApiWithPagination } from '@/api/notificationApi';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'react-toastify';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
+import Pagination from '@/components/Pagination/Pagination';
 
 type EmailDelivery = {
     emailDeliId: string;
@@ -19,11 +20,17 @@ const NotificationEmails: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [selected, setSelected] = useState<EmailDelivery | null>(null);
 
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+
     const load = async () => {
         setLoading(true);
         try {
-            const res = await getAllEmailDeliveries();
-            setItems(res?.data ?? []);
+            const res = await getAllEmailDeliveriesApiWithPagination(page, pageSize);
+            if (!res || !res.data) throw new Error("Failed to fetch email deliveries");
+            setItems(res.data.content);
+            setTotalPages(res.data.totalPages);
         } catch (err) {
             console.error(err);
             toast.error('Không tải được danh sách');
@@ -34,7 +41,7 @@ const NotificationEmails: React.FC = () => {
 
     useEffect(() => {
         load();
-    }, []);
+    }, [page, pageSize]);
 
     const handleDelete = async (id?: string) => {
         if (!id) return;
@@ -63,7 +70,7 @@ const NotificationEmails: React.FC = () => {
     };
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex items-center justify-between py-1 mb-4">
                 <h1 className="text-base font-semibold">Quản lý email gửi đi</h1>
             </div>
@@ -94,9 +101,9 @@ const NotificationEmails: React.FC = () => {
 
                         {items.map((it) => (
                             <TableRow key={it.emailDeliId} className="border-t">
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{it.email ? it.email : "Không có người nhận"}</TableCell>
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{it.subject}</TableCell>
-                                <TableCell className="px-4 py-3 align-top text-center">
+                                <TableCell className="px-4 py-6 align-top max-w-xs break-words text-left">{it.email ? it.email : "Không có người nhận"}</TableCell>
+                                <TableCell className="px-4 py-6 align-top max-w-xs break-words text-left">{it.subject}</TableCell>
+                                <TableCell className="px-4 py-6 align-top text-center">
                                     <span
                                         className={
                                             it.status === "fail" ? "text-red-600"
@@ -113,7 +120,7 @@ const NotificationEmails: React.FC = () => {
                                     </span>
                                 </TableCell>
 
-                                <TableCell className="px-4 py-3 align-top text-center">{it.sentAt ? new Date(it.sentAt).toLocaleString() : ''}</TableCell>
+                                <TableCell className="px-4 py-6 align-top text-center">{it.sentAt ? new Date(it.sentAt).toLocaleString() : ''}</TableCell>
                                 <TableCell className="px-4 py-3 align-top">
                                     <div className="flex justify-center gap-2">
                                         <Dialog open={!!selected && selected.emailDeliId === it.emailDeliId} onOpenChange={(open) => { if (!open) setSelected(null); }}>
@@ -150,6 +157,9 @@ const NotificationEmails: React.FC = () => {
                         ))}
                     </TableBody>
                 </Table>
+            </div>
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
         </div>
     );

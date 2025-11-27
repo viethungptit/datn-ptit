@@ -46,7 +46,7 @@ const CVManagement = () => {
     const [userEmails, setUserEmails] = useState<Record<string, string>>({});
     const [retryingEmbeddingsCV, setRetryingEmbeddingsCV] = useState<string[]>([]);
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(3);
+    const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     const previewCV = (cvId: string) => {
         const url = `/preview-cvs/${cvId}`;
@@ -126,7 +126,7 @@ const CVManagement = () => {
     };
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold pb-1">Quản lý CV</h2>
             </div>
@@ -154,7 +154,7 @@ const CVManagement = () => {
                         ) : (
                             templates.map((c) => (
                                 <TableRow key={c.cvId}>
-                                    <TableCell className="text-left">{c.title}</TableCell>
+                                    <TableCell className="text-left py-6">{c.title}</TableCell>
                                     <TableCell className="text-left">{userEmails[c.userId] || c.userId}</TableCell>
                                     <TableCell className="text-center">{SOURCE_MAP[c.sourceType || ''] || ''}</TableCell>
                                     <TableCell className="text-center">
@@ -182,10 +182,9 @@ const CVManagement = () => {
                     </TableBody>
                 </Table>
             </div>
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
         </div>
     );
 };

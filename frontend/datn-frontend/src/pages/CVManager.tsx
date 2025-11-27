@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import { useNavigate } from 'react-router-dom';
 import { deleteCV, exportCV, getCVMe, updateNameCV, retryEmbeddingCV } from '@/api/recruitApi';
 import { toast } from 'react-toastify';
+import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 
 export type CVItem = {
     cvId: string;
@@ -32,7 +33,7 @@ const CVManager = () => {
     const handlePrintClick = async (cvId: string) => {
         try {
             const res = await exportCV(cvId);
-            const pdfUrl = res.data.fileUrl;
+            const pdfUrl = MINIO_ENDPOINT + "/datn/" + res.data.fileUrl;
             if (pdfUrl) {
                 window.open(pdfUrl, "_blank");
             } else {
@@ -154,7 +155,7 @@ const CVManager = () => {
                         <h2 className="text-xl font-bold">CV đã tạo theo mẫu</h2>
                         <Button variant="login" onClick={handleCreateCV}>Tạo CV theo mẫu</Button>
                     </div>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-4 gap-4 overflow-y-auto max-h-[600px]">
                         {templateCVs.length === 0 ? (
                             <p className='text-left'>Chưa có CV nào</p>
                         ) : (
@@ -227,7 +228,7 @@ const CVManager = () => {
                         <h2 className="text-xl font-bold">CV tải lên từ máy tính</h2>
                         <Button variant="login" onClick={handleUploadCV}>Tải CV từ máy tính</Button>
                     </div>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-4 gap-4 overflow-y-auto max-h-[600px]">
                         {uploadedCVList.length === 0 ? (
                             <p className='text-left'>Chưa có CV nào</p>
                         ) : (

@@ -9,6 +9,8 @@ import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated } from '@/redux/authSlice';
 import { toast } from 'react-toastify';
+import remarkGfm from "remark-gfm";
+import ReactMarkdown from 'react-markdown';
 
 const JOB_TYPE_OPTIONS = [
     { value: 'full_time', label: 'Toàn thời gian' },
@@ -146,7 +148,13 @@ const CompaniesDetail = () => {
                 </div>
                 <div className="my-10 shadow-lg p-6 rounded-lg border">
                     <h2 className="text-xl font-semibold mb-4 border-b pb-3">Giới thiệu công ty</h2>
-                    <p className="text-gray-700 text-left">{company.description}</p>
+                    <div className="prose prose-sm text-gray-700 text-left max-w-none leading-7">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                        >
+                            {company.description || "*Chưa có mô tả*"}
+                        </ReactMarkdown>
+                    </div>
                 </div>
                 <div className='my-10 shadow-lg p-6 rounded-lg border'>
                     <h2 className="text-xl font-semibold mb-4 border-b pb-3">Danh sách công việc</h2>
