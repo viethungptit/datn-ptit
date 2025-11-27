@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { toast } from 'react-toastify';
-import { getAllLogsApi } from '@/api/adminApi';
+import { getAllLogsApiWithPagination } from '@/api/adminApi';
+import Pagination from '@/components/Pagination/Pagination';
 
 type Logs = {
     id: string;
@@ -17,12 +18,17 @@ type Logs = {
 const LogsUI: React.FC = () => {
     const [logs, setLogs] = useState<Logs[]>([]);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
 
     const load = async () => {
         setLoading(true);
         try {
-            const res = await getAllLogsApi();
-            setLogs(res?.data ?? []);
+            const res = await getAllLogsApiWithPagination(page, pageSize);
+            if (!res || !res.data) throw new Error("Failed to fetch logs");
+            setLogs(res.data.content);
+            setTotalPages(res.data.totalPages);
         } catch (err) {
             console.error(err);
             toast.error('Không tải được danh sách logs');
@@ -33,10 +39,10 @@ const LogsUI: React.FC = () => {
 
     useEffect(() => {
         load();
-    }, []);
+    }, [page, pageSize]);
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-base font-semibold">Quản lý mẫu thông báo</h1>
             </div>
@@ -45,11 +51,10 @@ const LogsUI: React.FC = () => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Mã người dùng</TableHead>
-                            <TableHead>Vai trò</TableHead>
-                            <TableHead className="text-center">Ngày tạo</TableHead>
-                            <TableHead className="text-center">Hành động</TableHead>
-                            <TableHead className="text-center">Mô tả</TableHead>
+                            <TableHead className="text-left w-[20%]">Hành động</TableHead>
+                            <TableHead className="text-left w-[5%]">Vai trò</TableHead>
+                            <TableHead className="text-center w-[15%]">Ngày tạo</TableHead>
+                            <TableHead className="text-center w-[60%]">Mô tả</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -65,17 +70,19 @@ const LogsUI: React.FC = () => {
                             </TableRow>
                         )}
 
-                        {logs.reverse().map((t) => (
+                        {logs.map((t) => (
                             <TableRow key={t.id} className="border-t">
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{t.actorId}</TableCell>
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{t.actorRole}</TableCell>
-                                <TableCell className="px-4 py-3 align-top text-center">{t.createdAt ? new Date(t.createdAt).toLocaleString() : ''}</TableCell>
-                                <TableCell className="px-4 py-3 align-top text-center">{t.action}</TableCell>
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{t.description}</TableCell>
+                                <TableCell className="px-4 py-5 align-top text-left w-[20%]">{t.action}</TableCell>
+                                <TableCell className="px-4 py-5 align-top max-w-xs break-words text-left w-[5%]">{t.actorRole}</TableCell>
+                                <TableCell className="px-4 py-5 align-top text-center w-[15%]">{t.createdAt ? new Date(t.createdAt).toLocaleString() : ''}</TableCell>
+                                <TableCell className="px-4 py-5 align-top max-w-xs break-words text-left w-[60%]">{t.description}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
+            </div>
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
         </div>
     );

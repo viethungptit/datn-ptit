@@ -1,4 +1,3 @@
-import Footer from "@/components/Footer";
 import React, { useEffect, useState } from "react";
 import { getAllApplicationsForCandidate } from "@/api/recruitApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
@@ -156,7 +155,6 @@ const AppliedJobs: React.FC = () => {
                     })}
                 </div>
             </div>
-            <Footer />
         </div>
     );
 };

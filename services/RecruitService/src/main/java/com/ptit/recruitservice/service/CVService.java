@@ -316,7 +316,7 @@ public class CVService {
             throw new BusinessException("Chỉ có thể xuất các CV được tải lên");
         }
         CVExportResponse response = new CVExportResponse();
-        String fullURL = minioUrl + "/" + bucketName + "/" + cv.getFileUrl();
+        String fullURL = cv.getFileUrl();
         response.setFileUrl(fullURL);
         return response;
     }

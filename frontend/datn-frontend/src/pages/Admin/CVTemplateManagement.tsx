@@ -57,53 +57,59 @@ const CVTemplateManagement = () => {
     };
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 min-h-screen flex flex-col">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý mẫu CV</h2>
                 <Button variant="login" size="sm" onClick={() => createNewTemplate()}>Thêm mẫu CV</Button>
             </div>
-            <div className="border rounded-lg overflow-x-auto">
-                <Table className="text-sm text-gray-700">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="text-left">Tên mẫu CV</TableHead>
-                            <TableHead className="text-center">Ảnh minh họa</TableHead>
-                            <TableHead className="text-center">Ngày tạo</TableHead>
-                            <TableHead className="text-center">Hành động</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
+            <div className="border rounded-lg">
+                <div className="sticky top-0 bg-white z-20">
+                    <Table className="text-sm text-gray-700 min-w-full table-fixed">
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={8} className="text-center">Đang tải...</TableCell>
+                                <TableHead className="text-left" style={{ width: '40%' }}>Tên mẫu CV</TableHead>
+                                <TableHead className="text-left" style={{ width: '20%' }}>Ảnh minh họa</TableHead>
+                                <TableHead className="text-center" style={{ width: '20%' }}>Ngày tạo</TableHead>
+                                <TableHead className="text-center" style={{ width: '20%' }}>Hành động</TableHead>
                             </TableRow>
-                        ) : templates.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={8} className="text-center">Không có dữ liệu</TableCell>
-                            </TableRow>
-                        ) : (
-                            templates.map((c) => (
-                                <TableRow key={c.templateId}>
-                                    <TableCell className="text-left">{c.name}</TableCell>
-                                    <TableCell className="text-center flex justify-center">
-                                        <img
-                                            alt="Template Logo"
-                                            className="h-24 object-cover"
-                                            src={c.previewUrl ? `${MINIO_ENDPOINT}/datn/${c.previewUrl}` : '/default-logo.png'}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="text-center">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
-                                    <TableCell className="text-center">
-                                        <div className="flex gap-2 w-full justify-center">
-                                            <Button size="sm" variant="outline" onClick={() => editCVTemplate(c.templateId)}>Sửa</Button>
-                                            <Button size="sm" variant="destructive" onClick={() => handleDelete(c.templateId)}>Xóa</Button>
-                                        </div>
-                                    </TableCell>
+                        </TableHeader>
+                    </Table>
+                </div>
+                <div className="overflow-y-auto max-h-[calc(100vh-120px)]">
+                    <Table className="text-sm text-gray-700 min-w-full table-fixed">
+                        <TableBody>
+                            {loading ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center">Đang tải...</TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : templates.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center">Không có dữ liệu</TableCell>
+                                </TableRow>
+                            ) : (
+                                templates.map((c) => (
+                                    <TableRow key={c.templateId}>
+                                        <TableCell className="text-left" style={{ width: '40%' }}>{c.name}</TableCell>
+                                        <TableCell className="text-left" style={{ width: '20%' }}>
+                                            <img
+                                                alt="Template Logo"
+                                                className="h-28 object-cover"
+                                                src={c.previewUrl ? `${MINIO_ENDPOINT}/datn/${c.previewUrl}` : '/default-logo.png'}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-center" style={{ width: '20%' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
+                                        <TableCell className="text-center" style={{ width: '20%' }}>
+                                            <div className="flex gap-2 w-full justify-center">
+                                                <Button size="sm" variant="outline" onClick={() => editCVTemplate(c.templateId)}>Sửa</Button>
+                                                <Button size="sm" variant="destructive" onClick={() => handleDelete(c.templateId)}>Xóa</Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
         </div>
     );

@@ -4,6 +4,14 @@ import { gatewayApi } from './axiosInstances';
 export const getAllNotifications = () =>
     gatewayApi.get('/api/notification-service/notifications');
 
+export const getAllNotificationsApiWithPagination = (
+    page: number = 0,
+    pageSize: number = 10
+) =>
+    gatewayApi.get("/api/notification-service/notifications/paged", {
+        params: { page, size: pageSize },
+    });
+
 export const getNotification = (id: string) =>
     gatewayApi.get(`/api/notification-service/notifications/${id}`);
 
@@ -45,6 +53,14 @@ export const deleteInappDelivery = (inappDeliId: string) =>
 // Email deliveries
 export const getAllEmailDeliveries = () =>
     gatewayApi.get('/api/notification-service/email-deliveries');
+
+export const getAllEmailDeliveriesApiWithPagination = (
+    page: number = 0,
+    pageSize: number = 10
+) =>
+    gatewayApi.get("/api/notification-service/email-deliveries/paged", {
+        params: { page, size: pageSize },
+    });
 
 export const createEmailDelivery = (payload: { notification?: any; email?: string; subject?: string; body?: string; status?: string }) =>
     gatewayApi.post('/api/notification-service/email-deliveries', payload);

@@ -1,9 +1,12 @@
 package com.ptit.notificationservice.service;
 
+import com.ptit.notificationservice.dto.EmailDeliveryResponse;
 import com.ptit.notificationservice.entity.EmailDelivery;
 import com.ptit.notificationservice.exception.ResourceNotFoundException;
 import com.ptit.notificationservice.repository.EmailDeliveryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,5 +50,24 @@ public class EmailDeliveryService {
             throw new RuntimeException("Failed to send email: " + ex.getMessage(), ex);
         }
         return emailDeliveryRepository.save(delivery);
+    }
+
+    public Page<EmailDeliveryResponse> getAllEmailDeliveriesWithPagination(Pageable pageable) {
+        return emailDeliveryRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    private EmailDeliveryResponse toResponse(EmailDelivery e) {
+        var b = EmailDeliveryResponse.builder()
+                .emailDeliId(e.getEmailDeliId())
+                .email(e.getEmail())
+                .subject(e.getSubject())
+                .body(e.getBody())
+                .status(e.getStatus())
+                .sentAt(e.getSentAt());
+        if (e.getNotification() != null) {
+            b.notificationId(e.getNotification().getNotificationId())
+                    .notificationEventType(e.getNotification().getEventType());
+        }
+        return b.build();
     }
 }

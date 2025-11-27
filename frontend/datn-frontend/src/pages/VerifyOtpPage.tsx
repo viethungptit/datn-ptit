@@ -16,6 +16,8 @@ const VerifyOtpPage: React.FC = () => {
     const [expired, setExpired] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
 
+    console.log('VerifyOtpPage rendered with email:', email, 'expired:', expired);
+
     useEffect(() => {
         // keep email & type available in url so user can reload and continue
         // no-op here since useSearchParams reads from URL
@@ -40,7 +42,7 @@ const VerifyOtpPage: React.FC = () => {
         } catch (err: any) {
             console.error('Verify OTP failed:', err);
             const msg = err?.message || 'Xác minh thất bại';
-            if (msg === "OTP đã hết hạn") {
+            if (msg === "OTP hết hạn") {
                 setExpired(true);
                 toast.error('Mã OTP đã hết hạn. Vui lòng gửi lại OTP.');
             } else {

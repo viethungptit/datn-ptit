@@ -98,10 +98,10 @@ const FilePickerDialog: React.FC<Props> = ({ onSelect, trigger, contentClassName
                     ) : files.length === 0 ? (
                         <div>Không có ảnh nào. Hãy tải ảnh lên.</div>
                     ) : (
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-4 gap-4 overflow-y-auto max-h-[500px]">
                             {files.map((f: any) => (
                                 <div key={f.id} className="border rounded p-2">
-                                    <img src={`${MINIO_ENDPOINT}/datn/${f.fileUrl}`} alt={f.fileName || 'img'} className="w-full h-28 object-cover rounded" />
+                                    <img src={`${MINIO_ENDPOINT}/datn/${f.fileUrl}`} alt={f.fileName || 'img'} className="w-full h-40 object-cover rounded" />
                                     <div className="flex items-center justify-between mt-2">
                                         <Button size="sm" onClick={() => { onSelect(`${f.fileUrl}`); setOpen(false); }}>Chọn</Button>
                                         <Button variant="outline" size="sm" onClick={() => handleDelete(f.id)}>Xóa</Button>

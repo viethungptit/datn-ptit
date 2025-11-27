@@ -15,6 +15,7 @@ import {
     updateApplicationStatus,
 } from "@/api/recruitApi";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 
 interface AppliedCVsDialogProps {
     jobId: string;
@@ -63,7 +64,7 @@ export default function EmployerAppliedCVsDialog({
     const handlePrintClick = async (cvId: string) => {
         try {
             const res = await exportCV(cvId);
-            const pdfUrl = res.data.fileUrl;
+            const pdfUrl = MINIO_ENDPOINT + "/datn/" + res.data.fileUrl;
             if (pdfUrl) {
                 window.open(pdfUrl, "_blank");
             } else {

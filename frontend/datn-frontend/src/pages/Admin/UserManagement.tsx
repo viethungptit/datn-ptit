@@ -132,7 +132,7 @@ const UserManagement = () => {
     };
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý người dùng</h2>
                 <Button variant="login" size="sm" onClick={() => openDialogUser()}>Thêm người dùng</Button>
@@ -161,7 +161,7 @@ const UserManagement = () => {
                         ) : (
                             users.map((user) => (
                                 <TableRow key={user.userId}>
-                                    <TableCell className="text-left">{user.email}</TableCell>
+                                    <TableCell className="text-left py-6">{user.email}</TableCell>
                                     <TableCell className="text-left">{user.fullName}</TableCell>
                                     <TableCell className="text-left">{user.phone}</TableCell>
                                     <TableCell className="text-left">
@@ -181,10 +181,10 @@ const UserManagement = () => {
                     </TableBody>
                 </Table>
             </div>
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
+
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>

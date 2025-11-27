@@ -312,7 +312,7 @@ const JobManagement = () => {
     }
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý công việc</h2>
                 <Button variant="login" size="sm" onClick={() => openDialogJob()}>Thêm công việc</Button>
@@ -341,7 +341,7 @@ const JobManagement = () => {
                         ) : (
                             jobs.map((j) => (
                                 <TableRow key={j.jobId}>
-                                    <TableCell className="text-left">{j.title}</TableCell>
+                                    <TableCell className="text-left py-6">{j.title}</TableCell>
                                     <TableCell className="text-left">{companyNameById(j.companyId)}</TableCell>
                                     <TableCell className="text-center w-[120px]">
                                         <Select
@@ -594,10 +594,9 @@ const JobManagement = () => {
                     onClose={() => setSelectedJob(null)}
                     role="admin" />
             )}
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
         </div>
     );
 };

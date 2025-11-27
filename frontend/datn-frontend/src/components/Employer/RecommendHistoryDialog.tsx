@@ -13,6 +13,7 @@ import { toast } from 'react-toastify';
 import { listRecommendBatches, getJobMatch, getRecommendBatch } from '@/api/recommendApi';
 import { exportCV, getApplicationsByJob, updateApplicationStatus } from '@/api/recruitApi';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { MINIO_ENDPOINT } from '@/api/serviceConfig';
 
 interface Props {
     open: boolean;
@@ -138,7 +139,7 @@ const RecommendHistoryDialog: React.FC<Props> = ({ open, onOpenChange, jobId, re
     const handlePrintClick = async (cvId: string) => {
         try {
             const res = await exportCV(cvId);
-            const pdfUrl = res.data.fileUrl;
+            const pdfUrl = MINIO_ENDPOINT + "/datn/" + res.data.fileUrl;
             if (pdfUrl) {
                 window.open(pdfUrl, "_blank");
             } else {

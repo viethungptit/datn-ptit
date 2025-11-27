@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "react-toastify";
 import { exportCV } from '@/api/recruitApi';
+import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 
 interface AppliedCVsDialogProps {
     appliedCVs: any[];
@@ -15,7 +16,7 @@ export default function AppliedCVsDialog({ appliedCVs, open, onClose }: AppliedC
     const handlePrintClick = async (cvId: string) => {
         try {
             const res = await exportCV(cvId);
-            const pdfUrl = res.data.fileUrl;
+            const pdfUrl = MINIO_ENDPOINT + "/datn/" + res.data.fileUrl;
             if (pdfUrl) {
                 window.open(pdfUrl, "_blank");
             } else {
@@ -59,7 +60,7 @@ export default function AppliedCVsDialog({ appliedCVs, open, onClose }: AppliedC
                     <i className="fa-solid fa-file fa-5x text-btn-red"></i>
                 </div>
 
-                <span className="font-semibold mb-1 text-center">
+                <span className="font-semibold mb-1 text-center truncate w-[350px]">
                     {cv?.title || "Không có tiêu đề"}
                 </span>
 

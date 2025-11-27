@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 import { toast } from 'react-toastify';
 import { uploadCV } from '@/api/recruitApi';
 import { useNavigate } from 'react-router-dom';
+import Footer from '@/components/Footer';
 
 const UploadCV = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -51,7 +52,7 @@ const UploadCV = () => {
                     <p className="text-base text-gray-700">Bạn đã có sẵn CV của mình, chỉ cần tải CV lên, hệ thống sẽ tự động đề xuất CV của bạn tới những nhà tuyển dụng uy tín.</p>
                 </div>
             </div>
-            <div className='px-[100px] p-6 rounded-md flex flex-col items-center justify-center'>
+            <div className='px-[100px] py-10 rounded-md flex flex-col items-center justify-center'>
                 <h2 className="text-2xl font-semibold text-txt-red mb-4"></h2>
 
                 <div
@@ -80,6 +81,7 @@ const UploadCV = () => {
                     Tải lên CV
                 </Button>
             </div>
+            <Footer/>
         </div>
     );
 };

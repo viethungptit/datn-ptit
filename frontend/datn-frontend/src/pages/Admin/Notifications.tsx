@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getAllNotifications, deleteNotification } from '@/api/notificationApi';
+import { deleteNotification, getAllNotificationsApiWithPagination } from '@/api/notificationApi';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { toast } from 'react-toastify';
+import Pagination from '@/components/Pagination/Pagination';
 
 type Template = {
     templateId: string;
@@ -30,11 +31,17 @@ const Notifications: React.FC = () => {
     const [viewOpen, setViewOpen] = useState(false);
     const [viewing, setViewing] = useState<NotificationItem | null>(null);
 
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+
     const load = async () => {
         setLoading(true);
         try {
-            const res = await getAllNotifications();
-            setNotifications(res?.data ?? []);
+            const res = await getAllNotificationsApiWithPagination(page, pageSize);
+            if (!res || !res.data) throw new Error("Failed to fetch logs");
+            setNotifications(res.data.content);
+            setTotalPages(res.data.totalPages);
         } catch (err) {
             console.error(err);
             toast.error('Không tải được danh sách thông báo');
@@ -45,7 +52,7 @@ const Notifications: React.FC = () => {
 
     useEffect(() => {
         load();
-    }, []);
+    }, [page, pageSize]);
 
     const handleDelete = async (id?: string) => {
         if (!id) return;
@@ -77,7 +84,7 @@ const Notifications: React.FC = () => {
     };
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex items-center justify-between mb-4 py-1">
                 <h1 className="text-base font-semibold">Quản lý thông báo</h1>
             </div>
@@ -86,10 +93,10 @@ const Notifications: React.FC = () => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Sự kiện</TableHead>
-                            <TableHead>Người nhận</TableHead>
-                            <TableHead className="text-center">Ngày tạo</TableHead>
-                            <TableHead className="text-center">Hành động</TableHead>
+                            <TableHead className='w-[20%]'>Sự kiện</TableHead>
+                            <TableHead className='w-[50%]'>Người nhận</TableHead>
+                            <TableHead className="text-center w-[15%]">Ngày tạo</TableHead>
+                            <TableHead className="text-center w-[15%]">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -107,8 +114,8 @@ const Notifications: React.FC = () => {
 
                         {notifications.map((n) => (
                             <TableRow key={n.notificationId} className="border-t">
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">{n.eventType}</TableCell>
-                                <TableCell className="px-4 py-3 align-top max-w-xs break-words text-left">
+                                <TableCell className="px-4 py-6 align-top max-w-xs break-words text-left w-[20%]">{n.eventType}</TableCell>
+                                <TableCell className="px-4 py-6 align-top max-w-xs break-words text-left w-[50%]">
                                     {(() => {
                                         if (!n.payload) return <span className="text-muted-foreground">-</span>;
                                         try {
@@ -121,8 +128,8 @@ const Notifications: React.FC = () => {
                                         }
                                     })()}
                                 </TableCell>
-                                <TableCell className="px-4 py-3 align-top text-center">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</TableCell>
-                                <TableCell className="px-4 py-3 align-top">
+                                <TableCell className="px-4 py-6 align-top text-center w-[15%]">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}</TableCell>
+                                <TableCell className="px-4 py-3 align-top w-[15%]">
                                     <div className="flex justify-center gap-2">
                                         <Button variant="outline" size="sm" onClick={() => openView(n)}>Xem</Button>
                                         <Button variant="destructive" size="sm" onClick={() => handleDelete(n.notificationId)}>Xóa</Button>
@@ -132,6 +139,9 @@ const Notifications: React.FC = () => {
                         ))}
                     </TableBody>
                 </Table>
+            </div>
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
 
             <Dialog open={viewOpen} onOpenChange={(open) => setViewOpen(open)}>

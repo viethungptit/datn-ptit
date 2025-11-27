@@ -33,7 +33,7 @@ const CompanyManagement = () => {
     const [employerDialogCompanyId, setEmployerDialogCompanyId] = useState<string | null>(null);
     const [employerDialogCompanyName, setEmployerDialogCompanyName] = useState<string | null>(null);
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(3);
+    const [pageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
     // no route navigation needed for employee dialog
     useEffect(() => {
@@ -51,7 +51,7 @@ const CompanyManagement = () => {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize]);
     const handleManageEmployees = (companyId: string, companyName: string) => {
         setEmployerDialogCompanyId(companyId);
         setEmployerDialogCompanyName(companyName);
@@ -97,12 +97,9 @@ const CompanyManagement = () => {
         setOpenDialog(false);
     };
 
-    // previews and file cleanup are handled inside CompanyDialog now
-
-
 
     return (
-        <div className="px-4 py-2">
+        <div className="px-4 py-2 relative min-h-screen">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý công ty</h2>
                 <Button variant="login" size="sm" onClick={() => openDialogCompany()}>Thêm công ty</Button>
@@ -115,7 +112,6 @@ const CompanyManagement = () => {
                             <TableHead className="text-left">Logo</TableHead>
                             <TableHead className="text-center">Ngành nghề</TableHead>
                             <TableHead className="text-center">Quy mô</TableHead>
-                            <TableHead className="text-center">Địa chỉ</TableHead>
                             <TableHead className="text-left">Xác thực</TableHead>
                             <TableHead className="text-left">Ngày tạo</TableHead>
                             <TableHead className="text-center">Hành động</TableHead>
@@ -141,9 +137,8 @@ const CompanyManagement = () => {
                                             src={c.logoUrl ? `${MINIO_ENDPOINT}/datn/${c.logoUrl}` : '/default-logo.png'}
                                         />
                                     </TableCell>
-                                    <TableCell className="text-center">{c.industry}</TableCell>
+                                    <TableCell className="text-center py-6">{c.industry}</TableCell>
                                     <TableCell className="text-center">{c.companySize ?? ''}</TableCell>
-                                    <TableCell className="text-center">{c.location}</TableCell>
                                     <TableCell className="text-left">{c.verified ? 'Đã xác thực' : 'Chưa xác thực'}</TableCell>
                                     <TableCell className="text-left">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : ''}</TableCell>
                                     <TableCell className="text-left">
@@ -162,10 +157,9 @@ const CompanyManagement = () => {
                     </TableBody>
                 </Table>
             </div>
-            <div className="mt-8 text-gray-500">
-                Tổng số trang: {totalPages}
+            <div className="absolute bottom-3 right-0 left-0">
+                <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
             </div>
-            <Pagination currentPage={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
 
             <CompanyDialog open={openDialog} onOpenChange={setOpenDialog} company={dialogCompany ?? undefined} onSaved={handleDialogSaved} />
             <EmployerDialog
