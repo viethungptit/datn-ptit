@@ -6,6 +6,7 @@ import re
 from typing import List, Dict, Any
 import asyncio
 from db import get_pool
+from utils.openai_proxy_client import send_openai_request_sync
 from utils.service_client import get_cv_details_batch
 from datetime import datetime
 
@@ -191,9 +192,6 @@ def parse_model_json(response_text: str) -> Dict[str, Any]:
 
 
 def call_openai_api(system_prompt: str, user_prompt: str, model: str = "gpt-4.1-nano", max_tokens: int = 1000, temperature: float = 0.7) -> str:
-    if not OPENAI_KEY:
-        raise RuntimeError("OPENAI_API_KEY not configured")
-    headers = {"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"}
     body = {
         "model": model,
         "messages": [
@@ -203,13 +201,20 @@ def call_openai_api(system_prompt: str, user_prompt: str, model: str = "gpt-4.1-
         "temperature": temperature,
         "max_tokens": max_tokens
     }
-    resp = requests.post(OPENAI_CHAT_URL, headers=headers, json=body, timeout=30)
-    resp.raise_for_status()
-    j = resp.json()
     try:
-        return j["choices"][0]["message"]["content"]
-    except Exception:
-        return resp.text
+        resp = send_openai_request_sync("chat/completions", json_body=body, method="POST")
+        resp.raise_for_status()
+        j = resp.json()
+        try:
+            return j["choices"][0]["message"]["content"]
+        except Exception:
+            return resp.text
+    except requests.HTTPError as e:
+        logger.exception("HTTP error calling OpenAI (sync): %s", e)
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error calling OpenAI (sync): %s", e)
+        raise
 
 
 async def suggest_cv_content(language: str, position: str, section: str, content: str, style: str, user_id: str) -> Dict[str, Any]:

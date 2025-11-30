@@ -48,6 +48,9 @@ def root():
     return {
         # OpenAI
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+        "PROXY_URL": os.getenv("PROXY_URL"),
+        "PROXY_TOKEN": os.getenv("PROXY_TOKEN"),
+        "DEFAULT_TIMEOUT": os.getenv("DEFAULT_TIMEOUT"),
 
         # PostgreSQL
         "POSTGRES_HOST": os.getenv("POSTGRES_HOST"),
