@@ -22,8 +22,7 @@ const RegisterEmployer: React.FC = () => {
             navigate(`/verify-otp?email=${encodeURIComponent(email)}&type=register`);
         } catch (err: any) {
             console.error('Register failed:', err);
-            const msg = err?.response?.data?.message || err || err?.message || 'Đăng ký thất bại';
-            toast.error(msg);
+            toast.error(err.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!");
         }
     };
 
