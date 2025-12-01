@@ -13,7 +13,7 @@ DEFAULT_TIMEOUT = float(os.getenv("DEFAULT_TIMEOUT", "60.0"))
 
 
 def _build_headers_sync(extra_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "Accept-Encoding": "identity"}
     if PROXY_URL:
         # proxy auth via x-proxy-token
         if PROXY_TOKEN:
@@ -51,6 +51,7 @@ def send_openai_request_sync(
     headers = _build_headers_sync(extra_headers)
     logger.debug("Sending sync request to %s (proxy=%s)", url, bool(PROXY_URL))
     resp = requests.request(method=method, url=url, json=json_body, headers=headers, timeout=timeout)
+    print("OpenAI Proxy Response 111:", resp.json())
     return resp
 
 
@@ -74,4 +75,5 @@ async def send_openai_request_async(
     logger.debug("Sending async request to %s (proxy=%s)", url, bool(PROXY_URL))
     async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
         resp = await client.request(method=method, url=url, json=json_body, headers=headers)
+        print("OpenAI Proxy Response async 222:", resp)
         return resp

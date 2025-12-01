@@ -203,6 +203,7 @@ def call_openai_api(system_prompt: str, user_prompt: str, model: str = "gpt-4.1-
     }
     try:
         resp = send_openai_request_sync("chat/completions", json_body=body, method="POST")
+        print("OpenAI response 000: ", resp.json())
         resp.raise_for_status()
         j = resp.json()
         try:
