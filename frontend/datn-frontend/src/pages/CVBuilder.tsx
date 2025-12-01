@@ -186,7 +186,7 @@ export default function CVBuilder() {
             const match = rawContent.match(/!\[.*?\]\((.*?)\)/);
             if (match) imgSrc = match[1];
             return (
-                <div key={sectionId} className="cv-section" style={{ marginBottom: 16 }}>
+                <div key={sectionId} className="cv-section flex justify-center" style={{ marginBottom: 16 }}>
                     <img
                         src={imgSrc}
                         alt="avatar"
