@@ -582,7 +582,7 @@ public class JobService {
             }
 
             if (location != null && !location.trim().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("location")),
+                predicates.add(cb.like(cb.lower(root.get("city")),
                         "%" + location.toLowerCase() + "%"));
             }
 

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import FilePickerDialog from '@/components/FilePicker/FilePickerDialog';
 import { translateSection } from "@/utils/translateSection";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
+import { SECTION_PLACEHOLDERS } from "@/data/placeholderData";
 
 type SectionId =
     | "avatar"
@@ -114,7 +115,7 @@ export default function CVEditTemplate() {
             const opts = aiOptions[sectionId] || { style: 'professional' };
             const position = draftData.position || data.position || '';
             const payload = {
-                language: themeJson?.language || 'vi',
+                language: 'auto',
                 position,
                 section: sectionId,
                 content: draftData[sectionId] || '',
@@ -128,7 +129,11 @@ export default function CVEditTemplate() {
                 toast.error('Không nhận được gợi ý từ AI');
             } else {
                 const original = draftData[sectionId] || '';
-                const combined = original ? `~~${original}~~\n\n${suggestionText}` : suggestionText;
+                const striked = original
+                    .split('\n')
+                    .map(line => line.trim() ? `~~${line}~~` : '')
+                    .join('\n');
+                const combined = original ? `${striked}\n\n${suggestionText}` : suggestionText;
                 setAiSuggestions(prev => ({ ...prev, [sectionId]: { newText: suggestionText, originalText: original } }));
                 handleChange(sectionId, combined);
             }
@@ -234,11 +239,19 @@ export default function CVEditTemplate() {
                             </div>
                         );
                     }
-
+                    const sectionId = key as SectionId;
                     return (
                         <div key={key} style={{ marginBottom: 16 }}>
                             <label className="form-label text-left" htmlFor={key}>{translateSection(key as SectionId)}</label>
                             <div data-color-mode="light">
+                                {SECTION_PLACEHOLDERS[sectionId] && (
+                                    <div
+                                        className="mb-3 p-3 rounded border bg-gray-50 text-sm text-left font-light"
+                                        style={{ whiteSpace: "pre-wrap", opacity: 0.85 }}
+                                    >
+                                        {SECTION_PLACEHOLDERS[sectionId]}
+                                    </div>
+                                )}
                                 <MDEditor
                                     value={draftData[key as SectionId]}
                                     onChange={val => handleChange(key as SectionId, val || "")}

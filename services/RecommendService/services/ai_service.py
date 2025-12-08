@@ -23,9 +23,6 @@ class DBError(MatchJobError):
 # Environment keys
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
-# OpenAI endpoint
-OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
-
 PROMPT_TEMPLATE = r"""
     Bạn là một trợ lý viết CV chuyên nghiệp, chính xác và không thêm thông tin không có trong đầu vào.
     --- INPUT (hãy hiểu các giá trị):
@@ -45,6 +42,10 @@ PROMPT_TEMPLATE = r"""
     7) Nếu `style` là "professional" → văn phong chuyên nghiệp, lịch sự, từ ngữ trang trọng, thể hiện chuyên môn và trách nhiệm.
     8) Nếu `style` là "concise" → ngắn gọn, súc tích, loại bỏ chi tiết thừa, tập trung ý chính.
     9) Nếu `style` là "impact" → nhấn mạnh thành tích, kết quả đạt được, dùng từ mạnh mẽ (nhưng chỉ nếu có thật).
+    10) Bắt buộc phải mở rộng mô tả dựa trên ý nghĩa chung của các nhiệm vụ trong `content` mức độ câu từ, độ mĩ miều phù hợp với `style` nhưng không được bịa thông tin. 
+    (ví dụ: “làm React” → có thể viết thành “xây dựng giao diện tối ưu trải nghiệm người dùng”, 
+    “fix bug” → “xử lý lỗi và cải thiện độ ổn định hệ thống”), 
+    MIỄN LÀ không bịa số liệu, không thêm công nghệ hoặc chi tiết không được nhắc tới.
 
     --- QUY ƯỚC THEO SECTION (linh hoạt hơn):
     - experience:
@@ -64,7 +65,7 @@ PROMPT_TEMPLATE = r"""
     - projects:
       Người dùng có thể nhập nhiều hơn 1 project, không được gộp chung. Nếu hết 1 project thì **xuống dòng cách một dòng trống**.
       Format:
-      "**<Tên dự án>** – <Số người trong nhóm (nếu có)> – **<Vị trí làm việc>**."
+      "**<Tên dự án>** – <Số người trong nhóm (chỉ ghi nếu có dữ liệu)> – **<Vị trí làm việc> (chỉ ghi nếu có dữ liệu)**."
       Sau đó mô tả project (1–4 câu) nêu công nghệ, vai trò, mục tiêu, kết quả.
       Ví dụ:
       Input:
@@ -76,12 +77,12 @@ PROMPT_TEMPLATE = r"""
       - Đảm bảo trải nghiệm mượt mà và tối ưu hiệu năng hiển thị
     - education:
       Giữ nguyên tên trường, degree, major, GPA nếu có.
-      Format mỗi trường như sau (xuống dòng sau tên trường, không gạch đầu dòng):
+      Format mỗi trường như sau (xuống dòng sau tên trường, phải gạch đầu dòng):
         **<Tên trường>**
-        <Degree>
-        <Major>
-        <GPA> (nếu có)
-        (*<Năm vào> – <Năm ra>*)
+        - <Degree>
+        - <Major>
+        - <GPA> (nếu có)
+        - (*<Năm vào> – <Năm ra>*)
       Nếu có nhiều trường, cách nhau bằng **1 dòng trống**.
     - skills:
       Giữ nguyên cấu trúc nhóm nếu có (ví dụ: “Programming”, “Tools”, “Soft skills”).
@@ -93,7 +94,7 @@ PROMPT_TEMPLATE = r"""
       "**<Tên giải thưởng hoặc chứng chỉ>** (*<Năm>* nếu có)*."
       Nếu có nhiều giải, cách nhau **1 dòng trống**.
     - summary/objective:
-      Viết 1–3 câu mô tả điểm mạnh và định hướng nghề nghiệp, không thêm thông tin mới.
+      Viết 3 câu mô tả điểm mạnh và định hướng nghề nghiệp, không thêm thông tin mới.
 
     --- ĐỊNH DẠNG XUẤT RA (Markdown rules):
     Trong phần "suggested", sử dụng **Markdown format** để đảm bảo hiển thị đẹp khi render:

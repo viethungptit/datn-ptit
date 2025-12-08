@@ -88,15 +88,15 @@ async def health(x_internal_secret: Optional[str] = Header(None, alias="X-Intern
 
     status = "UP"
     if psutil:
+        process = psutil.Process(os.getpid())
         try:
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            cpu = round(cpu_percent * 10.0) / 10.0
+            cpu = process.cpu_percent(interval=0.1)
         except Exception:
             cpu = 0.0
+
         try:
-            mem_bytes = psutil.virtual_memory().used
-            memory_mb = mem_bytes / (1024 * 1024)
-            memory = round(memory_mb)
+            mem_bytes = process.memory_info().rss
+            memory = round(mem_bytes / (1024 * 1024))  # MB
         except Exception:
             memory = 0
     else:
@@ -107,6 +107,6 @@ async def health(x_internal_secret: Optional[str] = Header(None, alias="X-Intern
         "service": os.environ.get("SERVICE_NAME", "recommend-service"),
         "status": status,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-        "cpu": cpu,
+        "cpu": round(cpu, 1),
         "memory": memory,
     }
