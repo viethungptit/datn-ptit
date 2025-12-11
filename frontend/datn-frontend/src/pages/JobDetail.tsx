@@ -12,6 +12,7 @@ import { getCurrentUserProfile } from '@/api/userApi';;
 import ApplyJobDialog from '@/components/UploadCV/ApplyJobDialog';
 import { toast } from 'react-toastify';
 import AppliedCVsDialog from '@/components/UploadCV/AppliedCVDialog';
+import RecommendJobs from '@/components/RecommendJobs/RecommendJobs';
 
 const JOB_TYPE_OPTIONS = [
     { value: 'full_time', label: 'Toàn thời gian' },
@@ -201,60 +202,63 @@ const JobDetail = () => {
                 <h1 className="text-3xl font-semibold text-txt-red">{job.title}</h1>
             </div>
             <div className="flex flex-col md:flex-row gap-8 px-[100px] py-10">
-                <div className="md:w-3/4 w-full bg-white rounded-xl shadow p-8 flex flex-col border gap-6">
-                    <div className="flex flex-row justify-between gap-6">
-                        <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
-                            <div className="flex items-center justify-center w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
-                                <i className="fa-solid fa-sack-dollar text-[#d90429]"></i>
-                            </div>
-                            <div className='flex flex-col'>
-                                <span className="text-left text-sm">Mức lương</span>
-                                <span className="text-left font-semibold">{job.salaryRange}</span>
-                            </div>
-                        </div>
-                        <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
-                            <div className="flex items-center justify-center w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
-                                <i className="fa-solid fa-hourglass-half text-[#d90429]"></i>
-                            </div>
-                            <div className='flex flex-col'>
-                                <span className="text-left text-sm">Kinh nghiệm</span>
-                                <span className="text-left font-semibold">{job.experience ? (EXPERIENCE_MAP[job.experience] ?? job.experience) : 'N/A'}</span>
-                            </div>
-                        </div>
-                        <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
-                            <div className="flex items-center justify-center px-2 w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
-                                <i className="fa-solid fa-location-dot text-[#d90429]"></i>
-                            </div>
-                            <div className='flex flex-col'>
-                                <span className="text-left text-sm">Địa điểm</span>
-                                <span className="text-left font-semibold line-clamp-1">{job.location}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <span className="text-left text-gray-600">Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span></span>
-                    <div className="flex items-center justify-between">
-                        <Button variant="seek" className='w-1/3' onClick={handleApply}>Ứng tuyển ngay</Button>
-                        {profile?.role === 'candidate' && (
-                            <div className='flex items-center gap-4'>
-                                {
-                                    isHiddenButton &&
-                                    <Button variant="seek" onClick={openAppliedCVsDialog}>
-                                        Xem CV đã nộp
-                                    </Button>
-                                }
-                                <div
-                                    onClick={() => toggleFavorite()}
-                                    className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
-                                >
-                                    <i className={`${favorite ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
+                <div className="md:w-3/4 w-full bg-white rounded-xl shadow p-8 border">
+                    <div className="flex flex-col gap-10 mb-10">
+                        <div className="flex flex-row justify-between gap-6">
+                            <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
+                                    <i className="fa-solid fa-sack-dollar text-[#d90429]"></i>
+                                </div>
+                                <div className='flex flex-col'>
+                                    <span className="text-left text-sm">Mức lương</span>
+                                    <span className="text-left font-semibold">{job.salaryRange}</span>
                                 </div>
                             </div>
-                        )}
+                            <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
+                                    <i className="fa-solid fa-hourglass-half text-[#d90429]"></i>
+                                </div>
+                                <div className='flex flex-col'>
+                                    <span className="text-left text-sm">Kinh nghiệm</span>
+                                    <span className="text-left font-semibold">{job.experience ? (EXPERIENCE_MAP[job.experience] ?? job.experience) : 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-row items-center gap-3 text-gray-700 w-1/3">
+                                <div className="flex items-center justify-center px-2 w-10 h-10 bg-[#ffe3ea] rounded-full border-2 border-[#d90429] mb-2">
+                                    <i className="fa-solid fa-location-dot text-[#d90429]"></i>
+                                </div>
+                                <div className='flex flex-col'>
+                                    <span className="text-left text-sm">Địa điểm</span>
+                                    <span className="text-left font-semibold line-clamp-1">{job.location}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span className="text-left text-gray-600">Hạn nộp hồ sơ: <span className="font-semibold">{formatTime(job.deadline)}</span></span>
+                        <div className="flex items-center justify-between">
+                            <Button variant="seek" className='w-1/3' onClick={handleApply}>Ứng tuyển ngay</Button>
+                            {profile?.role === 'candidate' && (
+                                <div className='flex items-center gap-4'>
+                                    {
+                                        isHiddenButton &&
+                                        <Button variant="seek" onClick={openAppliedCVsDialog}>
+                                            Xem CV đã nộp
+                                        </Button>
+                                    }
+                                    <div
+                                        onClick={() => toggleFavorite()}
+                                        className={`flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors ${favorite ? 'bg-background-red text-white border-txt-red' : 'text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red'}`}
+                                    >
+                                        <i className={`${favorite ? 'fa-solid' : 'fa-regular'} fa-heart text-lg`}></i>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className='text-left border-t-2 pt-5'>
+                            <h2 className="text-lg font-semibold mb-2">Chi tiết công việc</h2><br />
+                            <p className="text-gray-700 text-base whitespace-pre-line">{job.description}</p>
+                        </div>
                     </div>
-                    <div className='text-left border-t-2 pt-5'>
-                        <h2 className="text-lg font-semibold mb-2">Chi tiết công việc</h2><br />
-                        <p className="text-gray-700 text-base whitespace-pre-line">{job.description}</p>
-                    </div>
+                    <RecommendJobs gridNumber={1} />
                 </div>
                 <div className="md:w-1/4 w-full bg-white rounded-xl shadow p-6 flex flex-col border gap-6">
                     <div className="flex flex-col items-center gap-4 mb-4">

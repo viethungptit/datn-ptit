@@ -20,3 +20,5 @@ export const listRecommendBatches = (jobId: string, params?: { limit?: number })
 export const getRecommendBatch = (batchId: string) =>
     gatewayApi.get(`/api/recommend-service/recommend_batches/${batchId}/detail`);
 
+export const getRecommendedJob = (cv_ids: string[], top_k?: number) =>
+    gatewayApi.post('/api/recommend-service/suggest_jobs', cv_ids, { params: { top_k } });

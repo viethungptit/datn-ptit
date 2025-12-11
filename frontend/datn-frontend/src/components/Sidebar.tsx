@@ -117,6 +117,15 @@ const Sidebar: React.FC<Props> = ({ collapsed, onToggle, headerOffset }) => {
                                                 <i className="fa-solid fa-users"></i>
                                                 {!collapsed && <span>Quản lý nhân viên</span>}
                                             </NavLink>
+                                            <NavLink
+                                                to={`/employer/reports`}
+                                                className={({ isActive }) =>
+                                                    `flex items-center gap-3 px-4 py-3 ${isActive ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                                                }
+                                            >
+                                                <i className="fa-solid fa-file-waveform"></i>
+                                                {!collapsed && <span>Báo cáo tháng</span>}
+                                            </NavLink>
                                         </SidebarMenuItem>
                                     )}
                                 </SidebarMenu>

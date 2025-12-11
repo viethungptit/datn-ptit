@@ -286,3 +286,27 @@ export const postRecruitJob = (data: {
   quantity?: number;
   deadline?: string;
 }) => gatewayApi.post("/api/recruit-service/jobs", data);
+
+// Reports
+export const getReportHistory = (page: number = 0, size: number = 10) =>
+  gatewayApi.get("/api/recruit-service/reports/history", {
+    params: { page, size },
+  });
+
+export const exportReports = (
+  year: number,
+  month: number,
+  format?: string,
+  report?: string[]
+) =>
+  gatewayApi.get("/api/recruit-service/reports/export", {
+    params: {
+      year,
+      month,
+      ...(format ? { format } : {}),
+      ...(report ? { report } : {}),
+    },
+  });
+
+export const deleteReportHistory = (id: string) =>
+  gatewayApi.delete(`/api/recruit-service/reports/history/${id}`);

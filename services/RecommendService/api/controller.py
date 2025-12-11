@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, Header
-from typing import Optional
+from typing import Optional, List
 import os
 import datetime
 
@@ -7,6 +7,7 @@ from models.request_model import CVRequest
 from services.ai_service import (
     suggest_cv_content,
     match_and_store,
+    match_jobs_for_cvs,
     get_recommend_batches_for_user,
     get_recommend_batch_detail,
     JobNotFound,
@@ -76,6 +77,21 @@ async def recommend_batch_detail(
         raise HTTPException(status_code=404, detail="Batch not found")
     except HTTPException:
         raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/suggest_jobs")
+async def suggest_jobs_for_cvs(
+    cv_ids: List[str],
+    top_k: int = Query(20, ge=1, le=200),
+    current_user=Depends(require_roles("CANDIDATE")),
+):
+    try:
+        results = await match_jobs_for_cvs(cv_ids, top_k=top_k)
+        return results
+    except DBError:
+        raise HTTPException(status_code=500, detail="Database query failed")
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
 

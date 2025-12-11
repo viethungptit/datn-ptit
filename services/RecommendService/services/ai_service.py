@@ -267,10 +267,8 @@ async def suggest_cv_content(language: str, position: str, section: str, content
             logger.exception("Failed to persist fallback ai_suggestion to DB")
         return ai_result
 
+
 async def insert_ai_suggestion(section_name: str, original_content: str, suggested_content: str, user_id: str, style_used: str) -> str:
-    """
-    Insert a row into ai_suggestions and return the generated suggestion_id (UUID string).
-    """
     pool = await get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -286,6 +284,8 @@ async def insert_ai_suggestion(section_name: str, original_content: str, suggest
             style_used
         )
     return str(row["suggestion_id"]) if row and row["suggestion_id"] is not None else None
+
+
 
 async def match_job(job_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
     try:
@@ -340,10 +340,48 @@ async def match_job(job_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
     return enriched_results;
 
 
+async def match_jobs_for_cvs(cv_ids: List[str], top_k: int = 50) -> List[Dict[str, Any]]:
+    results = []
+    if not cv_ids:
+        return results
+
+    try:
+        pool = await get_pool()
+    except Exception as e:
+        logger.exception("Failed to get DB pool: %s", e)
+        raise DBError("Database pool unavailable")
+
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT j.job_id,
+                       MAX(1 - (c.embedding_vector <=> j.embedding_vector)) AS score
+                FROM embedding_jd j
+                JOIN embedding_cv c ON c.cv_id = ANY($1::uuid[])
+                GROUP BY j.job_id
+                ORDER BY score DESC
+                LIMIT $2
+                """,
+                cv_ids,
+                top_k,
+            )
+    except Exception as e:
+        logger.exception("DB query failed for match_jobs_for_cvs: %s", e)
+        raise DBError("Database query failed")
+
+    results = [
+        {
+            "job_id": str(r["job_id"]),
+            "score": float(r["score"]) if r["score"] is not None else None,
+        }
+        for r in rows
+    ]
+
+    return results
+
+
 async def create_recommend_batch(job_id: str, user_id: str) -> str:
-    """
-    Create a recommend_batches row and return batch_id (UUID string).
-    """
     pool = await get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -359,10 +397,6 @@ async def create_recommend_batch(job_id: str, user_id: str) -> str:
 
 
 async def store_recommend_results(batch_id: str, results: List[Dict[str, Any]]) -> None:
-    """
-    Insert multiple rows into recommend_results for a given batch.
-    `results` is a list of dicts with keys: cv_id (str) and score (float)
-    """
     if not results:
         return
     pool = await get_pool()
@@ -465,10 +499,6 @@ async def get_recommend_batches_for_user(
 
 
 async def get_recommend_batch_detail(batch_id: str) -> Dict[str, Any]:
-    """
-    Return a single recommend batch with enriched results (including CV data).
-    Raises ValueError if batch not found.
-    """
     pool = await get_pool()
     async with pool.acquire() as conn:
         br = await conn.fetchrow(

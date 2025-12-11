@@ -110,7 +110,6 @@ const RecommendHistoryDialog: React.FC<Props> = ({ open, onOpenChange, jobId, re
             const res = await getJobMatch(jobId, 20);
             const newBatch = res?.data;
             if (newBatch) {
-                setBatchDetails(newBatch);
                 setBatches(prev => [newBatch, ...prev]);
                 toast.success('Chạy lọc AI thành công');
             }
