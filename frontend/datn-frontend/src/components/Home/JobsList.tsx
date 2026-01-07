@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import { addFavorite, filterJobsApiWithPagination, getFavorites, removeFavorite } from "@/api/recruitApi";
+import {
+    addFavorite,
+    filterJobsApiWithPagination,
+    getFavorites,
+    removeFavorite,
+    getCVMe,
+} from "@/api/recruitApi";
 import { getAllCompaniesApi } from "@/api/userApi";
+import { getRecommendedJob } from "@/api/recommendApi";
 import { MINIO_ENDPOINT } from "@/api/serviceConfig";
 import { selectIsAuthenticated } from "@/redux/authSlice";
 import { useSelector } from "react-redux";
 import Pagination from "../Pagination/Pagination";
+
+/* ================== TYPES ================== */
 
 interface Job {
     jobId: string;
@@ -30,7 +39,6 @@ interface Company {
     companyName: string;
     logoUrl?: string;
     location?: string;
-    website?: string;
 }
 
 interface Favorite {
@@ -42,6 +50,7 @@ interface Favorite {
 interface MergedJob extends Job {
     company?: Company;
     favorite?: Favorite;
+    aiScore?: number;
 }
 
 interface JobsListProps {
@@ -50,33 +59,51 @@ interface JobsListProps {
     onlyFavorites?: boolean;
 }
 
+/* ================== MAP ================== */
+
 const jobTypeMap: Record<string, string> = {
-    full_time: 'Toàn thời gian',
-    part_time: 'Bán thời gian',
-    internship: 'Thực tập',
-    freelance: 'Freelance',
+    full_time: "Toàn thời gian",
+    part_time: "Bán thời gian",
+    internship: "Thực tập",
+    freelance: "Freelance",
 };
 
-const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyFavorites = false }) => {
-    const isAuthenticated = useSelector(selectIsAuthenticated);
+/* ================== COMPONENT ================== */
+
+const JobsList: React.FC<JobsListProps> = ({
+    gridNumber = 3,
+    filters = {},
+    onlyFavorites = false,
+}) => {
     const navigate = useNavigate();
+    const isAuthenticated = useSelector(selectIsAuthenticated);
+
     const [jobs, setJobs] = useState<MergedJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
     const [page, setPage] = useState(0);
-    const [pageSize] = useState(() => (gridNumber === 3 ? 6 : 10));
+    const [pageSize] = useState(gridNumber === 3 ? 6 : 10);
     const [totalPages, setTotalPages] = useState(1);
+
+    /* ================== RESET PAGE WHEN FILTER CHANGE ================== */
     useEffect(() => {
         setPage(0);
     }, [filters]);
+
+    /* ================== MAIN EFFECT ================== */
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+            setError(null);
+
             try {
+                /* ---------- 1. LOAD JOB + COMPANY + FAVORITE ---------- */
                 const promises: Promise<any>[] = [
-                    filterJobsApiWithPagination({ ...filters }, page, pageSize),
+                    filterJobsApiWithPagination(filters, page, pageSize),
                     getAllCompaniesApi(),
                 ];
+
                 if (isAuthenticated) {
                     promises.push(getFavorites());
                 } else {
@@ -84,21 +111,58 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                 }
 
                 const [jobRes, companyRes, favoriteRes] = await Promise.all(promises);
+
                 const jobList: Job[] = jobRes?.data?.data || [];
-                setTotalPages(jobRes.data.totalPages);
                 const companyList: Company[] = companyRes?.data || [];
                 const favoriteList: Favorite[] = favoriteRes?.data || [];
 
-                const merged = jobList.map((job) => ({
+                setTotalPages(jobRes?.data?.totalPages ?? 1);
+
+                /* ---------- 2. LOAD CV IDS FOR AI ---------- */
+                let aiScoreMap = new Map<string, number>();
+
+                if (isAuthenticated) {
+                    const uploadRes = await getCVMe("upload");
+                    const uploaded = uploadRes?.data || [];
+
+                    let cvIds = uploaded.map((c: any) => c.cvId).filter(Boolean);
+
+                    if (cvIds.length === 0) {
+                        const systemRes = await getCVMe("system");
+                        cvIds = (systemRes?.data || [])
+                            .slice(0, 2)
+                            .map((c: any) => c.cvId)
+                            .filter(Boolean);
+                    }
+
+                    if (cvIds.length > 0) {
+                        const recRes = await getRecommendedJob(cvIds);
+                        (recRes?.data || []).forEach(
+                            (r: { job_id: string; score: number }) => {
+                                aiScoreMap.set(r.job_id, r.score);
+                            }
+                        );
+                    }
+                }
+
+                /* ---------- 3. MERGE DATA ---------- */
+                let merged: MergedJob[] = jobList.map((job) => ({
                     ...job,
-                    company: companyList.find((c) => c.companyId === job.companyId),
-                    favorite: favoriteList.find((f) => f.jobId === job.jobId),
+                    company: companyList.find(
+                        (c) => c.companyId === job.companyId
+                    ),
+                    favorite: favoriteList.find(
+                        (f) => f.jobId === job.jobId
+                    ),
+                    aiScore: aiScoreMap.get(job.jobId),
                 }));
 
+                /* ---------- 4. SORT BY AI SCORE ---------- */
+                merged.sort((a, b) => (b.aiScore ?? 0) - (a.aiScore ?? 0));
+
                 setJobs(merged);
-                setError(null);
             } catch (err) {
-                console.error("Lỗi khi load việc làm:", err);
+                console.error("JobsList error:", err);
                 setError("Không thể tải danh sách việc làm");
                 setJobs([]);
             } finally {
@@ -107,85 +171,31 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
         };
 
         fetchData();
-    }, [filters, isAuthenticated, page]);
+    }, [filters, page, isAuthenticated]);
 
-    const handleLoginRedirect = () => navigate('/login');
-    const handleViewDetailJob = (jobId: string) => navigate(`/jobs/${jobId}`);
-
-    const displayedJobs = onlyFavorites ? jobs.filter(job => job.favorite) : jobs;
-
-    if (loading) {
-        return (
-            <div className="py-14 flex flex-col items-center">
-                <h2 className="text-3xl font-semibold mb-6 text-txt-red">
-                    Việc làm có thể bạn quan tâm
-                </h2>
-                <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-xl text-center">
-                    <span>Đang tải danh sách việc làm...</span>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="py-14 flex flex-col items-center">
-                <h2 className="text-3xl font-semibold mb-6 text-txt-red">
-                    Việc làm có thể bạn quan tâm
-                </h2>
-                <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-xl text-center text-red-500">
-                    {error}
-                </div>
-            </div>
-        );
-    }
-
-    if (displayedJobs.length === 0) {
-        return (
-            <div className="w-full py-14 flex flex-col items-center px-[100px]">
-                {
-                    !onlyFavorites &&
-                    <h2 className="text-3xl font-semibold mb-6 text-txt-red">
-                        Việc làm có thể bạn quan tâm
-                    </h2>
-                }
-                <div className="bg-white shadow-lg rounded-lg p-8 w-full text-center">
-                    <span>{onlyFavorites ? "Bạn chưa lưu công việc nào." : "Không có công việc phù hợp với bộ lọc hiện tại."}</span>
-                </div>
-            </div>
-        );
-    }
-
+    /* ================== FAVORITE ================== */
     const toggleFavorite = async (jobId: string) => {
         if (!isAuthenticated) {
-            handleLoginRedirect();
+            navigate("/login");
             return;
         }
 
-        const job: MergedJob | undefined = jobs.find((j) => j.jobId === jobId);
+        const job = jobs.find((j) => j.jobId === jobId);
         if (!job) return;
 
         try {
             if (job.favorite) {
                 await removeFavorite(job.favorite.favoriteId);
-
                 setJobs((prev) =>
                     prev.map((j) =>
-                        j.jobId === jobId
-                            ? { ...j, favorite: undefined }
-                            : j
+                        j.jobId === jobId ? { ...j, favorite: undefined } : j
                     )
                 );
             } else {
                 const res = await addFavorite({ jobId });
-
-                const newFavorite: Favorite = res.data;
-
                 setJobs((prev) =>
                     prev.map((j) =>
-                        j.jobId === jobId
-                            ? { ...j, favorite: newFavorite }
-                            : j
+                        j.jobId === jobId ? { ...j, favorite: res.data } : j
                     )
                 );
             }
@@ -194,23 +204,47 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
         }
     };
 
+    /* ================== FILTER FAVORITES ================== */
+    const displayedJobs = onlyFavorites
+        ? jobs.filter((j) => j.favorite)
+        : jobs;
 
+    /* ================== UI STATES ================== */
+    if (loading) {
+        return <div className="py-14 text-center">Đang tải danh sách việc làm...</div>;
+    }
 
+    if (error) {
+        return <div className="py-14 text-center text-red-500">{error}</div>;
+    }
+
+    if (displayedJobs.length === 0) {
+        return (
+            <div className="py-14 text-center">
+                {onlyFavorites
+                    ? "Bạn chưa lưu công việc nào."
+                    : "Không có công việc phù hợp."}
+            </div>
+        );
+    }
+
+    /* ================== RENDER ================== */
     return (
-        <div className={`w-full ${gridNumber === 3 ? "py-14 px-[100px]" : "py-0 px-[50px]"} flex flex-col items-center`}>
-            <h2 className={`${gridNumber === 3 ? "block" : "hidden"} text-3xl font-semibold mb-10 text-txt-red`}>
-                Việc làm có thể bạn quan tâm
-            </h2>
-
-            <div className={`grid grid-cols-${gridNumber} gap-8 w-full mb-5`}>
+        <div className="w-full py-14 px-[100px]">
+            <div className={`grid grid-cols-${gridNumber} gap-8`}>
                 {displayedJobs.map((job) => {
                     const company = job.company;
+
                     return (
                         <div
                             key={job.jobId}
-                            className={`flex ${gridNumber === 3 ? "flex-col" : "flex-row"} bg-white rounded-xl shadow-lg p-6 border border-gray-100 hover:scale-105 transition-transform`}
+                            className={`flex ${gridNumber === 3 ? "flex-col" : "flex-row"} 
+            bg-white rounded-xl shadow-lg p-6 border border-gray-100 
+            hover:scale-105 transition-transform`}
                         >
+                            {/* ===== LEFT CONTENT ===== */}
                             <div className={`flex flex-col ${gridNumber === 3 ? "w-full" : "w-2/3"} pr-4`}>
+                                {/* COMPANY */}
                                 <div className="flex items-center mb-4">
                                     <img
                                         src={
@@ -233,21 +267,33 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                                     </div>
                                 </div>
 
+                                {/* JOB INFO */}
                                 <div className="mb-4">
-                                    <div className="font-semibold text-lg line-clamp-2 text-left cursor-pointer" onClick={() => handleViewDetailJob(job.jobId)}>
+                                    <div
+                                        className="font-semibold text-lg line-clamp-2 text-left cursor-pointer"
+                                        onClick={() => navigate(`/jobs/${job.jobId}`)}
+                                    >
                                         {job.title}
                                     </div>
 
-                                    <div className="text-txt-red mt-2 mb-4 text-left">
+                                    <div className="text-txt-red mt-2 mb-2 text-left">
                                         {job.minSalary && job.maxSalary
                                             ? `${Number(job.minSalary).toLocaleString("vi-VN")} - ${Number(job.maxSalary).toLocaleString("vi-VN")} VNĐ`
                                             : "Thoả thuận"}
                                     </div>
 
+
+                                    {job.aiScore !== undefined && (
+                                        <div className="text-txt-red font-semibold mb-2 text-left">
+                                            Độ tương thích: {(job.aiScore * 100).toFixed(0)}%
+                                            <i className="fa-solid fa-user-astronaut ml-2" />
+                                        </div>
+                                    )}
+
                                     <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
                                         <span className="flex items-center gap-1">
                                             <i className="fa fa-list" />
-                                            {job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : 'N/A'}
+                                            {job.jobType ? (jobTypeMap[job.jobType] ?? job.jobType) : "N/A"}
                                         </span>
 
                                         <span className="flex items-center gap-1">
@@ -279,7 +325,11 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                                 </div>
                             </div>
 
-                            <div className={`flex flex-col ${gridNumber === 3 ? "w-full" : "w-1/3"} pb-4 items-end justify-end gap-2`}>
+                            {/* ===== RIGHT ACTION ===== */}
+                            <div
+                                className={`flex flex-col ${gridNumber === 3 ? "w-full" : "w-1/3"} 
+                pb-4 items-end justify-end gap-2`}
+                            >
                                 <div className="flex flex-row gap-4 items-center">
                                     {isAuthenticated && (
                                         <div
@@ -288,21 +338,29 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                                                 toggleFavorite(job.jobId);
                                             }}
                                             className={`
-                                            flex items-center cursor-pointer gap-2 px-3 py-2 border-[1px] rounded-full transition-colors
-                                            ${job.favorite
+                                flex items-center cursor-pointer gap-2 px-3 py-2 
+                                border rounded-full transition-colors
+                                ${job.favorite
                                                     ? "bg-background-red text-white border-txt-red"
                                                     : "text-txt-red border-background-red hover:border-txt-red hover:text-white hover:bg-background-red"
                                                 }
-                                        `}
+                            `}
                                         >
-                                            <i className={`fa-heart text-lg ${job.favorite ? "fa-solid" : "fa-regular"}`}></i>
+                                            <i
+                                                className={`fa-heart text-lg ${job.favorite ? "fa-solid" : "fa-regular"
+                                                    }`}
+                                            />
                                         </div>
                                     )}
-                                    <Button variant="seek" onClick={() => handleViewDetailJob(job.jobId)}>Ứng tuyển</Button>
+
+                                    <Button variant="seek" onClick={() => navigate(`/jobs/${job.jobId}`)}>
+                                        Ứng tuyển
+                                    </Button>
                                 </div>
 
+                                {/* DEADLINE */}
                                 <span className="text-sm text-gray-500 text-right">
-                                    <span className="text-gray-500">Ngày hết hạn: </span>
+                                    <span>Ngày hết hạn: </span>
                                     <span className="text-black">
                                         {(() => {
                                             const date = new Date(job.deadline);
@@ -321,16 +379,17 @@ const JobsList: React.FC<JobsListProps> = ({ gridNumber = 3, filters = {}, onlyF
                                         })()}
                                     </span>
                                 </span>
-
                             </div>
                         </div>
                     );
                 })}
+
             </div>
+
             <Pagination
                 currentPage={page}
                 totalPages={totalPages}
-                onPageChange={(p) => setPage(p)}
+                onPageChange={setPage}
             />
         </div>
     );

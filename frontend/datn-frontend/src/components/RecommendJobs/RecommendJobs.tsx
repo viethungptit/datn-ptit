@@ -76,13 +76,12 @@ const RecommendJobs: React.FC<{ gridNumber?: number }> = ({ gridNumber }) => {
                     return;
                 }
 
-                // Request recommended jobs (top 4)
-                const recRes = await getRecommendedJob(cvIds, 20);
+                const recRes = await getRecommendedJob(cvIds);
                 const recList: Array<{ job_id: string; score?: number }> = recRes?.data || [];
 
-                // Take up to 4 distinct job ids
-                const top = recList.slice(0, 20).map(r => ({ id: r.job_id, score: r.score }));
-                const uniqueJobs: string[] = Array.from(new Set(top.map(t => t.id))).slice(0, 4);
+                // Take up to full distinct job ids
+                const top = recList.map(r => ({ id: r.job_id, score: r.score }));
+                const uniqueJobs: string[] = Array.from(new Set(top.map(t => t.id)))
 
                 // Fetch job details + company for each
                 const enriched: Array<Job & { company?: Company; score?: number }> = [];
