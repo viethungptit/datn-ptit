@@ -340,7 +340,7 @@ async def match_job(job_id: str, top_k: int = 10) -> List[Dict[str, Any]]:
     return enriched_results;
 
 
-async def match_jobs_for_cvs(cv_ids: List[str], top_k: int = 50) -> List[Dict[str, Any]]:
+async def match_jobs_for_cvs(cv_ids: List[str]) -> List[Dict[str, Any]]:
     results = []
     if not cv_ids:
         return results
@@ -361,10 +361,8 @@ async def match_jobs_for_cvs(cv_ids: List[str], top_k: int = 50) -> List[Dict[st
                 JOIN embedding_cv c ON c.cv_id = ANY($1::uuid[])
                 GROUP BY j.job_id
                 ORDER BY score DESC
-                LIMIT $2
                 """,
                 cv_ids,
-                top_k,
             )
     except Exception as e:
         logger.exception("DB query failed for match_jobs_for_cvs: %s", e)
@@ -379,6 +377,7 @@ async def match_jobs_for_cvs(cv_ids: List[str], top_k: int = 50) -> List[Dict[st
     ]
 
     return results
+
 
 
 async def create_recommend_batch(job_id: str, user_id: str) -> str:

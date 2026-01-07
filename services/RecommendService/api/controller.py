@@ -84,11 +84,10 @@ async def recommend_batch_detail(
 @router.post("/suggest_jobs")
 async def suggest_jobs_for_cvs(
     cv_ids: List[str],
-    top_k: int = Query(20, ge=1, le=200),
     current_user=Depends(require_roles("CANDIDATE")),
 ):
     try:
-        results = await match_jobs_for_cvs(cv_ids, top_k=top_k)
+        results = await match_jobs_for_cvs(cv_ids)
         return results
     except DBError:
         raise HTTPException(status_code=500, detail="Database query failed")
