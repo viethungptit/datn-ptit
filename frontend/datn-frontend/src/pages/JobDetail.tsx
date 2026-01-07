@@ -258,7 +258,7 @@ const JobDetail = () => {
                             <p className="text-gray-700 text-base whitespace-pre-line">{job.description}</p>
                         </div>
                     </div>
-                    <RecommendJobs gridNumber={1} />
+                    {/* <RecommendJobs gridNumber={1} /> */}
                 </div>
                 <div className="md:w-1/4 w-full bg-white rounded-xl shadow p-6 flex flex-col border gap-6">
                     <div className="flex flex-col items-center gap-4 mb-4">
