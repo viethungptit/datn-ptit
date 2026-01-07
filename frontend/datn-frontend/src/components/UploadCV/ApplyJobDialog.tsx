@@ -54,9 +54,9 @@ export default function ApplyJobDialog({ isAuthenticated, open, onClose, jobId }
             toast.success("Ứng tuyển thành công!");
             setSelectedCVs([]);
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error applying for job:", error);
-            toast.error("Ứng tuyển thất bại!");
+            toast.error(error?.message || "Ứng tuyển thất bại!");
         }
     };
 

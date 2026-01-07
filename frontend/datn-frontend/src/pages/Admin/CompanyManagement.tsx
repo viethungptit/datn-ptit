@@ -147,7 +147,7 @@ const CompanyManagement = () => {
                                                 Quản lý
                                             </Button>
                                             <Button size="sm" variant="outline" onClick={() => openDialogCompany(c)}>Sửa</Button>
-                                            {!c.verified && <Button size="sm" variant="secondary" onClick={() => handleVerify(c.companyId)}>Xác thực</Button>}
+                                            {/* {!c.verified && <Button size="sm" variant="secondary" onClick={() => handleVerify(c.companyId)}>Xác thực</Button>} */}
                                             <Button size="sm" variant="destructive" onClick={() => handleDelete(c.companyId)}>Xóa</Button>
                                         </div>
                                     </TableCell>

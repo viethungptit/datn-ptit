@@ -129,7 +129,6 @@ function App() {
           <Route path="/admin/dashboard" element={<RoleRoute element={<Dashboard />} allowedRoles={['admin']} />} />
           <Route path="/admin/users" element={<RoleRoute element={<UserManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
-          <Route path="/admin/companies" element={<RoleRoute element={<CompanyManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/jobs" element={<RoleRoute element={<JobManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/tags" element={<RoleRoute element={<TagManagement />} allowedRoles={['admin']} />} />
           <Route path="/admin/cvs" element={<RoleRoute element={<CVManagement />} allowedRoles={['admin']} />} />

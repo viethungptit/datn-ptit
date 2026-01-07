@@ -11,6 +11,7 @@ import com.ptit.recruitservice.repository.JobTagRepository;
 import com.ptit.recruitservice.repository.GroupJobTagRepository;
 import com.ptit.recruitservice.exception.ResourceNotFoundException;
 import com.ptit.recruitservice.exception.BusinessException;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -455,12 +456,12 @@ public class JobService {
     public void softDeleteJobsByCompany(UUID companyId) {
         List<Job> jobs = jobRepository.findByCompanyIdAndIsDeletedFalse(companyId);
         if (jobs == null || jobs.isEmpty()) {
-            throw new ResourceNotFoundException("Không tìm thấy công việc nào cho công ty: " + companyId);
+            return;
         }
         for (Job job : jobs) {
             job.setIsDeleted(true);
         }
-        List<Job> saved = jobRepository.saveAll(jobs);
+        jobRepository.saveAll(jobs);
     }
 
     public List<JobDto> getAllJobs() {
@@ -712,6 +713,11 @@ public class JobService {
             job.setStatus(Job.Status.closed);
             jobRepository.save(job);
         }
+    }
+
+    @PostConstruct
+    public void runOnStartup() {
+        closeExpiredJobs();
     }
 
     @Transactional
