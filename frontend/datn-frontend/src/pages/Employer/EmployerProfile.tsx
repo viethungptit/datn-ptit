@@ -234,7 +234,7 @@ const EmployerProfile: React.FC = () => {
                                         </DialogContent>
                                     </Dialog>
 
-                                    <div className="mt-2">
+                                    {/* <div className="mt-2">
                                         <Button
                                             variant="outline"
                                             onClick={() => {
@@ -244,7 +244,7 @@ const EmployerProfile: React.FC = () => {
                                         >
                                             Tạo công ty mới
                                         </Button>
-                                    </div>
+                                    </div> */}
                                 </div>
                             )
                             :
@@ -350,13 +350,13 @@ const EmployerProfile: React.FC = () => {
                                                     >
                                                         {leavingCompany ? 'Đang xử lý...' : 'Rời công ty'}
                                                     </Button>
-                                                    {
+                                                    {/* {
                                                         profile.employer.admin && (
                                                             <Button variant="outline" onClick={() => setCompanyDialogOpen(true)}>
                                                                 Sửa thông tin công ty
                                                             </Button>
                                                         )
-                                                    }
+                                                    } */}
                                                 </div>
                                             </div>
                                         ) : profile.employer.status === 'PENDING' ? (

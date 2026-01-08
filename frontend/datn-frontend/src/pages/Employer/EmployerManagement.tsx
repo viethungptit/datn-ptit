@@ -105,17 +105,17 @@ const EmployerManagement = () => {
         }
     };
 
-    const handleChangeAdmin = async (userId: string, isAdmin: boolean) => {
-        try {
-            const employer = employers.find(e => e.user.userId === userId);
-            if (!employer) return;
-            await upsertEmployerForAdminApi(userId, { status: employer.status, isAdmin, companyId: companyId! });
-            setEmployers(prev => prev.map(e => e.user.userId === userId ? { ...e, admin: isAdmin } : e));
-            toast.success("Cập nhật quyền admin thành công");
-        } catch (err: any) {
-            toast.error(err?.message || "Cập nhật thất bại");
-        }
-    };
+    // const handleChangeAdmin = async (userId: string, isAdmin: boolean) => {
+    //     try {
+    //         const employer = employers.find(e => e.user.userId === userId);
+    //         if (!employer) return;
+    //         await upsertEmployerForAdminApi(userId, { status: employer.status, isAdmin, companyId: companyId! });
+    //         setEmployers(prev => prev.map(e => e.user.userId === userId ? { ...e, admin: isAdmin } : e));
+    //         toast.success("Cập nhật quyền admin thành công");
+    //     } catch (err: any) {
+    //         toast.error(err?.message || "Cập nhật thất bại");
+    //     }
+    // };
 
     if (!profile?.employer?.admin)
         return (
@@ -227,7 +227,9 @@ const EmployerManagement = () => {
                                     </Select>
                                 </TableCell>
                                 <TableCell>
-                                    <Checkbox checked={emp.admin} onCheckedChange={value => handleChangeAdmin(emp.user.userId, value as boolean)} />
+                                    <Checkbox checked={emp.admin}
+                                    // onCheckedChange={value => handleChangeAdmin(emp.user.userId, value as boolean)}
+                                    />
                                 </TableCell>
                                 <TableCell className="text-left">{new Date(emp.createdAt).toLocaleDateString("vi-VN")}</TableCell>
                             </TableRow>

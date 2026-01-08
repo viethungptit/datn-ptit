@@ -129,6 +129,7 @@ const JobManagement = () => {
                     quantity: j.quantity,
                     deadline: j.deadline,
                     status: j.status,
+                    experience: j.experience,
                     statusEmbedding: j.statusEmbedding,
                     deleted: j.deleted,
                     createdAt: j.createdAt ?? j.created_at,
@@ -155,7 +156,7 @@ const JobManagement = () => {
     const [updatingJobs, setUpdatingJobs] = useState<string[]>([]);
     const [retryingEmbeddings, setRetryingEmbeddings] = useState<string[]>([]);
 
-    const openDialogJob = (job?: Job) => {
+    const openDialogJob = (job?: Partial<Job>) => {
         if (job) {
             setForm({ ...job });
             setIsEdit(true);

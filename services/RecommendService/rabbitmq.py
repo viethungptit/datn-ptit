@@ -8,6 +8,8 @@ from services.extract_text_from_url import extract_text_from_url
 from utils.service_client import update_status_embedding_job, update_status_embedding_cv
 import logging
 from dotenv import load_dotenv
+from difflib import SequenceMatcher
+import re
 load_dotenv()
 
 logger = logging.getLogger("rabbitmq")
@@ -80,6 +82,30 @@ async def start_rabbit_listener():
             await asyncio.sleep(retry_interval)
             elapsed += retry_interval
 
+def find_most_similar_raw_text(
+    new_text: str,
+    rows,
+    threshold: float = 0.9
+):
+    best_ratio = 0.0
+    best_row = None
+
+
+    for row in rows:
+        old_text = row["raw_text"]
+        ratio = SequenceMatcher(None, new_text, old_text).ratio()
+
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_row = row
+
+    return best_row if best_ratio >= threshold else None, best_ratio
+
+def is_similar_text(new_text: str, old_text: str, threshold: float = 0.95) -> bool:
+    ratio = SequenceMatcher(None, new_text, old_text).ratio()
+    logger.info("Computed similarity ratio: %.3f", ratio)
+    return ratio >= threshold
+
 
 async def process_event_embedding(message: aio_pika.IncomingMessage, table: str, id_field: str):
     logger.info("[🐇] Starting RabbitMQ listener...")
@@ -97,6 +123,85 @@ async def process_event_embedding(message: aio_pika.IncomingMessage, table: str,
             if file_url:
                 full_url = MINIO_URL + file_url
                 raw_text = await extract_text_from_url(full_url)
+            
+            if id_field == "cv_id":
+                pool = await get_pool()
+                async with pool.acquire() as conn:
+                    row = await conn.fetchrow(
+                        f"""
+                        SELECT raw_text
+                        FROM {table}
+                        WHERE {id_field} = $1
+                        """,
+                        record_id
+                    )
+
+                if row and row["raw_text"]:
+                    old_raw_text = row["raw_text"]
+                    ratio = SequenceMatcher(None, raw_text, old_raw_text).ratio()
+                    if ratio >= 0.95:
+                        logger.info(
+                            "Skip embedding for cv_id=%s (change_ratio=%.3f >= 0.95)",
+                            record_id,
+                            ratio
+                        )
+                        await update_status_embedding_cv(record_id, "embedded")
+                        return
+
+
+            if id_field == "cv_id":
+                    pool = await get_pool()
+                    async with pool.acquire() as conn:
+                        rows = await conn.fetch(
+                            """
+                            SELECT cv_id, raw_text, origin_text, embedding_vector
+                            FROM embedding_cv
+                            WHERE raw_text IS NOT NULL
+                            AND cv_id != $1
+                            """,
+                            record_id
+                        )
+
+                    best_row, best_ratio = find_most_similar_raw_text(
+                        raw_text, rows, threshold=0.9
+                    )
+
+                    if best_row:
+                        logger.info(
+                            "Reuse embedding from cv_id=%s (similarity=%.3f)",
+                            best_row["cv_id"],
+                            best_ratio
+                        )
+
+                        pool = await get_pool()
+                        async with pool.acquire() as conn:
+                            await conn.execute(
+                                """
+                                INSERT INTO embedding_cv (
+                                    cv_id,
+                                    origin_text,
+                                    raw_text,
+                                    embedding_vector,
+                                    created_at
+                                )
+                                VALUES ($1, $2, $3, $4, NOW())
+                                ON CONFLICT (cv_id) DO UPDATE
+                                SET
+                                    origin_text = EXCLUDED.origin_text,
+                                    raw_text = EXCLUDED.raw_text,
+                                    embedding_vector = EXCLUDED.embedding_vector,
+                                    created_at = NOW()
+                                """,
+                                record_id,
+                                best_row["origin_text"],
+                                raw_text,
+                                best_row["embedding_vector"],
+                            )
+
+                        status = "embedded"
+                        await update_status_embedding_cv(record_id, status)
+                        return
+                    
             summary = await summarize_text(raw_text)
             vector = await create_embedding(summary)
             pg_vector = "[" + ",".join(str(x) for x in vector) + "]"

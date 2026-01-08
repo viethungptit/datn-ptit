@@ -282,14 +282,6 @@ const JobsList: React.FC<JobsListProps> = ({
                                             : "Thoả thuận"}
                                     </div>
 
-
-                                    {job.aiScore !== undefined && (
-                                        <div className="text-txt-red font-semibold mb-2 text-left">
-                                            Độ tương thích: {(job.aiScore * 100).toFixed(0)}%
-                                            <i className="fa-solid fa-user-astronaut ml-2" />
-                                        </div>
-                                    )}
-
                                     <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-2">
                                         <span className="flex items-center gap-1">
                                             <i className="fa fa-list" />
@@ -322,6 +314,12 @@ const JobsList: React.FC<JobsListProps> = ({
                                             </span>
                                         )}
                                     </div>
+                                    {job.aiScore !== undefined && (
+                                        <div className="text-txt-red font-semibold mb-2 text-left">
+                                            Độ tương thích: {(job.aiScore * 100).toFixed(0)}%
+                                            <i className="fa-solid fa-user-astronaut ml-2" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

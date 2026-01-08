@@ -354,13 +354,31 @@ async def match_jobs_for_cvs(cv_ids: List[str]) -> List[Dict[str, Any]]:
     try:
         async with pool.acquire() as conn:
             rows = await conn.fetch(
+                # """
+                # SELECT j.job_id,
+                #        MAX(1 - (c.embedding_vector <=> j.embedding_vector)) AS score
+                # FROM embedding_jd j
+                # JOIN embedding_cv c ON c.cv_id = ANY($1::uuid[])
+                # GROUP BY j.job_id
+                # ORDER BY score DESC
+                # """,
                 """
-                SELECT j.job_id,
-                       MAX(1 - (c.embedding_vector <=> j.embedding_vector)) AS score
-                FROM embedding_jd j
-                JOIN embedding_cv c ON c.cv_id = ANY($1::uuid[])
-                GROUP BY j.job_id
-                ORDER BY score DESC
+                SELECT
+                    j.job_id,
+                    AVG(1 - (c.embedding_vector <=> j.embedding_vector)) AS score
+                    FROM embedding_jd j
+                    JOIN embedding_cv c
+                    ON c.cv_id = ANY($1::uuid[])
+                    WHERE
+                        (
+                            SELECT COUNT(*)
+                            FROM embedding_cv c2
+                            WHERE c2.cv_id = ANY($1::uuid[])
+                            AND (1 - (c2.embedding_vector <=> j.embedding_vector))
+                                > (1 - (c.embedding_vector <=> j.embedding_vector))
+                        ) < 2
+                    GROUP BY j.job_id
+                    ORDER BY score DESC;
                 """,
                 cv_ids,
             )
