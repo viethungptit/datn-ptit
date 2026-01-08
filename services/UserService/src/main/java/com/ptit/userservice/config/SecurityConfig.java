@@ -28,6 +28,7 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers(HttpMethod.GET, "/api/user-service/companies/**")
                                                 .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/api/user-service/invitations/verify").permitAll()
                                                 .requestMatchers(
                                                                 "/api/user-service/auth/**",
                                                                 "/swagger-ui/**",

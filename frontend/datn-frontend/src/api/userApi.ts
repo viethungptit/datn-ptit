@@ -139,6 +139,19 @@ export const searchCompaniesApiWithPagination = (
     params: { keyword, page, pageSize },
   });
 
+export const verifyInviteTokenApi = (token: string) =>
+  gatewayApi.get("/api/user-service/invitations/verify", {
+    params: { token },
+  });
+export const inviteEmployerApi = (inviteEmail: string, companyId: string) =>
+  gatewayApi.post("/api/user-service/invitations", {
+    email: inviteEmail,
+    companyId,
+  });
+
+export const acceptInviteApi = (token: string) =>
+  gatewayApi.post("/api/user-service/invitations/accept", { token });
+
 export const getDetailCompanyApi = (companyId: string) =>
   gatewayApi.get(`/api/user-service/companies/${companyId}`);
 

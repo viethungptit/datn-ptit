@@ -4,24 +4,43 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerApi } from "@/api/userApi";
 import { toast } from "react-toastify";
-
+import { useLocation } from "react-router-dom";
 const RegisterEmployer: React.FC = () => {
-    const [email, setEmail] = useState("");
+
     const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
     const [phone, setPhone] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-
+    const location = useLocation();
     const navigate = useNavigate();
-
+    const params = new URLSearchParams(location.search);
+    const inviteEmail = params.get("email");
+    const redirect = params.get("redirect");
+    const emailLocked = !!inviteEmail;
+    const [email, setEmail] = useState(inviteEmail || "");
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await registerApi({ email, password, fullName, phone, role: 'employer' });
-            toast.success('Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.');
-            navigate(`/verify-otp?email=${encodeURIComponent(email)}&type=register`);
+            await registerApi({
+                email,
+                password,
+                fullName,
+                phone,
+                role: "employer",
+            });
+
+            toast.success("Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.");
+
+
+            const next = redirect
+                ? `&redirect=${encodeURIComponent(redirect)}`
+                : "";
+
+            navigate(
+                `/verify-otp?email=${encodeURIComponent(email)}&type=register${next}`
+            );
         } catch (err: any) {
-            console.error('Register failed:', err);
+            console.error("Register failed:", err);
             toast.error(err.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin!");
         }
     };
@@ -57,9 +76,10 @@ const RegisterEmployer: React.FC = () => {
                         <Input
                             id="email"
                             type="email"
-                            value={email}
+                            value={emailLocked ? inviteEmail : email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Nhập email"
+                            disabled={emailLocked}
                             required
                             className="w-full"
                         />

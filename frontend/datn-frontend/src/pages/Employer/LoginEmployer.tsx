@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { login } from "@/redux/authReduxAPI";
 import { setAuthData } from "@/redux/authSlice";
-
+import { useLocation } from "react-router-dom";
 const LoginEmployer: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -14,7 +14,18 @@ const LoginEmployer: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
-
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const redirect = searchParams.get("redirect");
+    let redirectToken: string | null = null;
+    if (redirect) {
+        try {
+            const url = new URL(redirect, window.location.origin); // tạo URL tuyệt đối
+            redirectToken = url.searchParams.get("token"); // lấy token
+        } catch (err) {
+            console.warn("Invalid redirect URL", err);
+        }
+    }
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -24,7 +35,11 @@ const LoginEmployer: React.FC = () => {
                 dispatch(setAuthData(res));
                 toast.success("Đăng nhập thành công!");
                 localStorage.setItem('accessToken', res.accessToken);
-                navigate("/employer/profile");
+                if (redirectToken) {
+                    navigate(`/invite?token=${redirectToken}`);
+                } else {
+                    navigate("/employer/profile");
+                }
             }
             else {
                 toast.error("Trang đăng nhập này chỉ dành cho nhà tuyển dụng!");

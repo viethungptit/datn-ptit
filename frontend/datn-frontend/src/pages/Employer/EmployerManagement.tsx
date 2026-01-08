@@ -4,8 +4,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "react-toastify";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
-import { getAllEmployersForCompanyApi, getCurrentUserProfile, upsertEmployerForAdminApi } from "@/api/userApi";
+import { getAllEmployersForCompanyApi, getCurrentUserProfile, inviteEmployerApi, upsertEmployerForAdminApi } from "@/api/userApi";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 
 export type Employer = {
@@ -37,7 +39,9 @@ const EmployerManagement = () => {
     const [profile, setProfile] = useState<any | null>(null);
     const [companyId, setCompanyId] = useState<string | null>(null);
     const navigate = useNavigate();
-
+    const [openInvite, setOpenInvite] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviting, setInviting] = useState(false);
     useEffect(() => {
         const fetchProfile = async () => {
             setLoading(true);
@@ -65,7 +69,25 @@ const EmployerManagement = () => {
             setLoading(false);
         }
     };
+    const handleInvite = async () => {
+        if (!inviteEmail.trim()) {
+            toast.error("Vui lòng nhập email");
+            return;
+        }
 
+        try {
+            setInviting(true);
+            await inviteEmployerApi(inviteEmail, companyId!);
+            toast.success("Đã gửi lời mời thành công");
+            setInviteEmail("");
+            setOpenInvite(false);
+            fetchEmployers(); // reload list nếu backend trả PENDING
+        } catch (err: any) {
+            toast.error(err?.message || "Gửi lời mời thất bại");
+        } finally {
+            setInviting(false);
+        }
+    };
     useEffect(() => {
         if (!companyId) return;
         fetchEmployers();
@@ -131,6 +153,44 @@ const EmployerManagement = () => {
         <div className="px-4 py-2">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="font-semibold">Quản lý nhân viên</h2>
+                <Dialog open={openInvite} onOpenChange={setOpenInvite}>
+                    <DialogTrigger asChild>
+                        <Button variant="destructive">
+                            Mời thành viên
+                        </Button>
+                    </DialogTrigger>
+
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Mời thành viên qua email</DialogTitle>
+                        </DialogHeader>
+
+                        <div className="space-y-3">
+                            <Input
+                                placeholder="Nhập email người cần mời"
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                type="email"
+                            />
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setOpenInvite(false)}
+                            >
+                                Hủy
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleInvite}
+                                disabled={inviting}
+                            >
+                                {inviting ? "Đang gửi..." : "Gửi lời mời"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
             <div className="border rounded-lg overflow-x-auto">
                 <Table className="text-sm text-gray-700">

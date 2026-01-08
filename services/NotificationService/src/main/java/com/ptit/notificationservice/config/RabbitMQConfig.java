@@ -28,6 +28,9 @@ public class RabbitMQConfig {
     @Value("${notification.application.created.routing-key}")
     private String applicationCreatedRoutingKey;
 
+    @Value("${notification.invite.routing-key}")
+    private String inviteRoutingKey;
+
     @Value("${notification.cv.upload.routing-key}")
     private String cvUploadRoutingKey;
 
@@ -55,6 +58,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(userQueue())
                 .to(notificationExchange())
                 .with(userRegisterRoutingKey);
+    }
+
+    @Bean
+    public Binding userInviteBinding() {
+        return BindingBuilder.bind(userQueue())
+                .to(notificationExchange())
+                .with(inviteRoutingKey);
     }
 
     @Bean

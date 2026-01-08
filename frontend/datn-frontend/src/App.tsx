@@ -49,6 +49,7 @@ import CVManagement from './pages/Admin/CVManagement';
 import LogsUI from './pages/Admin/LogsUI';
 import Dashboard from './pages/Admin/Dashboard';
 import EmployerReports from './pages/Employer/EmployerReports';
+import InvitePage from './pages/Employer/InvitePage';
 
 function App() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -102,7 +103,7 @@ function App() {
           <Route path="/admin/login" element={<LoginAdmin />} />
           <Route path="/admin/register" element={<RegisterAdmin />} />
           <Route path="/preview-cvs/:cvId" element={<CVPreviewPage />} />
-
+          <Route path="/invite" element={<InvitePage />} />
           <Route path="/" element={<Home />} />
           <Route path="/companies" element={<Companies />} />
           <Route path="/companies/:companyId" element={<CompaniesDetail />} />

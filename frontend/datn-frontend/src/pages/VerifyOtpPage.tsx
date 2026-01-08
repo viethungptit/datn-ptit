@@ -10,7 +10,7 @@ const VerifyOtpPage: React.FC = () => {
     const navigate = useNavigate();
     const email = searchParams.get('email') || '';
     const type = searchParams.get('type') || 'register';
-
+    const redirect = searchParams.get('redirect');
     const [code, setCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [expired, setExpired] = useState(false);
@@ -37,7 +37,12 @@ const VerifyOtpPage: React.FC = () => {
             } else {
                 await verifyOtpApi({ email, otp: code });
                 toast.success('Xác minh OTP thành công');
-                navigate('/login');
+
+                if (redirect) {
+                    navigate(redirect);
+                } else {
+                    navigate('/login');
+                }
             }
         } catch (err: any) {
             console.error('Verify OTP failed:', err);
